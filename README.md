@@ -11,4 +11,4 @@ Our documentation is found on
 
 ---
 
-Licence TBD © Ezzidean Azzabi, Matthew Hrehirchuk
+Licence TBD © Ezzidean Azzabi, Matthew Hrehirchuk, Sunny Parmar
