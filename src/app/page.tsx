@@ -1,5 +1,7 @@
 import Image from "next/image";
 
+import CodeEditor from "~/components/code-editor";
+
 export default function Home() {
   return (
     <div className={`
@@ -13,6 +15,7 @@ export default function Home() {
         sm:items-start
       `}
       >
+        <CodeEditor />
         <Image
           className="dark:invert"
           src="/next.svg"
