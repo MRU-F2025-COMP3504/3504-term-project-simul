@@ -1,5 +1,5 @@
 import Image from "next/image";
-import CodeEditor from "~/components/CodeEditor";
+import CodeEditor from "~/components/CodeEditior";
 
 export default function Home() {
   return (
