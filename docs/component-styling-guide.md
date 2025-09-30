@@ -24,11 +24,17 @@ You can find the base themes defined in `src/app/globals.css`. Look at the style
 The base themes define classes that we can use for colours throughout our application. Instead of hardcoded colors, use the semantic color names that automatically adapt to the theme:
 
 ```tsx
-// Do NOT use hardcoded colors (all the utility classes below use hardcoded colours)
-<div className="bg-white text-black dark:bg-gray-900 dark:text-white">
-  // Use theme colors. These utility classes adapt to the theme
-  <div className="bg-background text-foreground"></div>
-</div>
+{ /* Do NOT use hardcoded colors (all the utility classes below use hardcoded colours) */ }
+<div
+  className={`
+    bg-white text-black
+    dark:bg-gray-900 dark:text-white
+  `}
+>
+</div>;
+{ /* Use theme colors. These utility classes adapt to the theme */ }
+<div className="bg-background text-foreground"></div>
+;
 ```
 
 ### Available Theme Colors
@@ -78,7 +84,7 @@ export function ThemeToggle() {
   const { theme, setTheme } = useTheme();
 
   return (
-    <button onClick={() => setTheme(theme === "dark" ? "light" : "dark")}>
+    <button type="button" onClick={() => setTheme(theme === "dark" ? "light" : "dark")}>
       Toggle Theme
     </button>
   );
@@ -95,7 +101,7 @@ export function ThemeToggle() {
 
 ```jsx
 // DON'T do this. Use semantic colors instead
-function BadComponent() {
+export function BadComponent() {
   const { resolvedTheme } = useTheme();
 
   return (
@@ -107,9 +113,11 @@ function BadComponent() {
     </div>
   );
 }
+```
 
+```jsx
 // Do this instead
-function GoodComponent() {
+export function GoodComponent() {
   return (
     <div className="bg-background text-foreground">
       Content
@@ -127,9 +135,18 @@ Always prefer theme colors over hardcoded values:
 ```jsx
 // Good
 <div className="bg-background text-foreground border-border">
+</div>;
+```
 
+```jsx
 // Avoid
-<div className="bg-white text-black dark:bg-gray-900 dark:text-white">
+<div
+  className={`
+    bg-white text-black
+    dark:bg-gray-900 dark:text-white
+  `}
+>
+</div>;
 ```
 
 ### 2. Use CSS Custom Properties
