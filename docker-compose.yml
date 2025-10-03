@@ -1,12 +1,12 @@
 # Defines the services and volumes required for the application.
-services: 
+services:
   db:
     image: postgres:16
     container_name: simul-db
     env_file:
       - .env
     ports:
-      - "${POSTGRES_PORT}:${POSTGRES_PORT}"  
+      - "${POSTGRES_PORT}:${POSTGRES_PORT}"
     volumes:
       - simul_pgdata:/var/lib/postgresql/data
 
