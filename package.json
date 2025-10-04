@@ -3,17 +3,24 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "dev": "next dev --turbopack",
+    "dev:db": "docker-compose up db",
+    "dev:db:stop": "docker-compose down",
+    "dev_web": "concurrently npm \"next dev --turbopack\" \"npm run dev:db\"",
     "build": "next build --turbopack",
     "start": "next start",
     "lint": "eslint",
     "lint:fix": "eslint --fix",
-    "prepare": "husky"
+    "prepare": "husky",
+    "db_push": "npx drizzle-kit push",
+    "db_studio": "npx drizzle-kit studio"
+
   },
   "dependencies": {
     "@monaco-editor/react": "^4.7.0",
+    "drizzle-orm": "^0.44.6",
     "monaco-editor": "^0.53.0",
     "next": "15.5.4",
+    "pg": "^8.16.3",
     "react": "19.1.0",
     "react-dom": "19.1.0"
   },
@@ -24,8 +31,10 @@
     "@next/eslint-plugin-next": "^15.5.4",
     "@tailwindcss/postcss": "^4",
     "@types/node": "^20",
+    "@types/pg": "^8.15.5",
     "@types/react": "^19",
     "@types/react-dom": "^19",
+    "drizzle-kit": "^0.31.5",
     "eslint": "^9",
     "eslint-config-next": "15.5.4",
     "eslint-plugin-better-tailwindcss": "^3.7.9",
@@ -34,6 +43,7 @@
     "eslint-plugin-react-refresh": "^0.4.22",
     "husky": "^9.1.7",
     "tailwindcss": "^4",
+    "tsx": "^4.20.6",
     "typescript": "^5"
   }
 }

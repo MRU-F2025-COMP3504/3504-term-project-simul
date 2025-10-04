@@ -4,6 +4,7 @@
   bash,
   nodejs_23,
   pnpm,
+  docker-compose,
 }:
 mkShell rec {
   name = "simul";
@@ -12,6 +13,8 @@ mkShell rec {
     bash
     nodejs_23
     pnpm
+
+    docker-compose
 
     # required for CI for format checking
     alejandra
