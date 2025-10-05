@@ -8,6 +8,9 @@ importers:
 
   .:
     dependencies:
+      '@matthew-hre/env':
+        specifier: ^0.3.0
+        version: 0.3.0
       '@monaco-editor/react':
         specifier: ^4.7.0
         version: 4.7.0(monaco-editor@0.53.0)(react-dom@19.1.0(react@19.1.0))(react@19.1.0)
@@ -23,6 +26,9 @@ importers:
       react-dom:
         specifier: 19.1.0
         version: 19.1.0(react@19.1.0)
+      zod:
+        specifier: ^4.1.11
+        version: 4.1.11
     devDependencies:
       '@antfu/eslint-config':
         specifier: ^5.4.1
@@ -449,6 +455,9 @@ packages:
 
   '@jridgewell/trace-mapping@0.3.31':
     resolution: {integrity: sha512-zzNR+SdQSDJzc8joaeP8QQoCQr8NuYx2dIIytl1QeBEZHJ9uW6hebsrYgbz8hJwUQao3TWCMtmfV8Nu1twOLAw==}
+
+  '@matthew-hre/env@0.3.0':
+    resolution: {integrity: sha512-W3eZVjoieWVuB2CBXBPmDTAcyaTbMeGrQIodJ3Crx2RWl7xdH9feJd4wwfqlDM6woNVdbkZjlcByifvY0WT7tw==}
 
   '@monaco-editor/loader@1.5.0':
     resolution: {integrity: sha512-hKoGSM+7aAc7eRTRjpqAZucPmoNOC4UUbknb/VNoTkEIkCPhqV8LfbsgM1webRM7S/z21eHEx9Fkwx8Z/C/+Xw==}
@@ -3226,6 +3235,11 @@ snapshots:
     dependencies:
       '@jridgewell/resolve-uri': 3.1.2
       '@jridgewell/sourcemap-codec': 1.5.5
+
+  '@matthew-hre/env@0.3.0':
+    dependencies:
+      picocolors: 1.1.1
+      zod: 4.1.11
 
   '@monaco-editor/loader@1.5.0':
     dependencies:
