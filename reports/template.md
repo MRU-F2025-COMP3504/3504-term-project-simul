@@ -1,17 +1,39 @@
 # Weekly Report - 2025-xx-xx
 
-## Last Week's Goals
+#### Last Week's Team Goals
 
-## Progress and Issues
+#### What We Did
 
-### What We Did
+#### What Worked
 
-### What Worked
+#### Where We Had Trouble
 
-### Where We Had Trouble
+#### Where We Are Stuck
 
-### Where We Are Stuck
+#### What We Learned
 
-### What We Learned
+#### Team Plans & Goals for Next Week
 
-## Plans and Goals for Next Week
+## Individual Reporting
+
+<!-- Copy this and add your own report -->
+
+### NAME
+
+#### Last Week's Goals
+
+#### What I Did
+
+#### What Worked
+
+#### Where I Had Trouble
+
+#### Where I Was Stuck
+
+#### What I Learned
+
+#### Plans & Goals for Next Week
+
+---
+
+<!--------------------------------------->

@@ -3,26 +3,33 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "dev:db": "docker-compose up db",
-    "dev:db:stop": "docker-compose down",
-    "dev_web": "concurrently npm \"next dev --turbopack\" \"npm run dev:db\"",
+    "db:start": "docker-compose up db",
+    "db:stop": "docker-compose down",
+    "dev": "concurrently npm \"next dev --turbopack\" \"npm run dev:db\"",
     "build": "next build --turbopack",
     "start": "next start",
     "lint": "eslint",
     "lint:fix": "eslint --fix",
     "prepare": "husky",
-    "db_push": "npx drizzle-kit push",
-    "db_studio": "npx drizzle-kit studio"
+    "db:push": "npx drizzle-kit push",
+    "db:studio": "npx drizzle-kit studio"
 
   },
   "dependencies": {
     "@monaco-editor/react": "^4.7.0",
+    "@radix-ui/react-dropdown-menu": "^2.1.16",
+    "@radix-ui/react-slot": "^1.2.3",
+    "class-variance-authority": "^0.7.1",
+    "clsx": "^2.1.1",
     "drizzle-orm": "^0.44.6",
+    "lucide-react": "^0.544.0",
     "monaco-editor": "^0.53.0",
     "next": "15.5.4",
+    "next-themes": "^0.4.6",
     "pg": "^8.16.3",
     "react": "19.1.0",
-    "react-dom": "19.1.0"
+    "react-dom": "19.1.0",
+    "tailwind-merge": "^3.3.1"
   },
   "devDependencies": {
     "@antfu/eslint-config": "^5.4.1",
@@ -44,6 +51,7 @@
     "husky": "^9.1.7",
     "tailwindcss": "^4",
     "tsx": "^4.20.6",
+    "tw-animate-css": "^1.4.0",
     "typescript": "^5"
   }
 }
