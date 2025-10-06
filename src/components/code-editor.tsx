@@ -3,6 +3,7 @@
 import type * as monaco from "monaco-editor"; // to replace 'any' types in editorRef & onMount init
 
 import { Editor } from "@monaco-editor/react";
+import { useTheme } from "next-themes";
 import { useRef, useState } from "react";
 
 function CodeEditor() {
@@ -12,6 +13,7 @@ function CodeEditor() {
   */
   const editorRef = useRef<monaco.editor.IStandaloneCodeEditor | null>(null);
   const [_code, setCode] = useState<string>("");
+  const { theme } = useTheme();
 
   const onMount = (editor: monaco.editor.IStandaloneCodeEditor) => {
     editorRef.current = editor;
@@ -34,7 +36,7 @@ function CodeEditor() {
       height="30vh"
       defaultLanguage="javascript"
       defaultValue="// Write your code here"
-      theme="vs-dark"
+      theme={theme === "dark" ? "vs-dark" : "vs-light"}
 
       // State management
       onChange={value => setCode(value || "")}
