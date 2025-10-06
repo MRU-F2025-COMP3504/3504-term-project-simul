@@ -96,8 +96,4 @@ function Button({
     />
   );
 }
-// Known issue with react-refresh/only-export-components and shadcn.
-// see https://github.com/shadcn-ui/ui/issues/7736 and
-// https://github.com/ArnaudBarre/eslint-plugin-react-refresh/issues/84#issuecomment-3076117181
-// eslint-disable-next-line react-refresh/only-export-components
 export { Button, buttonVariants };
