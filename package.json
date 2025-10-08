@@ -5,7 +5,7 @@
   "scripts": {
     "db:start": "docker-compose up db",
     "db:stop": "docker-compose down",
-    "dev": "concurrently npm \"next dev --turbopack\" \"npm run dev:db\"",
+    "dev": "concurrently \"next dev --turbopack\" \"npm run db:start\"",
     "build": "next build --turbopack",
     "start": "next start",
     "lint": "eslint",
@@ -13,7 +13,6 @@
     "prepare": "husky",
     "db:push": "npx drizzle-kit push",
     "db:studio": "npx drizzle-kit studio"
-
   },
   "dependencies": {
     "@matthew-hre/env": "^0.3.0",
@@ -32,7 +31,6 @@
     "react-dom": "19.1.0",
     "tailwind-merge": "^3.3.1",
     "zod": "^4.1.11"
-
   },
   "devDependencies": {
     "@antfu/eslint-config": "^5.4.1",
@@ -44,6 +42,7 @@
     "@types/pg": "^8.15.5",
     "@types/react": "^19",
     "@types/react-dom": "^19",
+    "concurrently": "^9.2.1",
     "drizzle-kit": "^0.31.5",
     "eslint": "^9",
     "eslint-config-next": "15.5.4",
