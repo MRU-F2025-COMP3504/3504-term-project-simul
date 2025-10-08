@@ -1,4 +1,5 @@
 import { defineConfig } from "drizzle-kit";
+
 import { serverEnv } from "~/lib/env";
 
 export default defineConfig({
@@ -7,7 +8,7 @@ export default defineConfig({
   dialect: "postgresql",
   casing: "snake_case",
   dbCredentials: {
-    
+
     url: serverEnv.DATABASE_URL!,
   },
 });
