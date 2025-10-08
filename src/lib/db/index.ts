@@ -1,7 +1,7 @@
 import "dotenv/config";
 import { drizzle } from "drizzle-orm/node-postgres";
+import { serverEnv } from "../env";
 
-// eslint-disable-next-line node/no-process-env
-const db = drizzle(process.env.DATABASE_URL!);
+const db = drizzle(serverEnv.DATABASE_URL!);
 
 export { db };
