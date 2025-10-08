@@ -5,7 +5,7 @@
   "scripts": {
     "db:start": "docker-compose up db",
     "db:stop": "docker-compose down",
-    "dev": "concurrently npm \"next dev --turbopack\" \"npm run dev:db\"",
+    "dev": "concurrently \"next dev --turbopack\" \"npm run db:start\"",
     "build": "next build --turbopack",
     "start": "next start",
     "lint": "eslint",
@@ -15,6 +15,7 @@
     "db:studio": "npx drizzle-kit studio"
   },
   "dependencies": {
+    "@matthew-hre/env": "^0.3.0",
     "@monaco-editor/react": "^4.7.0",
     "@radix-ui/react-dropdown-menu": "^2.1.16",
     "@radix-ui/react-slot": "^1.2.3",
