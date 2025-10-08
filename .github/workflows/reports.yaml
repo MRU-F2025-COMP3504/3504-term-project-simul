@@ -1,0 +1,35 @@
+name: Weekly Reports
+
+on:
+  schedule:
+    # fridays at around midnight
+    - cron: "59 6 * * 6"
+  workflow_dispatch:
+
+jobs:
+  create-issue:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Create weekly report issue
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const assignees = [
+              "bryan-2006",
+              "matthew-hre",
+              "Ademo277",
+              "aparm539",
+              "Ezzidean"
+            ]
+            const today = new Date().toISOString().split('T')[0];
+
+            for (const user of assignees) {
+              await github.rest.issues.create({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                title: `Weekly Report (${today}) - ${user}`,
+                body: `Make sure to add your contributions to this week's report:\n\n[Google Drive Link](https://drive.google.com/drive/folders/11cd4hWy62AM1cJtWnPCh7WxiPASAIGpe?usp=drive_link)`,
+                assignees: [user],
+                labels: ['coursework']
+              })
+            }
