@@ -4513,7 +4513,7 @@ snapshots:
   '@matthew-hre/env@0.3.0':
     dependencies:
       picocolors: 1.1.1
-      zod: 4.1.11
+      zod: 4.1.12
 
   '@monaco-editor/loader@1.5.0':
     dependencies:
