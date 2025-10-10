@@ -1,6 +1,7 @@
 import { betterAuth } from "better-auth";
 import { drizzleAdapter } from "better-auth/adapters/drizzle";
 import { nextCookies } from "better-auth/next-js";
+import { createAuthClient } from "better-auth/react";
 import { v4 as uuidv4 } from "uuid";
 
 import { db } from "./db";
@@ -20,10 +21,13 @@ export const auth = betterAuth({
       clientSecret: serverEnv.GITHUB_SECRET,
     },
   },
+  // We want to handle our own IDs, as we like UUIDs over Serials
   advanced: {
     database: {
       generateId: () => uuidv4(),
     },
   },
   plugins: [nextCookies()],
-});
+}); // make sure to import from better-auth/react
+
+export const authClient = createAuthClient();

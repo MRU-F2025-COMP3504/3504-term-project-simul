@@ -1,4 +1,4 @@
-import SignoutButton from "~/components/signout-button";
+import SignoutButton from "~/components/auth/signout-button";
 
 export default async function Dashboard() {
   return (
