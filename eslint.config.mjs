@@ -16,7 +16,7 @@ export default antfu(
     // Known issue with react-refresh/only-export-components and shadcn.
     // see https://github.com/shadcn-ui/ui/issues/7736 and
     // https://github.com/ArnaudBarre/eslint-plugin-react-refresh/issues/84#issuecomment-3076117181
-    ignores: ["**/migrations/*", "next-env.d.ts", "**/components/ui/*"],
+    ignores: ["**/migrations/*", "next-env.d.ts", "**/components/ui/*", "**/reports/*.md", "**/docs/*.md"],
   },
   {
     plugins: {
