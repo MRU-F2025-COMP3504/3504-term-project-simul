@@ -14,6 +14,8 @@
 
 #### Team Plans & Goals for Next Week
 
+#### Monday Meeting Agenda
+
 ## Individual Reporting
 
 <!-- Copy this and add your own report -->
