@@ -11,6 +11,12 @@ const envSchema = {
 
     POSTGRES_USER: z.string().min(1, { message: "POSTGRES_USER is required" }),
     POSTGRES_PASSWORD: z.string().min(1, { message: "POSTGRES_PASSWORD is required" }),
+
+    BETTER_AUTH_SECRET: z.string().min(1, { message: "BETTER_AUTH_SECRET is required" }),
+    BETTER_AUTH_URL: z.url().min(1, { message: "BETTER_AUTH_URL is required" }),
+
+    GITHUB_CLIENT_ID: z.string().min(1, { message: "GITHUB_CLIENT_ID is required" }),
+    GITHUB_SECRET: z.string().min(1, { message: "GITHUB_SECRET is required" }),
   }),
   client: z.object({}),
 };
