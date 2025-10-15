@@ -250,22 +250,32 @@ export async function GET() {
 
 ### Middleware Protection
 
-Our middleware automatically protects certain routes. Currently, it protects `/dashboard`:
+Middleware provides an optimistic early check (a convenient, global filter) but it is not a full substitute for route/page-level enforcement. Use middleware to catch obvious unauthenticated requests early and reduce server work, but always enforce auth inside the page or API route to guarantee protection.
+
+Example middleware matcher (runs the check for listed routes):
 
 ```typescript
 // src/middleware.ts
 export const config = {
-  matcher: ["/dashboard"], // Add more protected routes here
+  matcher: ["/dashboard"], // middleware runs for these routes
 };
 ```
 
-To protect additional routes, add them to the `matcher` array:
+Always perform the authoritative check inside the route or page (server-side) — e.g. use auth.api.getSession and redirect or return 401 if missing:
 
-```typescript
-export const config = {
-  matcher: ["/dashboard", "/profile", "/settings"],
-};
+```tsx
+import { headers } from "next/headers";
+import { redirect } from "next/navigation";
+import { auth } from "~/lib/auth";
+
+export default async function ProtectedPage() {
+  const session = await auth.api.getSession({ headers: await headers() });
+  if (!session) redirect("/"); // definitive protection
+  return <div>Protected content</div>;
+}
 ```
+
+Keep middleware for broad, optimistic filtering; put final access control in the route/page or API handler.
 
 ### Page-Level Protection
 
