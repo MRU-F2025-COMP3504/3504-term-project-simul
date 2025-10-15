@@ -32,8 +32,7 @@ function CodeEditor() {
       // Need to mount for autofocus & I think for some extra features in future
       onMount={onMount}
 
-      // Temporarily hardcoded values for now
-      height="30vh"
+      height="100%"
       defaultLanguage="javascript"
       defaultValue="// Write your code here"
       theme={theme === "dark" ? "vs-dark" : "vs-light"}
