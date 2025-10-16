@@ -1,4 +1,4 @@
-import CodePlaybackDemo from "~/components/code-playback-demo";
+import CodePlaybackDemo from "~/components/playback/code-playback-demo";
 
 export default function ProblemPage() {
   return (
