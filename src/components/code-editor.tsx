@@ -1,47 +1,53 @@
-"use client";
+import type { Transaction } from "@codemirror/state";
 
-import type * as monaco from "monaco-editor"; // to replace 'any' types in editorRef & onMount init
+import { javascript } from "@codemirror/lang-javascript";
+import { EditorState } from "@codemirror/state";
+import { useCodeMirror } from "@uiw/react-codemirror";
+import { useEffect, useRef } from "react";
 
-import { Editor } from "@monaco-editor/react";
-import { useTheme } from "next-themes";
-import { useRef, useState } from "react";
+import { Button } from "~/components/ui/button";
 
-function CodeEditor() {
-  /*
-    Still getting used to TS but excluding "| null" works.
-    Copilot suggested adding it for extra type safety since editorRef is null before mounting.
-  */
-  const editorRef = useRef<monaco.editor.IStandaloneCodeEditor | null>(null);
-  const [_code, setCode] = useState<string>("");
-  const { theme } = useTheme();
+const history: Transaction[] = [];
+function recordChanges(tr: Transaction) {
+  history.push(tr);
+}
+export default function CodeEditor(_props: { handleClear: () => void; handleClick: () => void }) {
+  const editor = useRef<HTMLDivElement>(null);
 
-  const onMount = (editor: monaco.editor.IStandaloneCodeEditor) => {
-    editorRef.current = editor;
-    editor.focus();
-  };
+  const { view, setContainer } = useCodeMirror({
+    container: editor.current,
+    extensions: [
+      javascript(),
+      EditorState.changeFilter.of((tr: Transaction) => {
+        recordChanges(tr);
+        return true;
+      }),
+    ],
+    basicSetup: {
+      lineNumbers: false,
+    },
+  });
 
+  function handleClick() {
+    if (history.length > 0) {
+      view?.dispatch(history);
+    }
+  }
+  function handleClear() {
+    history.length = 0;
+    view?.setState(EditorState.create({ extensions: [javascript()] }));
+  }
+  useEffect(() => {
+    if (editor.current) {
+      setContainer(editor.current);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [editor.current]);
   return (
-    <Editor
-      // No need for mini map in a small editor like ours; just clutter
-      options={{
-        minimap: {
-          enabled: false,
-        },
-      }}
-
-      // Need to mount for autofocus & I think for some extra features in future
-      onMount={onMount}
-
-      // Temporarily hardcoded values for now
-      height="30vh"
-      defaultLanguage="javascript"
-      defaultValue="// Write your code here"
-      theme={theme === "dark" ? "vs-dark" : "vs-light"}
-
-      // State management
-      onChange={value => setCode(value || "")}
-    />
+    <>
+      <Button onClick={handleClear}> Clear </Button>
+      <Button onClick={handleClick}>Run</Button>
+      <div ref={editor} />
+    </>
   );
 }
-
-export default CodeEditor;

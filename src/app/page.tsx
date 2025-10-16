@@ -3,6 +3,7 @@
 import { useState } from "react";
 
 import CodeEditor from "~/components/code-editor";
+import PlaybackEngine from "~/components/playback/playback-engine";
 import { ThemeToggle } from "~/components/theme-toggle";
 import { Button } from "~/components/ui/button";
 
@@ -18,7 +19,9 @@ export default function Home() {
         message={message}
         setMessage={setMessage}
       />
-      <CodeEditor />
+      <PlaybackEngine>
+        <CodeEditor handleClear={handleClear} handleClick={handleClick} />
+      </PlaybackEngine>
     </div>
   );
 }
