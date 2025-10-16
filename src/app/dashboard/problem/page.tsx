@@ -1,20 +1,12 @@
-import CodeEditor from "~/components/code-editor";
+import CodePlaybackDemo from "~/components/code-playback-demo";
 
 export default function ProblemPage() {
   return (
     <div className="flex min-h-screen flex-col">
-      <h1 className="p-4 text-2xl font-bold">Problem</h1>
+      <h1 className="p-4 text-2xl font-bold">Code Playback Demo</h1>
 
       <div className="flex flex-1">
-        <div className="w-1/2">
-          <CodeEditor />
-        </div>
-
-        <div className="w-1/2 p-4">
-          <p>
-            This is where the problem description / test cases would go.
-          </p>
-        </div>
+        <CodePlaybackDemo />
       </div>
     </div>
   );
