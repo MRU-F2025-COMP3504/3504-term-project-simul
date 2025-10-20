@@ -1,0 +1,115 @@
+"use client";
+import type { ChangeSet } from "@codemirror/state";
+
+import { javascript } from "@codemirror/lang-javascript";
+import { EditorState, Transaction } from "@codemirror/state";
+import { useCodeMirror } from "@uiw/react-codemirror";
+import { useEffect, useRef, useState } from "react";
+
+import { Button } from "~/components/ui/button";
+
+export default function CodeEditor() {
+  const [history, setHistory] = useState<Transaction[]>([]);
+  const [recording, setRecording] = useState(false);
+  const [playbackTime, setPlaybackTime] = useState(0);
+  function recordChanges(tr: Transaction) {
+    if (recording) {
+      if ((tr.annotation(Transaction.userEvent))) {
+        setHistory(prev => [...prev, tr]);
+      }
+    }
+  }
+  const editor = useRef<HTMLDivElement>(null);
+
+  const { view, setContainer } = useCodeMirror({
+    container: editor.current,
+    extensions: [
+      javascript(),
+      EditorState.transactionFilter.of((tr: Transaction) => {
+        recordChanges(tr);
+        return tr;
+      }),
+    ],
+    basicSetup: {
+      lineNumbers: true,
+      highlightActiveLine: true,
+      highlightActiveLineGutter: true,
+
+    },
+  });
+  const handleclick = async () => {
+    if (!view)
+      return;
+    // Match the state from the beginning of the recording
+    view.setState(history[0].startState);
+
+    for (let i = 0; i < history.length; i++) {
+      const event: Transaction = history[i];
+      const changes: ChangeSet = event.changes;
+      if (changes) {
+        // We must build a new transaction to apply the changes
+        // When I didn't do this and just dispatched the old transaction,
+        // The editor would not update correctly.
+        // Could just be a skill issue.
+        const tr: Transaction = view.state.update({ changes });
+        view.dispatch(tr);
+      }
+
+      // Check if the event is the last one
+      if (i === history.length - 1) {
+        break;
+      }
+      const nextEvent: Transaction = history[i + 1];
+      // Guard me
+      if (!nextEvent) {
+        break;
+      }
+      // Calculate me
+      const delay = (nextEvent?.annotation(Transaction?.time) ?? 0) - (event?.annotation(Transaction.time) ?? 0);
+
+      // Delay me
+      await new Promise(resolve => setTimeout(resolve, delay));
+    }
+  };
+
+  const calculatePlaybackTime = () => {
+    // compare first and last event timestamps
+    if (history.length < 2) {
+      return 0;
+    }
+    const firstEvent: Transaction = history[0];
+    const lastEvent: Transaction = history[history.length - 1];
+    const playbackTime = (lastEvent.annotation(Transaction.time) ?? 0) - (firstEvent.annotation(Transaction.time) ?? 0);
+    setPlaybackTime(playbackTime);
+  };
+  const toggleRecording = async () => {
+    setRecording(!recording);
+    if (recording === true) {
+      setHistory([]);
+    }
+    else {
+      calculatePlaybackTime();
+    }
+  };
+
+  useEffect(() => {
+    if (editor.current) {
+      setContainer(editor.current);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [editor.current]);
+  return (
+    <>
+      <Button onClick={toggleRecording}>
+        {recording ? "Stop Recording" : "Start Recording"}
+      </Button>
+      <Button onClick={handleclick}> play </Button>
+      <div>
+        Playback time:
+        {playbackTime}
+      </div>
+      <div ref={editor} />
+
+    </>
+  );
+}
