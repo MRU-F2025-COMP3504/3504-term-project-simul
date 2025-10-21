@@ -5,6 +5,7 @@
   nodejs_23,
   pnpm,
   docker-compose,
+  playwright-driver
 }:
 mkShell rec {
   name = "simul";
@@ -18,5 +19,12 @@ mkShell rec {
 
     # required for CI for format checking
     alejandra
+
+    playwright-driver.browsers
   ];
+
+  shellHook = ''
+    export PLAYWRIGHT_BROWSERS_PATH=${playwright-driver.browsers}
+    export PLAYWRIGHT_SKIP_VALIDATE_HOST_REQUIREMENTS=true
+  '';
 }
