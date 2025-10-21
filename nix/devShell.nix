@@ -5,7 +5,7 @@
   nodejs_23,
   pnpm,
   docker-compose,
-  playwright-driver
+  playwright-driver,
 }:
 mkShell rec {
   name = "simul";
