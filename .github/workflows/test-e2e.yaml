@@ -30,8 +30,12 @@ jobs:
             node-modules-${{ runner.os }}-
       - name: pnpm install
         run: nix develop -c pnpm install
+      - name: Build application
+        run: nix develop -c pnpm build
       - name: run e2e tests
         run: nix develop -c pnpm test:e2e
+        env:
+          CI: true
       - name: Upload test report
         if: always()
         uses: actions/upload-artifact@v4
