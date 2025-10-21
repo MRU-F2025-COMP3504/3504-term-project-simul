@@ -44,5 +44,5 @@ pnpm test:e2e:headed
 ## Notes
 
 - E2E tests will automatically start the dev server on port 3000
-- The Playwright test suite includes chromium, firefox, and webkit browsers
+- The Playwright test suite includes chromium and firefox browsers
 - Tests run in parallel by default (except on CI)
