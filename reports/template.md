@@ -1,6 +1,6 @@
 # Weekly Report - 2025-xx-xx
 
-#### Last Week's Team Goals
+### Last Week's Team Goals
 
 #### What We Did
 
