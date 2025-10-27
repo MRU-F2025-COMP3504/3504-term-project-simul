@@ -7,8 +7,13 @@ import { EditorSelection, EditorState, Transaction } from "@codemirror/state";
 import { useCodeMirror } from "@uiw/react-codemirror";
 import { useEffect, useMemo, useRef, useState } from "react";
 
-import type { FileEntry, RecordedEvent, TestResults } from "~/types/coding-session";
+import type { FileEntry, RecordedEvent, TestDetail, TestResults } from "~/types/coding-session";
 
+import { CursorOverlay } from "~/components/coding-session/editor/cursor-overlay";
+import { FileTabs } from "~/components/coding-session/editor/file-tabs";
+import { FileSidebar } from "~/components/coding-session/file-sidebar";
+import { PlaybackControls } from "~/components/coding-session/playback-controls";
+import { ProblemPanel } from "~/components/coding-session/problem/problem-panel";
 import { Button } from "~/components/ui/button";
 import { TWO_SUM_STARTER_CODE, TWO_SUM_TEST_CASES } from "~/lib/coding-session/tests/two-sum";
 import { formatDisplayTime } from "~/lib/coding-session/time";
@@ -372,7 +377,7 @@ export default function CodeEditor() {
     if (!testResults) {
       return null;
     }
-    const map = new Map<string, { passed: boolean; error?: string }>();
+    const map = new Map<string, TestDetail>();
     for (const detail of testResults.details) {
       map.set(detail.name, detail);
     }
@@ -436,10 +441,6 @@ export default function CodeEditor() {
     setTestResults(null);
   };
 
-  const totalTests = TEST_CASES.length;
-  const testsPassed = testResults?.passed ?? 0;
-  const allTestsPassed = Boolean(testResults) && testsPassed === totalTests;
-
   return (
     <div onMouseMove={recordMouseEvents} style={{ display: "flex", flexDirection: "column", height: "100vh" }}>
       {/* Top control bar */}
@@ -462,541 +463,46 @@ export default function CodeEditor() {
       {/* Main content area: sidebar + editor */}
       <div style={{ display: "flex", flex: 1, overflow: "hidden" }}>
         {/* Left sidebar: File explorer */}
-        <div style={{
-          width: "250px",
-          borderRight: "1px solid #e0e0e0",
-          backgroundColor: "#f9f9f9",
-          display: "flex",
-          flexDirection: "column",
-          overflow: "hidden",
-        }}
-        >
-          {/* File explorer header */}
-          <div style={{
-            padding: "1rem",
-            borderBottom: "1px solid #e0e0e0",
-            fontWeight: "bold",
-            fontSize: "0.9rem",
-            color: "#333",
-            textTransform: "uppercase",
-            display: "flex",
-            justifyContent: "space-between",
-            alignItems: "center",
-          }}
-          >
-            <span>Files</span>
-            <Button
-              onClick={() => {
-                const newFileName = `file${files.size + 1}.js`;
-                createNewFile(newFileName);
-                switchFile(newFileName);
-              }}
-              style={{ padding: "0.25rem 0.5rem", fontSize: "0.8rem" }}
-            >
-              +
-            </Button>
-          </div>
-
-          {/* File tree */}
-          <div style={{
-            flex: 1,
-            overflow: "auto",
-            padding: "0.5rem 0",
-          }}
-          >
-            {Array.from(files.keys()).map(fileName => (
-              <div
-                key={fileName}
-                onClick={() => switchFile(fileName)}
-                style={{
-                  padding: "0.75rem 1rem",
-                  cursor: "pointer",
-                  backgroundColor: activeFile === fileName ? "#e3f2fd" : "transparent",
-                  color: activeFile === fileName ? "#007bff" : "#333",
-                  borderLeft: activeFile === fileName ? "3px solid #007bff" : "3px solid transparent",
-                  fontSize: "0.9rem",
-                  userSelect: "none",
-                  transition: "all 0.2s",
-                }}
-                onMouseEnter={(e) => {
-                  if (activeFile !== fileName) {
-                    (e.currentTarget as HTMLDivElement).style.backgroundColor = "#f0f0f0";
-                  }
-                }}
-                onMouseLeave={(e) => {
-                  if (activeFile !== fileName) {
-                    (e.currentTarget as HTMLDivElement).style.backgroundColor = "transparent";
-                  }
-                }}
-              >
-                📄
-                {" "}
-                {fileName}
-              </div>
-            ))}
-          </div>
-        </div>
+        <FileSidebar
+          files={files}
+          activeFile={activeFile}
+          onCreateFile={createNewFile}
+          onSelectFile={switchFile}
+        />
 
         {/* Center: Editor and tabs */}
         <div style={{ display: "flex", flexDirection: "column", flex: 1, overflow: "hidden" }}>
-          {/* File tabs */}
-          <div style={{
-            display: "flex",
-            gap: "0",
-            borderBottom: "1px solid #e0e0e0",
-            backgroundColor: "#fafafa",
-            padding: "0.5rem 0.5rem 0 0.5rem",
-            overflowX: "auto",
-          }}
-          >
-            {Array.from(files.keys()).map(fileName => (
-              <button
-                key={fileName}
-                type="button"
-                onClick={() => switchFile(fileName)}
-                style={{
-                  padding: "0.5rem 1rem",
-                  backgroundColor: activeFile === fileName ? "white" : "#f0f0f0",
-                  color: "#333",
-                  border: activeFile === fileName ? "1px solid #e0e0e0" : "1px solid #d0d0d0",
-                  borderBottom: activeFile === fileName ? "none" : "1px solid #d0d0d0",
-                  borderRadius: "4px 4px 0 0",
-                  cursor: "pointer",
-                  fontSize: "0.9rem",
-                  transition: "all 0.2s",
-                  whiteSpace: "nowrap",
-                }}
-                onMouseEnter={(e) => {
-                  (e.currentTarget as HTMLButtonElement).style.backgroundColor = "#e8e8e8";
-                }}
-                onMouseLeave={(e) => {
-                  (e.currentTarget as HTMLButtonElement).style.backgroundColor = activeFile === fileName ? "white" : "#f0f0f0";
-                }}
-              >
-                {fileName}
-              </button>
-            ))}
-          </div>
+          <FileTabs
+            files={files}
+            activeFile={activeFile}
+            onSelectFile={switchFile}
+          />
 
           {/* Editor container: relative so we can position the playback cursor over it */}
           <div ref={editor} style={{ position: "relative", flex: 1, overflow: "hidden" }}>
-            {/* Cursor overlay */}
-            <div
-              ref={cursorRef}
-              style={{
-                position: "absolute",
-                top: 0,
-                left: 0,
-                width: 10,
-                height: 10,
-                background: "rgba(0,120,212,0.9)",
-                borderRadius: "50%",
-                transform: "translate(-50%, -50%)",
-                display: "none",
-                pointerEvents: "none",
-                zIndex: 2000,
-              }}
-            />
+            <CursorOverlay cursorRef={cursorRef} />
           </div>
         </div>
 
-        {/* Right side: Problem panel */}
-        <div style={{
-          width: "300px",
-          borderLeft: "1px solid #e0e0e0",
-          backgroundColor: "#fafafa",
-          display: "flex",
-          flexDirection: "column",
-          overflow: "hidden",
-        }}
-        >
-          {/* Problem header */}
-          <div style={{
-            padding: "1rem",
-            borderBottom: "1px solid #e0e0e0",
-            fontWeight: "bold",
-            fontSize: "0.9rem",
-            color: "#333",
-            textTransform: "uppercase",
-          }}
-          >
-            Problem
-          </div>
-
-          {/* Problem content */}
-          <div style={{
-            flex: 1,
-            overflow: "auto",
-            padding: "1rem",
-            fontSize: "0.85rem",
-            lineHeight: "1.6",
-          }}
-          >
-            {/* Actions and guidance */}
-            <div style={{ display: "flex", flexDirection: "column", gap: "1.25rem", marginBottom: "1.5rem" }}>
-              <div style={{ display: "flex", gap: "0.5rem", flexWrap: "wrap" }}>
-                <Button
-                  onClick={handleSubmit}
-                  disabled={isSubmitting}
-                  style={{
-                    flex: "1 1 160px",
-                    padding: "0.75rem",
-                    backgroundColor: isSubmitting ? "#ccc" : "#28a745",
-                    color: "white",
-                    border: "none",
-                    borderRadius: "4px",
-                    cursor: isSubmitting ? "not-allowed" : "pointer",
-                    fontSize: "0.9rem",
-                    fontWeight: "bold",
-                    transition: "background-color 0.2s",
-                  }}
-                >
-                  {isSubmitting ? "Submitting..." : "Submit Code"}
-                </Button>
-                <button
-                  type="button"
-                  onClick={resetToStarter}
-                  style={{
-                    flex: "1 1 140px",
-                    padding: "0.75rem",
-                    backgroundColor: "white",
-                    color: "#333",
-                    border: "1px solid #d0d0d0",
-                    borderRadius: "4px",
-                    cursor: "pointer",
-                    fontSize: "0.85rem",
-                    fontWeight: 500,
-                    transition: "border-color 0.2s, color 0.2s, background-color 0.2s",
-                  }}
-                  onMouseEnter={(e) => {
-                    (e.currentTarget as HTMLButtonElement).style.borderColor = "#007bff";
-                    (e.currentTarget as HTMLButtonElement).style.color = "#007bff";
-                  }}
-                  onMouseLeave={(e) => {
-                    (e.currentTarget as HTMLButtonElement).style.borderColor = "#d0d0d0";
-                    (e.currentTarget as HTMLButtonElement).style.color = "#333";
-                  }}
-                >
-                  Reset to Starter
-                </button>
-              </div>
-
-              <div style={{
-                backgroundColor: "#fff8e1",
-                border: "1px solid #ffe0a3",
-                borderRadius: "4px",
-                padding: "0.85rem",
-                color: "#8c6d1f",
-              }}
-              >
-                <strong style={{ display: "block", marginBottom: "0.35rem" }}>Workflow</strong>
-                <ol style={{ margin: 0, paddingLeft: "1.25rem", fontSize: "0.8rem" }}>
-                  <li style={{ marginBottom: "0.35rem" }}>Review the prompt and note the starter function signature.</li>
-                  <li style={{ marginBottom: "0.35rem" }}>Write your solution in the editor; edits clear prior results automatically.</li>
-                  <li>Submit to run the test suite and inspect the per-case feedback below.</li>
-                </ol>
-              </div>
-            </div>
-
-            {/* Test summary */}
-            <div style={{
-              marginBottom: "1.5rem",
-              padding: "1rem",
-              borderRadius: "4px",
-              backgroundColor: allTestsPassed ? "#d4edda" : testResults ? "#f8d7da" : "#eef2ff",
-              border: `1px solid ${allTestsPassed ? "#c3e6cb" : testResults ? "#f5c6cb" : "#d6dcff"}`,
-              color: allTestsPassed ? "#155724" : testResults ? "#721c24" : "#2f3a63",
-            }}
-            >
-              <div style={{ fontWeight: "bold", marginBottom: "0.5rem" }}>
-                {testResults ? (allTestsPassed ? "✓ All Tests Passed" : "✗ Tests Failed") : "Automated Feedback"}
-              </div>
-              <div style={{ fontSize: "0.8rem" }}>
-                {testsPassed}
-                {" / "}
-                {totalTests}
-                {" "}
-                tests passed
-              </div>
-              {!testResults && (
-                <div style={{ fontSize: "0.75rem", marginTop: "0.5rem" }}>
-                  Submit your code to run all test cases.
-                </div>
-              )}
-            </div>
-
-            {/* Test suite details */}
-            <div style={{ marginBottom: "1.5rem" }}>
-              <strong style={{ display: "block", marginBottom: "0.5rem", color: "#333" }}>Test Suite</strong>
-              <div style={{ display: "flex", flexDirection: "column", gap: "0.75rem" }}>
-                {TEST_CASES.map((testCase) => {
-                  const detail = testStatusMap?.get(testCase.name);
-                  const isPending = !testResults;
-                  const isPassed = detail?.passed;
-                  const statusLabel = isPending ? "Pending" : isPassed ? "Passed" : "Failed";
-                  const badgeColor = isPending ? "#555" : isPassed ? "#155724" : "#b0413e";
-                  const badgeBackground = isPending ? "#e0e0e0" : isPassed ? "#d4edda" : "#f8d7da";
-                  const cardBorder = isPending ? "#e0e0e0" : isPassed ? "#c3e6cb" : "#f5c6cb";
-                  const cardBackground = isPending ? "white" : isPassed ? "#f9fffa" : "#fff5f5";
-
-                  return (
-                    <div
-                      key={testCase.name}
-                      style={{
-                        border: `1px solid ${cardBorder}`,
-                        borderRadius: "4px",
-                        padding: "0.75rem",
-                        backgroundColor: cardBackground,
-                      }}
-                    >
-                      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: "0.5rem" }}>
-                        <span style={{ fontWeight: 600, color: "#333" }}>{testCase.name}</span>
-                        <span style={{
-                          fontSize: "0.7rem",
-                          padding: "0.1rem 0.4rem",
-                          borderRadius: "999px",
-                          backgroundColor: badgeBackground,
-                          color: badgeColor,
-                          textTransform: "uppercase",
-                          letterSpacing: "0.5px",
-                        }}
-                        >
-                          {statusLabel}
-                        </span>
-                      </div>
-                      <div style={{ fontSize: "0.75rem", color: "#555", marginTop: "0.4rem" }}>
-                        {testCase.description}
-                      </div>
-                      <div style={{ fontSize: "0.75rem", marginTop: "0.4rem", fontFamily: "monospace", color: "#666" }}>
-                        nums =
-                        {" "}
-                        {JSON.stringify(testCase.input.nums)}
-                        , target =
-                        {" "}
-                        {testCase.input.target}
-                      </div>
-                      {detail && detail.error && (
-                        <div style={{ fontSize: "0.75rem", marginTop: "0.45rem", color: "#b0413e" }}>
-                          {detail.error}
-                        </div>
-                      )}
-                    </div>
-                  );
-                })}
-              </div>
-            </div>
-
-            {/* Problem title */}
-            <h3 style={{ margin: "0 0 0.75rem 0", color: "#007bff", fontSize: "1rem" }}>
-              Two Sum
-            </h3>
-
-            {/* Problem description */}
-            <div style={{ marginBottom: "1rem" }}>
-              <strong>Description:</strong>
-              <p style={{ margin: "0.5rem 0", color: "#555" }}>
-                Given an array of integers
-                {" "}
-                <code>nums</code>
-                {" "}
-                and an integer
-                {" "}
-                <code>target</code>
-                , return the indices of the two numbers that add up to the target.
-              </p>
-              <p style={{ margin: "0.5rem 0", color: "#555" }}>
-                You may assume that each input has exactly one solution, and you may not use the same element twice.
-              </p>
-              <p style={{ margin: "0.5rem 0", color: "#555" }}>
-                You can return the answer in any order.
-              </p>
-            </div>
-
-            {/* Example 1 */}
-            <div style={{ marginBottom: "1rem", padding: "0.75rem", backgroundColor: "#f9f9f9", borderRadius: "4px" }}>
-              <strong style={{ color: "#333" }}>Example 1:</strong>
-              <div style={{ margin: "0.5rem 0", fontFamily: "monospace", color: "#555" }}>
-                <div>Input: nums = [2,7,11,15], target = 9</div>
-                <div>Output: [0,1]</div>
-                <div style={{ fontSize: "0.75rem", color: "#999", marginTop: "0.25rem" }}>
-                  Explanation: nums[0] + nums[1] = 2 + 7 = 9
-                </div>
-              </div>
-            </div>
-
-            {/* Example 2 */}
-            <div style={{ marginBottom: "1rem", padding: "0.75rem", backgroundColor: "#f9f9f9", borderRadius: "4px" }}>
-              <strong style={{ color: "#333" }}>Example 2:</strong>
-              <div style={{ margin: "0.5rem 0", fontFamily: "monospace", color: "#555" }}>
-                <div>Input: nums = [3,2,4], target = 6</div>
-                <div>Output: [1,2]</div>
-                <div style={{ fontSize: "0.75rem", color: "#999", marginTop: "0.25rem" }}>
-                  Explanation: nums[1] + nums[2] = 2 + 4 = 6
-                </div>
-              </div>
-            </div>
-
-            {/* Example 3 */}
-            <div style={{ marginBottom: "1rem", padding: "0.75rem", backgroundColor: "#f9f9f9", borderRadius: "4px" }}>
-              <strong style={{ color: "#333" }}>Example 3:</strong>
-              <div style={{ margin: "0.5rem 0", fontFamily: "monospace", color: "#555" }}>
-                <div>Input: nums = [3,3], target = 6</div>
-                <div>Output: [0,1]</div>
-              </div>
-            </div>
-
-            {/* Constraints */}
-            <div style={{ marginTop: "1.5rem", paddingTop: "1rem", borderTop: "1px solid #e0e0e0" }}>
-              <strong style={{ color: "#333" }}>Constraints:</strong>
-              <ul style={{ margin: "0.5rem 0 0 1.25rem", paddingLeft: 0, color: "#555" }}>
-                <li>2 ≤ nums.length ≤ 10⁴</li>
-                <li>-10⁹ ≤ nums[i] ≤ 10⁹</li>
-                <li>-10⁹ ≤ target ≤ 10⁹</li>
-                <li>Only one valid answer exists.</li>
-              </ul>
-            </div>
-
-          </div>
-        </div>
-      </div>
-
-      {/* Video-style playback bar at bottom */}
-      <div style={{
-        borderTop: "1px solid #e0e0e0",
-        backgroundColor: "#2d2d2d",
-        padding: "0.75rem 1rem",
-        display: "flex",
-        alignItems: "center",
-        gap: "0.75rem",
-      }}
-      >
-        {/* Play/Pause button */}
-        <button
-          type="button"
-          onClick={togglePlayback}
-          style={{
-            width: "32px",
-            height: "32px",
-            borderRadius: "4px",
-            border: "none",
-            backgroundColor: isPlaying ? "#ff6b6b" : "#007bff",
-            color: "white",
-            cursor: "pointer",
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            fontSize: "16px",
-            transition: "background-color 0.2s",
-          }}
-          onMouseEnter={(e) => {
-            (e.currentTarget as HTMLButtonElement).style.backgroundColor = isPlaying ? "#ff5252" : "#0056b3";
-          }}
-          onMouseLeave={(e) => {
-            (e.currentTarget as HTMLButtonElement).style.backgroundColor = isPlaying ? "#ff6b6b" : "#007bff";
-          }}
-          title={isPlaying ? "Pause" : "Play"}
-        >
-          {isPlaying ? "⏸" : "▶"}
-        </button>
-
-        {/* Current time / Total time */}
-        <div style={{ color: "#fff", fontSize: "0.85rem", minWidth: "80px" }}>
-          {formatDisplayTime(recordedEvents.length > 0 ? playbackTime : 0)}
-          {" / "}
-          {formatDisplayTime(recordedEvents.length > 0 ? Math.max(...recordedEvents.map(e => e.time), 0) : 0)}
-        </div>
-
-        {/* Progress bar */}
-        <input
-          type="range"
-          min="0"
-          max={recordedEvents.length > 0 ? Math.max(...recordedEvents.map(e => e.time), 1) : 0}
-          value={playbackTime}
-          onChange={(e) => {
-            if (!isPlaying) {
-              setPlaybackTime(Number(e.target.value));
-            }
-          }}
-          style={{
-            flex: 1,
-            height: "6px",
-            borderRadius: "3px",
-            border: "none",
-            background: `linear-gradient(to right, #007bff 0%, #007bff ${recordedEvents.length > 0 ? (playbackTime / Math.max(...recordedEvents.map(e => e.time), 1)) * 100 : 0}%, #555 ${recordedEvents.length > 0 ? (playbackTime / Math.max(...recordedEvents.map(e => e.time), 1)) * 100 : 0}%, #555 100%)`,
-            outline: "none",
-            cursor: recordedEvents.length > 0 ? "pointer" : "default",
-          }}
+        <ProblemPanel
+          testResults={testResults}
+          testCases={TEST_CASES}
+          testStatusMap={testStatusMap}
+          isSubmitting={isSubmitting}
+          onSubmit={handleSubmit}
+          onReset={resetToStarter}
         />
-
-        {/* Recording indicator */}
-        <div style={{ marginLeft: "auto", display: "flex", alignItems: "center", gap: "0.5rem" }}>
-          {recording && (
-            <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
-              <div style={{
-                width: "10px",
-                height: "10px",
-                borderRadius: "50%",
-                backgroundColor: "#ff4444",
-                animation: "pulse 1s infinite",
-              }}
-              />
-              <span style={{ color: "#ff4444", fontSize: "0.85rem" }}>Recording</span>
-            </div>
-          )}
-        </div>
       </div>
 
-      {/* CSS for pulse animation */}
-      <style>
-        {`
-        @keyframes pulse {
-          0% {
-            opacity: 1;
-          }
-          50% {
-            opacity: 0.5;
-          }
-          100% {
-            opacity: 1;
-          }
-        }
-        input[type="range"] {
-          -webkit-appearance: none;
-          appearance: none;
-          width: 100%;
-          background: transparent;
-        }
-        input[type="range"]::-webkit-slider-thumb {
-          -webkit-appearance: none;
-          appearance: none;
-          width: 14px;
-          height: 14px;
-          border-radius: 50%;
-          background: #007bff;
-          cursor: pointer;
-          box-shadow: 0 0 4px rgba(0, 123, 255, 0.5);
-        }
-        input[type="range"]::-moz-range-thumb {
-          width: 14px;
-          height: 14px;
-          border-radius: 50%;
-          background: #007bff;
-          cursor: pointer;
-          border: none;
-          box-shadow: 0 0 4px rgba(0, 123, 255, 0.5);
-        }
-        input[type="range"]::-webkit-slider-runnable-track {
-          width: 100%;
-          height: 6px;
-          background: #555;
-          border-radius: 3px;
-        }
-        input[type="range"]::-moz-range-track {
-          background: transparent;
-          border: none;
-        }
-      `}
-      </style>
+      <PlaybackControls
+        playbackTime={playbackTime}
+        isPlaying={isPlaying}
+        onSeek={time => setPlaybackTime(time)}
+        onPlay={togglePlayback}
+        onPause={togglePlayback}
+        recordedEvents={recordedEvents}
+        recording={recording}
+      />
     </div>
   );
 }
