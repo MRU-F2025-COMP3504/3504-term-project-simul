@@ -12,10 +12,19 @@ export function TestSummary({ testResults, testsPassed, totalTests, allTestsPass
         mb-6 rounded border p-4
         ${
     allTestsPassed
-      ? "border-green-300 bg-green-50 text-green-900"
+      ? `
+        border-green-300 bg-green-50 text-green-900
+        dark:border-green-700 dark:bg-green-900 dark:text-green-100
+      `
       : testResults
-        ? "border-red-300 bg-red-50 text-red-900"
-        : "border-indigo-200 bg-indigo-50 text-indigo-900"
+        ? `
+          border-red-300 bg-red-50 text-red-900
+          dark:border-red-700 dark:bg-red-900 dark:text-red-100
+        `
+        : `
+          border-indigo-200 bg-indigo-50 text-indigo-900
+          dark:border-indigo-700 dark:bg-indigo-900 dark:text-indigo-100
+        `
     }
       `}
     >

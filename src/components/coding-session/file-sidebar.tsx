@@ -1,3 +1,5 @@
+import { Plus } from "lucide-react";
+
 import type { FileEntry } from "~/types/coding-session";
 
 import { Button } from "~/components/ui/button";
@@ -18,21 +20,21 @@ export function FileSidebar({ files, activeFile, onCreateFile, onSelectFile }: F
 
   return (
     <div className={`
-      flex w-[250px] flex-col overflow-hidden border-r bg-neutral-50
+      bg-background flex w-[250px] flex-col overflow-hidden border-r
     `}
     >
       {/* File explorer header */}
       <div className={`
-        flex items-center justify-between border-b p-4 text-sm font-bold
-        text-neutral-700 uppercase
+        text-primary text-md flex items-center justify-between border-b p-4
+        font-bold
       `}
       >
         <span>Files</span>
         <Button
           onClick={handleCreateNewFile}
-          className="px-2 py-1 text-xs"
+          variant="ghost"
         >
-          +
+          <Plus className="h-4 w-4" />
         </Button>
       </div>
 
@@ -46,10 +48,10 @@ export function FileSidebar({ files, activeFile, onCreateFile, onSelectFile }: F
               cursor-pointer border-l-4 px-4 py-3 text-sm transition-all
               select-none
               ${activeFile === fileName
-            ? "border-l-blue-600 bg-blue-50 text-blue-600"
+            ? `border-l-muted-foreground bg-muted`
             : `
+              hover:bg-muted
               border-l-transparent
-              hover:bg-neutral-100
             `}
             `}
           >

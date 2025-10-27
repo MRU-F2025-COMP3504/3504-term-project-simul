@@ -9,17 +9,17 @@ export type TestListProps = {
 export function TestList({ testCases, testStatusMap, testResults }: TestListProps) {
   return (
     <div className="mb-6">
-      <strong className="mb-2 block text-neutral-700">Test Suite</strong>
+      <strong className="text-primary mb-2 block">Test Suite</strong>
       <div className="flex flex-col gap-3">
         {testCases.map((testCase) => {
           const detail = testStatusMap?.get(testCase.name);
           const isPending = !testResults;
           const isPassed = detail?.passed;
           const statusLabel = isPending ? "Pending" : isPassed ? "Passed" : "Failed";
-          const badgeColor = isPending ? "text-neutral-700" : isPassed ? "text-green-900" : "text-red-900";
-          const badgeBackground = isPending ? "bg-neutral-200" : isPassed ? "bg-green-100" : "bg-red-100";
-          const cardBorder = isPending ? "border-neutral-200" : isPassed ? "border-green-200" : "border-red-200";
-          const cardBackground = isPending ? "bg-white" : isPassed ? "bg-green-50/50" : "bg-red-50/50";
+          const badgeColor = isPending ? "text-primary" : isPassed ? "text-green-900 dark:text-green-100" : "text-red-900 dark:text-red-100";
+          const badgeBackground = isPending ? "bg-muted" : isPassed ? "bg-green-100 dark:bg-green-900" : "bg-red-100 dark:bg-red-900";
+          const cardBorder = isPending ? "border-muted" : isPassed ? "border-green-200 dark:border-green-900" : "border-red-200 dark:border-red-900";
+          const cardBackground = isPending ? "bg-card" : isPassed ? "bg-green-50/50 dark:bg-green-900" : "bg-red-50/50 dark:bg-red-900";
 
           return (
             <div
@@ -31,7 +31,7 @@ export function TestList({ testCases, testStatusMap, testResults }: TestListProp
               `}
             >
               <div className="flex items-center justify-between gap-2">
-                <span className="font-semibold text-neutral-700">{testCase.name}</span>
+                <span className="text-primary font-semibold">{testCase.name}</span>
                 <span className={`
                   rounded-full px-2 py-0.5 text-[0.7rem] tracking-wider
                   uppercase
@@ -42,10 +42,10 @@ export function TestList({ testCases, testStatusMap, testResults }: TestListProp
                   {statusLabel}
                 </span>
               </div>
-              <div className="mt-1.5 text-xs text-neutral-600">
+              <div className="text-muted-foreground mt-1.5 text-xs">
                 {testCase.description}
               </div>
-              <div className="mt-1.5 font-mono text-xs text-neutral-600">
+              <div className="text-muted-foreground mt-1.5 font-mono text-xs">
                 nums =
                 {" "}
                 {JSON.stringify(testCase.input.nums)}
@@ -54,7 +54,11 @@ export function TestList({ testCases, testStatusMap, testResults }: TestListProp
                 {testCase.input.target}
               </div>
               {detail && detail.error && (
-                <div className="mt-2 text-xs text-red-800">
+                <div className={`
+                  mt-2 text-xs text-red-800
+                  dark:text-red-200
+                `}
+                >
                   {detail.error}
                 </div>
               )}

@@ -28,11 +28,14 @@ export function ProblemPanel({
 
   return (
     <div className={`
-      flex w-[300px] flex-col overflow-hidden border-l bg-neutral-50
+      bg-background flex w-[300px] flex-col overflow-hidden border-l
     `}
     >
       {/* Problem header */}
-      <div className="border-b p-4 text-sm font-bold text-neutral-700 uppercase">
+      <div className={`
+        text-muted-foreground border-b p-4 text-sm font-bold uppercase
+      `}
+      >
         Problem
       </div>
 
@@ -44,35 +47,24 @@ export function ProblemPanel({
             <Button
               onClick={onSubmit}
               disabled={isSubmitting}
-              className={`
-                flex-[1_1_160px] rounded border-none px-3 py-3 text-sm font-bold
-                transition-colors
-                ${isSubmitting
-      ? `cursor-not-allowed bg-neutral-300 text-neutral-600`
-      : `
-        cursor-pointer bg-green-600 text-white
-        hover:bg-green-700
-      `}
-              `}
+              variant="default"
+              className="w-full"
             >
               {isSubmitting ? "Submitting..." : "Submit Code"}
             </Button>
-            <button
+            <Button
               type="button"
               onClick={onReset}
-              className={`
-                flex-[1_1_140px] cursor-pointer rounded border
-                border-neutral-300 bg-white px-3 py-3 text-[0.85rem] font-medium
-                text-neutral-700 transition-all
-                hover:border-blue-600 hover:text-blue-600
-              `}
+              variant="outline"
+              className="w-full"
             >
               Reset to Starter
-            </button>
+            </Button>
           </div>
 
           <div className={`
             rounded border border-amber-300 bg-amber-50 p-3.5 text-amber-900
+            dark:border-amber-700 dark:bg-amber-900 dark:text-amber-100
           `}
           >
             <strong className="mb-1.5 block">Workflow</strong>
@@ -97,15 +89,13 @@ export function ProblemPanel({
           testResults={testResults}
         />
 
-        {/* Problem title */}
-        <h3 className="mt-0 mb-3 text-base text-blue-600">
+        <h3 className="text-primary mt-0 mb-3 text-base font-semibold">
           Two Sum
         </h3>
 
-        {/* Problem description */}
         <div className="mb-4">
           <strong>Description:</strong>
-          <p className="my-2 text-neutral-600">
+          <p className="text-muted-foreground my-2">
             Given an array of integers
             {" "}
             <code>nums</code>
@@ -115,42 +105,42 @@ export function ProblemPanel({
             <code>target</code>
             , return the indices of the two numbers that add up to the target.
           </p>
-          <p className="my-2 text-neutral-600">
+          <p className="text-muted-foreground my-2">
             You may assume that each input has exactly one solution, and you may not use the same element twice.
           </p>
-          <p className="my-2 text-neutral-600">
+          <p className="text-muted-foreground my-2">
             You can return the answer in any order.
           </p>
         </div>
 
         {/* Example 1 */}
-        <div className="mb-4 rounded bg-neutral-100 p-3">
-          <strong className="text-neutral-700">Example 1:</strong>
-          <div className="my-2 font-mono text-neutral-600">
+        <div className="bg-muted mb-4 rounded p-3">
+          <strong className="text-primary">Example 1:</strong>
+          <div className="text-muted-foreground my-2 font-mono">
             <div>Input: nums = [2,7,11,15], target = 9</div>
             <div>Output: [0,1]</div>
-            <div className="mt-1 text-xs text-neutral-400">
+            <div className="text-muted-foreground mt-1 text-xs">
               Explanation: nums[0] + nums[1] = 2 + 7 = 9
             </div>
           </div>
         </div>
 
         {/* Example 2 */}
-        <div className="mb-4 rounded bg-neutral-100 p-3">
-          <strong className="text-neutral-700">Example 2:</strong>
-          <div className="my-2 font-mono text-neutral-600">
+        <div className="bg-muted mb-4 rounded p-3">
+          <strong className="text-primary">Example 2:</strong>
+          <div className="text-muted-foreground my-2 font-mono">
             <div>Input: nums = [3,2,4], target = 6</div>
             <div>Output: [1,2]</div>
-            <div className="mt-1 text-xs text-neutral-400">
+            <div className="text-muted-foreground mt-1 text-xs">
               Explanation: nums[1] + nums[2] = 2 + 4 = 6
             </div>
           </div>
         </div>
 
         {/* Example 3 */}
-        <div className="mb-4 rounded bg-neutral-100 p-3">
-          <strong className="text-neutral-700">Example 3:</strong>
-          <div className="my-2 font-mono text-neutral-600">
+        <div className="bg-muted mb-4 rounded p-3">
+          <strong className="text-primary">Example 3:</strong>
+          <div className="text-muted-foreground my-2 font-mono">
             <div>Input: nums = [3,3], target = 6</div>
             <div>Output: [0,1]</div>
           </div>
@@ -158,15 +148,14 @@ export function ProblemPanel({
 
         {/* Constraints */}
         <div className="mt-6 border-t pt-4">
-          <strong className="text-neutral-700">Constraints:</strong>
-          <ul className="m-0 mt-2 space-y-0 pl-5 text-neutral-600">
+          <strong className="text-primary">Constraints:</strong>
+          <ul className="text-muted-foreground m-0 mt-2">
             <li>2 ≤ nums.length ≤ 10⁴</li>
             <li>-10⁹ ≤ nums[i] ≤ 10⁹</li>
             <li>-10⁹ ≤ target ≤ 10⁹</li>
             <li>Only one valid answer exists.</li>
           </ul>
         </div>
-
       </div>
     </div>
   );

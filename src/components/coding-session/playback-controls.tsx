@@ -1,6 +1,10 @@
+import { Pause, Play } from "lucide-react";
+
 import type { RecordedEvent } from "~/types/coding-session";
 
 import { formatDisplayTime } from "~/lib/coding-session/time";
+
+import styles from "./playback-controls.module.css";
 
 export type PlaybackControlsProps = {
   isPlaying: boolean;
@@ -41,15 +45,13 @@ export function PlaybackControls({
 
   return (
     <>
-      {/* Video-style playback bar at bottom */}
-      <div className="flex items-center gap-3 border-t bg-neutral-800 px-4 py-3">
-        {/* Play/Pause button */}
+      <div className="bg-muted flex items-center gap-3 border-t px-4 py-3">
         <button
           type="button"
           onClick={handleTogglePlayback}
           className={`
-            flex size-8 cursor-pointer items-center justify-center rounded
-            border-none text-base text-white transition-colors
+            text-primary flex size-8 cursor-pointer items-center justify-center
+            rounded border-none text-base transition-colors
             ${isPlaying
       ? `
         bg-red-500
@@ -62,11 +64,15 @@ export function PlaybackControls({
           `}
           title={isPlaying ? "Pause" : "Play"}
         >
-          {isPlaying ? "⏸" : "▶"}
+          {isPlaying
+            ? <Pause className="fill-white text-white" />
+            : (
+                <Play className="fill-white text-white" />
+              )}
         </button>
 
         {/* Current time / Total time */}
-        <div className="min-w-20 text-[0.85rem] text-white">
+        <div className="text-muted-foreground min-w-20 text-[0.85rem]">
           {formatDisplayTime(recordedEvents.length > 0 ? playbackTime : 0)}
           {" / "}
           {formatDisplayTime(totalTime)}
@@ -80,13 +86,14 @@ export function PlaybackControls({
           value={playbackTime}
           onChange={e => handleSeek(Number(e.target.value))}
           className={`
-            playback-range flex-1
+            ${styles.playbackRange}
+            flex-1
             ${recordedEvents.length > 0
       ? `cursor-pointer`
       : `cursor-default`}
           `}
           style={{
-            background: `linear-gradient(to right, #007bff 0%, #007bff ${progressPercentage}%, #555 ${progressPercentage}%, #555 100%)`,
+            background: `linear-gradient(to right, #007bff 0%, #007bff ${progressPercentage}%, var(--muted-foreground) ${progressPercentage}%, var(--muted-foreground) 100%)`,
           }}
         />
 
@@ -100,49 +107,6 @@ export function PlaybackControls({
           )}
         </div>
       </div>
-
-      {/* CSS for range input styling */}
-      <style>
-        {`
-        input[type="range"].playback-range {
-          -webkit-appearance: none;
-          appearance: none;
-          width: 100%;
-          height: 6px;
-          border-radius: 3px;
-          outline: none;
-        }
-        input[type="range"].playback-range::-webkit-slider-thumb {
-          -webkit-appearance: none;
-          appearance: none;
-          width: 14px;
-          height: 14px;
-          border-radius: 50%;
-          background: #007bff;
-          cursor: pointer;
-          box-shadow: 0 0 4px rgba(0, 123, 255, 0.5);
-        }
-        input[type="range"].playback-range::-moz-range-thumb {
-          width: 14px;
-          height: 14px;
-          border-radius: 50%;
-          background: #007bff;
-          cursor: pointer;
-          border: none;
-          box-shadow: 0 0 4px rgba(0, 123, 255, 0.5);
-        }
-        input[type="range"].playback-range::-webkit-slider-runnable-track {
-          width: 100%;
-          height: 6px;
-          background: #555;
-          border-radius: 3px;
-        }
-        input[type="range"].playback-range::-moz-range-track {
-          background: transparent;
-          border: none;
-        }
-      `}
-      </style>
     </>
   );
 }

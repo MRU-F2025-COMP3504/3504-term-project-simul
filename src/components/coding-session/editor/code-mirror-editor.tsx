@@ -5,6 +5,7 @@ import type { RefObject } from "react";
 import { javascript } from "@codemirror/lang-javascript";
 import { EditorSelection, EditorState, Transaction } from "@codemirror/state";
 import { useCodeMirror } from "@uiw/react-codemirror";
+import { useTheme } from "next-themes";
 import { useEffect, useImperativeHandle, useRef } from "react";
 
 export type CodeMirrorEditorProps = {
@@ -26,8 +27,11 @@ export function CodeMirrorEditor({
 }: CodeMirrorEditorProps) {
   const editorContainerRef = useRef<HTMLDivElement | null>(null);
 
+  const { theme } = useTheme();
+
   const { view, setContainer } = useCodeMirror({
     container: editorContainerRef.current,
+    theme: theme === "dark" ? "dark" : "light",
     extensions: [
       javascript(),
       EditorState.transactionFilter.of((tr: Transaction) => {

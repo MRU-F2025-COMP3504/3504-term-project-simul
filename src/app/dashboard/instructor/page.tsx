@@ -7,12 +7,11 @@ import { useMemo, useRef, useState } from "react";
 
 import type { FileEntry, RecordedEvent, TestDetail, TestResults } from "~/types/coding-session";
 
-import { CodeMirrorEditor } from "~/components/coding-session/editor/code-mirror-editor";
-import { CursorOverlay } from "~/components/coding-session/editor/cursor-overlay";
-import { FileTabs } from "~/components/coding-session/editor/file-tabs";
+import { CodeMirrorEditor, CursorOverlay, FileTabs } from "~/components/coding-session/editor";
 import { FileSidebar } from "~/components/coding-session/file-sidebar";
 import { PlaybackControls } from "~/components/coding-session/playback-controls";
 import { ProblemPanel } from "~/components/coding-session/problem/problem-panel";
+import { ThemeToggle } from "~/components/theme-toggle";
 import { Button } from "~/components/ui/button";
 import { TWO_SUM_STARTER_CODE, TWO_SUM_TEST_CASES } from "~/lib/coding-session/tests/two-sum";
 import { formatDisplayTime } from "~/lib/coding-session/time";
@@ -407,21 +406,29 @@ export default function CodeEditor() {
   };
 
   return (
-    <div onMouseMove={recordMouseEvents} style={{ display: "flex", flexDirection: "column", height: "100vh" }}>
-      {/* Top control bar */}
-      <div style={{ padding: "1rem", borderBottom: "1px solid #e0e0e0", backgroundColor: "#f5f5f5" }}>
-        <div style={{ display: "flex", gap: "0.5rem", alignItems: "center" }}>
+    <div
+      onMouseMove={recordMouseEvents}
+      className="flex h-screen flex-col"
+    >
+      <div
+        className="bg-background border-b p-4"
+      >
+        <div className="flex items-center gap-2">
           <Button onClick={toggleRecording}>
             {recording ? "Stop Recording" : "Start Recording"}
           </Button>
           <Button onClick={togglePlayback}>
             {isPlaying ? "Stop" : "Play"}
           </Button>
-          <div style={{ marginLeft: "1rem", fontSize: "0.9rem", color: "#666" }}>
+          <div className="text-muted-foreground ml-4 text-xs">
             Playback time:
             {" "}
             {formatDisplayTime(playbackTime)}
           </div>
+          <div className="ml-auto">
+            <ThemeToggle />
+          </div>
+
         </div>
       </div>
 

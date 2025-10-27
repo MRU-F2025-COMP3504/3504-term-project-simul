@@ -9,7 +9,7 @@ export type FileTabsProps = {
 export function FileTabs({ files, activeFile, onSelectFile }: FileTabsProps) {
   return (
     <div className={`
-      flex gap-0 overflow-x-auto border-b bg-neutral-50 pt-2 pr-2 pb-0 pl-2
+      bg-background flex gap-0 overflow-x-auto border-b pt-2 pr-2 pb-0 pl-2
     `}
     >
       {Array.from(files.keys()).map(fileName => (
@@ -21,10 +21,10 @@ export function FileTabs({ files, activeFile, onSelectFile }: FileTabsProps) {
             cursor-pointer rounded-t border px-4 py-2 text-sm whitespace-nowrap
             transition-all
             ${activeFile === fileName
-          ? "border-neutral-200 border-b-transparent bg-white"
+          ? "border-muted bg-muted border-b-transparent"
           : `
-            border-neutral-300 bg-neutral-100
-            hover:bg-neutral-200
+            bg-background
+            hover:bg-muted
           `}
           `}
         >
