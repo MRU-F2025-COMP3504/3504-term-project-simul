@@ -2,13 +2,12 @@
 import type { ChangeSet, EditorState as CMEditorState } from "@codemirror/state";
 import type { MouseEvent } from "react";
 
-import { javascript } from "@codemirror/lang-javascript";
-import { EditorSelection, EditorState, Transaction } from "@codemirror/state";
-import { useCodeMirror } from "@uiw/react-codemirror";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { Transaction } from "@codemirror/state";
+import { useMemo, useRef, useState } from "react";
 
 import type { FileEntry, RecordedEvent, TestDetail, TestResults } from "~/types/coding-session";
 
+import { CodeMirrorEditor } from "~/components/coding-session/editor/code-mirror-editor";
 import { CursorOverlay } from "~/components/coding-session/editor/cursor-overlay";
 import { FileTabs } from "~/components/coding-session/editor/file-tabs";
 import { FileSidebar } from "~/components/coding-session/file-sidebar";
@@ -38,6 +37,11 @@ export default function CodeEditor() {
   const editor = useRef<HTMLDivElement | null>(null);
   const cursorRef = useRef<HTMLDivElement | null>(null);
   const playingRef = useRef(false);
+  const editorApiRef = useRef<{
+    setDoc: (content: string) => void;
+    setSelection: (selection: { anchor: number; head: number }) => void;
+    getState: () => CMEditorState | null;
+  } | null>(null);
 
   function recordChanges(tr: Transaction) {
     if (!recording)
@@ -56,31 +60,16 @@ export default function CodeEditor() {
     }
   }
 
-  const { view, setContainer } = useCodeMirror({
-    container: editor.current,
-    extensions: [
-      javascript(),
-      EditorState.transactionFilter.of((tr: Transaction) => {
-        recordChanges(tr);
-        return tr;
-      }),
-    ],
-    basicSetup: {
-      lineNumbers: true,
-      highlightActiveLine: true,
-      highlightActiveLineGutter: true,
-    },
-  });
-
   const handlePlayback: () => Promise<void> = async () => {
-    if (!view)
+    if (!editorApiRef.current)
       return;
     if (!recordedEvents || recordedEvents.length === 0)
       return;
 
-    // Reset editor state to the initial state captured when recording began
+    // Reset editor to initial state
     if (initialStateRef.current) {
-      view.setState(initialStateRef.current);
+      const initialContent = initialStateRef.current.doc.toString();
+      editorApiRef.current.setDoc(initialContent);
     }
 
     // Show cursor overlay
@@ -120,25 +109,25 @@ export default function CodeEditor() {
       }
 
       // Process current event
-      if (event.kind === "transaction" && event.transaction && event.transaction.changes) {
-        const changes: ChangeSet = event.transaction.changes;
-        const tr: Transaction = view.state.update({ changes });
-        view.dispatch(tr);
+      if (event.kind === "transaction" && event.transaction && event.transaction.changes && editorApiRef.current) {
+        const state = editorApiRef.current.getState();
+        if (state) {
+          const changes: ChangeSet = event.transaction.changes;
+          const newDoc = changes.apply(state.doc).toString();
+          editorApiRef.current.setDoc(newDoc);
 
-        // Apply selection range if recorded
-        if (event.selection) {
-          const selectionTr = view.state.update({
-            selection: EditorSelection.single(event.selection.anchor, event.selection.head),
-          });
-          view.dispatch(selectionTr);
+          // Apply selection range if recorded
+          if (event.selection) {
+            editorApiRef.current.setSelection(event.selection);
+          }
         }
       }
 
-      if (event.kind === "file-switch" && event.fileName) {
+      if (event.kind === "file-switch" && event.fileName && editorApiRef.current) {
         // Switch to the file during playback
         const fileEntry = files.get(event.fileName);
         if (fileEntry) {
-          view.setState(EditorState.create({ doc: fileEntry.content, extensions: [javascript()] }));
+          editorApiRef.current.setDoc(fileEntry.content);
         }
       }
 
@@ -204,24 +193,27 @@ export default function CodeEditor() {
 
   // Record a file switch
   const switchFile = (fileName: string) => {
-    if (activeFile === fileName || !view)
+    if (activeFile === fileName || !editorApiRef.current)
       return;
 
     // Save current file content before switching
-    const currentContent = view.state.doc.toString();
-    setFiles((prev) => {
-      const newMap = new Map(prev);
-      newMap.set(activeFile, { name: activeFile, content: currentContent });
-      return newMap;
-    });
+    const state = editorApiRef.current.getState();
+    if (state) {
+      const currentContent = state.doc.toString();
+      setFiles((prev) => {
+        const newMap = new Map(prev);
+        newMap.set(activeFile, { name: activeFile, content: currentContent });
+        return newMap;
+      });
+    }
 
     // Switch to new file
     setActiveFile(fileName);
 
     // Update editor with new file content
     const fileEntry = files.get(fileName);
-    if (fileEntry) {
-      view.setState(EditorState.create({ doc: fileEntry.content, extensions: [javascript()] }));
+    if (fileEntry && editorApiRef.current) {
+      editorApiRef.current.setDoc(fileEntry.content);
     }
 
     // Record file switch if recording
@@ -274,7 +266,7 @@ export default function CodeEditor() {
     if (!recording) {
       // starting recording
       recordingStartTimeRef.current = Date.now();
-      initialStateRef.current = view?.state ?? null;
+      initialStateRef.current = editorApiRef.current?.getState() ?? null;
       initialFilesRef.current = new Map(files);
       setRecordedEvents([]);
       setPlaybackTime(0);
@@ -283,46 +275,21 @@ export default function CodeEditor() {
     else {
       // stopping recording
       // Save current file content before stopping
-      if (view) {
-        const currentContent = view.state.doc.toString();
-        setFiles((prev) => {
-          const newMap = new Map(prev);
-          newMap.set(activeFile, { name: activeFile, content: currentContent });
-          return newMap;
-        });
+      if (editorApiRef.current) {
+        const state = editorApiRef.current.getState();
+        if (state) {
+          const currentContent = state.doc.toString();
+          setFiles((prev) => {
+            const newMap = new Map(prev);
+            newMap.set(activeFile, { name: activeFile, content: currentContent });
+            return newMap;
+          });
+        }
       }
       setRecording(false);
       calculatePlaybackTime();
     }
   };
-
-  useEffect(() => {
-    if (editor.current) {
-      setContainer(editor.current);
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [editor.current]);
-
-  useEffect(() => {
-    if (!view) {
-      return;
-    }
-    const currentDoc = view.state.doc.toString();
-    if (currentDoc.length > 0) {
-      return;
-    }
-    const activeFileEntry = files.get(activeFile);
-    if (!activeFileEntry) {
-      return;
-    }
-    view.dispatch({
-      changes: {
-        from: 0,
-        to: currentDoc.length,
-        insert: activeFileEntry.content,
-      },
-    });
-  }, [view, files, activeFile]);
 
   // Safe code evaluation using Web Worker or isolated context
   const evaluateCode = async (code: string): Promise<TestResults> => {
@@ -385,12 +352,17 @@ export default function CodeEditor() {
   }, [testResults]);
 
   const handleSubmit = async () => {
-    if (!view)
+    if (!editorApiRef.current)
       return;
 
     setIsSubmitting(true);
     try {
-      const code = view.state.doc.toString();
+      const state = editorApiRef.current.getState();
+      if (!state) {
+        setIsSubmitting(false);
+        return;
+      }
+      const code = state.doc.toString();
       if (!code.trim()) {
         // eslint-disable-next-line no-alert
         window.alert("Please write some code before submitting");
@@ -420,17 +392,10 @@ export default function CodeEditor() {
   };
 
   const resetToStarter = () => {
-    if (!view)
+    if (!editorApiRef.current)
       return;
 
-    const docLength = view.state.doc.length;
-    view.dispatch({
-      changes: {
-        from: 0,
-        to: docLength,
-        insert: starterCode,
-      },
-    });
+    editorApiRef.current.setDoc(starterCode);
 
     setFiles((prev) => {
       const newMap = new Map(prev);
@@ -479,7 +444,13 @@ export default function CodeEditor() {
           />
 
           {/* Editor container: relative so we can position the playback cursor over it */}
-          <div ref={editor} style={{ position: "relative", flex: 1, overflow: "hidden" }}>
+          <div style={{ position: "relative", flex: 1, overflow: "hidden" }}>
+            <CodeMirrorEditor
+              value={files.get(activeFile)?.content ?? ""}
+              onUserTransaction={recordChanges}
+              containerRef={editor}
+              setExternalApiRef={editorApiRef}
+            />
             <CursorOverlay cursorRef={cursorRef} />
           </div>
         </div>
