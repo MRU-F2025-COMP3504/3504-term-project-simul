@@ -7,81 +7,22 @@ import { EditorSelection, EditorState, Transaction } from "@codemirror/state";
 import { useCodeMirror } from "@uiw/react-codemirror";
 import { useEffect, useMemo, useRef, useState } from "react";
 
+import type { FileEntry, RecordedEvent, TestResults } from "~/types/coding-session";
+
 import { Button } from "~/components/ui/button";
+import { TWO_SUM_STARTER_CODE, TWO_SUM_TEST_CASES } from "~/lib/coding-session/tests/two-sum";
+import { formatDisplayTime } from "~/lib/coding-session/time";
 
 export default function CodeEditor() {
-  // A file entry with its content
-  type FileEntry = {
-    name: string;
-    content: string;
-  };
-
-  // A wrapper recorded event can be transaction, mouse, or file operation
-  type RecordedEvent = {
-    time: number; // epoch ms
-    kind: "transaction" | "mouse" | "file-switch" | "file-create";
-    fileName?: string; // which file (for transactions and file ops)
-    transaction?: Transaction;
-    selection?: { anchor: number; head: number }; // Selection range from transaction
-    mouse?: { x: number; y: number; type?: string; button?: number };
-    fileContent?: string; // for file-create events
-  };
-
   const [recordedEvents, setRecordedEvents] = useState<RecordedEvent[]>([]);
   const [recording, setRecording] = useState(false);
   const [playbackTime, setPlaybackTime] = useState(0);
   const [isPlaying, setIsPlaying] = useState(false);
-  const [testResults, setTestResults] = useState<{ passed: number; total: number; details: Array<{ name: string; passed: boolean; error?: string }> } | null>(null);
+  const [testResults, setTestResults] = useState<TestResults | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  // Starter code for Two Sum problem
-  const starterCode = `// Two Sum Problem
-// Given an array of integers nums and an integer target,
-// return the indices of the two numbers that add up to the target.
-// You may assume that each input has exactly one solution,
-// and you may not use the same element twice.
-
-function twoSum(nums, target) {
-  // Your code here
-  
-}
-
-// Return the result
-return twoSum(nums, target);`;
-
-  type TestCase = {
-    name: string;
-    input: { nums: number[]; target: number };
-    expected: [number, number];
-    description: string;
-  };
-
-  const TEST_CASES: TestCase[] = [
-    {
-      name: "Example 1",
-      input: { nums: [2, 7, 11, 15], target: 9 },
-      expected: [0, 1],
-      description: "Pair at indices 0 and 1 produce the target 9.",
-    },
-    {
-      name: "Example 2",
-      input: { nums: [3, 2, 4], target: 6 },
-      expected: [1, 2],
-      description: "Indices 1 and 2 sum to 6.",
-    },
-    {
-      name: "Example 3",
-      input: { nums: [3, 3], target: 6 },
-      expected: [0, 1],
-      description: "Duplicate values should be handled correctly.",
-    },
-    {
-      name: "Negative numbers",
-      input: { nums: [-1, -2, -3, 5, 10], target: -5 },
-      expected: [1, 2],
-      description: "Works when the solution involves negative values.",
-    },
-  ];
+  const starterCode = TWO_SUM_STARTER_CODE;
+  const TEST_CASES = TWO_SUM_TEST_CASES;
 
   // Multi-file support
   const [files, setFiles] = useState<Map<string, FileEntry>>(() => new Map([["main.js", { name: "main.js", content: starterCode }]]));
@@ -324,40 +265,6 @@ return twoSum(nums, target);`;
     setRecordedEvents(prev => [...prev, { time, kind: "mouse", mouse: { x, y, type: event.type, button: (event as any).button } }]);
   };
 
-  const formatDisplayTime = (timeInMs: number) => {
-    const parsedSeconds = Math.floor((timeInMs / 1000) % 60);
-    const parsedMinutes = Math.floor((timeInMs / (1000 * 60)) % 60);
-    const parsedHours = Math.floor((timeInMs / (1000 * 60 * 60)) % 24);
-    let formattedSeconds = "";
-    let formattedMinutes = "";
-    let formattedHours = "";
-
-    if (parsedSeconds < 10) {
-      formattedSeconds = `0${parsedSeconds}`;
-    }
-    else {
-      formattedSeconds = `${parsedSeconds}`;
-    }
-    if (parsedMinutes < 10) {
-      formattedMinutes = `0${parsedMinutes}`;
-    }
-    else {
-      formattedMinutes = `${parsedMinutes}`;
-    }
-    if (parsedHours < 10) {
-      formattedHours = `0${parsedHours}`;
-    }
-    else {
-      formattedHours = `${parsedHours}`;
-    }
-
-    if (parsedHours === 0) {
-      return `${formattedMinutes}:${formattedSeconds}`;
-    }
-
-    return `${formattedHours}:${formattedMinutes}:${formattedSeconds}`;
-  };
-
   const toggleRecording = async () => {
     if (!recording) {
       // starting recording
@@ -413,8 +320,8 @@ return twoSum(nums, target);`;
   }, [view, files, activeFile]);
 
   // Safe code evaluation using Web Worker or isolated context
-  const evaluateCode = async (code: string): Promise<{ passed: number; total: number; details: Array<{ name: string; passed: boolean; error?: string }> }> => {
-    const details: Array<{ name: string; passed: boolean; error?: string }> = [];
+  const evaluateCode = async (code: string): Promise<TestResults> => {
+    const details: TestResults["details"] = [];
     let passedCount = 0;
 
     for (const testCase of TEST_CASES) {
