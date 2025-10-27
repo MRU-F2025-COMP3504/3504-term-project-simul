@@ -17,8 +17,8 @@ export const auth = betterAuth({
   baseURL: serverEnv.BETTER_AUTH_URL,
   socialProviders: {
     github: {
-      clientId: serverEnv.GITHUB_CLIENT_ID,
-      clientSecret: serverEnv.GITHUB_SECRET,
+      clientId: serverEnv.GH_CLIENT_ID,
+      clientSecret: serverEnv.GH_SECRET,
     },
   },
   // We want to handle our own IDs, as we like UUIDs over Serials

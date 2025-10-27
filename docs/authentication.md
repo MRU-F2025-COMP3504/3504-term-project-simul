@@ -55,8 +55,8 @@ BETTER_AUTH_SECRET="your-secret-key-here"
 BETTER_AUTH_URL="http://localhost:3000"
 
 # GitHub OAuth
-GITHUB_CLIENT_ID="your-github-client-id"
-GITHUB_SECRET="your-github-client-secret"
+GH_CLIENT_ID="your-github-client-id"
+GH_SECRET="your-github-client-secret"
 
 # Database
 DATABASE_URL="postgresql://username:password@localhost:5432/database"
