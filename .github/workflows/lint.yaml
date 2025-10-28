@@ -14,6 +14,7 @@ on:
       - package.json
       - pnpm-lock.yaml
       - "src/**"
+      - ".github/workflows/*.yaml"
 
 jobs:
   alejandra:

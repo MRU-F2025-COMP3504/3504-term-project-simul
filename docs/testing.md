@@ -59,6 +59,7 @@ CI workflows are triggered only when relevant files are modified:
   - Test configuration files (`vitest.config.ts`, `playwright.config.ts`, etc.)
   - `package.json`, `pnpm-lock.yaml`
   - Files in `src/`, `__tests__/`, or `e2e/`
+  - CI configuration files (`.github/workflows/*.yaml`)
 
 ## Notes
 
