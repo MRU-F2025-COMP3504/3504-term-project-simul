@@ -19,8 +19,6 @@
 *.svg text
 *.csv text
 *.sh text
-*.env text
-
 # Shell scripts should use LF only
 *.sh text eol=lf
 
