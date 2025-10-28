@@ -4,6 +4,16 @@ on:
   pull_request:
     branches:
       - main
+    paths:
+      - "**.nix"
+      - "**.ts"
+      - "**.tsx"
+      - eslint.config.mjs
+      - flake.nix
+      - flake.lock
+      - package.json
+      - pnpm-lock.yaml
+      - "src/**"
 
 jobs:
   alejandra:

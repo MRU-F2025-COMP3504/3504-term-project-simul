@@ -41,8 +41,28 @@ pnpm test:e2e:headed
 - `vitest.config.ts` - Vitest configuration
 - `vitest.setup.ts` - Global test setup
 
+## Continuous Integration
+
+Tests run automatically on pull requests to the main branch via GitHub Actions.
+
+### Workflows
+
+- **Test** (`test.yaml`) - Runs Vitest unit tests
+- **E2E Tests** (`test-e2e.yaml`) - Runs Playwright end-to-end tests
+
+### Path-based Triggers
+
+CI workflows are triggered only when relevant files are modified:
+
+- **Test workflows** trigger on changes to:
+  - `.ts`, `.tsx` files
+  - Test configuration files (`vitest.config.ts`, `playwright.config.ts`, etc.)
+  - `package.json`, `pnpm-lock.yaml`
+  - Files in `src/`, `__tests__/`, or `e2e/`
+
 ## Notes
 
 - E2E tests will automatically start the dev server on port 3000
 - The Playwright test suite includes chromium and firefox browsers
 - Tests run in parallel by default (except on CI)
+- Changes to documentation files (`.md`) in `docs/` or `reports/` will not trigger test suites.

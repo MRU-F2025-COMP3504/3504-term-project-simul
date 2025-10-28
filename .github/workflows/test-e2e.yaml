@@ -4,6 +4,16 @@ on:
   pull_request:
     branches:
       - main
+    paths:
+      - "**.ts"
+      - "**.tsx"
+      - playwright.config.ts
+      - package.json
+      - pnpm-lock.yaml
+      - next.config.ts
+      - "src/**"
+      - "__tests__/**"
+      - "e2e/**"
 
 jobs:
   playwright:
