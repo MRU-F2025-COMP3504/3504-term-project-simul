@@ -12,7 +12,6 @@ on:
       - next.config.ts
       - "src/**"
       - "__tests__/**"
-      - "e2e/**"
       - ".github/workflows/*.yaml"
 
 jobs:
