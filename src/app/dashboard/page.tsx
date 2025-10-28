@@ -1,10 +1,11 @@
-import SignoutButton from "~/components/auth/signout-button";
+import Banner from "~/components/banner/simul-banner";
 
-export default async function Dashboard() {
+export default function Home() {
   return (
-    <div className="p-4 text-2xl">
-      Hello!!
-      <SignoutButton />
+    <div className="flex min-h-screen flex-col p-8 pb-20 font-sans">
+
+      <Banner />
+      <div>Welcome</div>
     </div>
   );
 }
