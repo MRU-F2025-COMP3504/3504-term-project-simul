@@ -7,7 +7,6 @@ on:
     paths:
       - "**.ts"
       - "**.tsx"
-      - playwright.config.ts
       - package.json
       - pnpm-lock.yaml
       - next.config.ts
