@@ -1,4 +1,4 @@
-import type { TestCase, TestDetail, TestResults } from "~/types/coding-session";
+import type { ProblemDefinition, TestDetail, TestResults } from "~/types/coding-session";
 
 import { Button } from "~/components/ui/button";
 
@@ -6,8 +6,8 @@ import { TestList } from "./test-list";
 import { TestSummary } from "./test-summary";
 
 export type ProblemPanelProps = {
+  problem: ProblemDefinition;
   testResults: TestResults | null;
-  testCases: TestCase[];
   testStatusMap: Map<string, TestDetail> | null;
   isSubmitting: boolean;
   onSubmit: () => void;
@@ -15,14 +15,14 @@ export type ProblemPanelProps = {
 };
 
 export function ProblemPanel({
+  problem,
   testResults,
-  testCases,
   testStatusMap,
   isSubmitting,
   onSubmit,
   onReset,
 }: ProblemPanelProps) {
-  const totalTests = testCases.length;
+  const totalTests = problem.testCases.length;
   const testsPassed = testResults?.passed ?? 0;
   const allTestsPassed = Boolean(testResults) && testsPassed === totalTests;
 
@@ -84,78 +84,72 @@ export function ProblemPanel({
         />
 
         <TestList
-          testCases={testCases}
+          testCases={problem.testCases}
           testStatusMap={testStatusMap}
           testResults={testResults}
+          renderTestInput={problem.renderTestInput}
         />
 
         <h3 className="text-primary mt-0 mb-3 text-base font-semibold">
-          Two Sum
+          {problem.title}
         </h3>
 
         <div className="mb-4">
           <strong>Description:</strong>
-          <p className="text-muted-foreground my-2">
-            Given an array of integers
-            {" "}
-            <code>nums</code>
-            {" "}
-            and an integer
-            {" "}
-            <code>target</code>
-            , return the indices of the two numbers that add up to the target.
-          </p>
-          <p className="text-muted-foreground my-2">
-            You may assume that each input has exactly one solution, and you may not use the same element twice.
-          </p>
-          <p className="text-muted-foreground my-2">
-            You can return the answer in any order.
-          </p>
+          {problem.description.map(paragraph => (
+            <p
+              key={paragraph.slice(0, 50)}
+              className="text-muted-foreground my-2"
+            >
+              {paragraph.split("`").map((part, partIndex) =>
+                partIndex % 2 === 0
+                  ? part
+                  : (
+                      <code key={part}>{part}</code>
+                    ),
+              )}
+            </p>
+          ))}
         </div>
 
-        {/* Example 1 */}
-        <div className="bg-muted mb-4 rounded p-3">
-          <strong className="text-primary">Example 1:</strong>
-          <div className="text-muted-foreground my-2 font-mono">
-            <div>Input: nums = [2,7,11,15], target = 9</div>
-            <div>Output: [0,1]</div>
-            <div className="text-muted-foreground mt-1 text-xs">
-              Explanation: nums[0] + nums[1] = 2 + 7 = 9
+        {/* Examples */}
+        {problem.examples.map(example => (
+          <div key={example.title} className="bg-muted mb-4 rounded p-3">
+            <strong className="text-primary">
+              {example.title}
+              :
+            </strong>
+            <div className="text-muted-foreground my-2 font-mono">
+              <div>
+                Input:
+                {example.input}
+              </div>
+              <div>
+                Output:
+                {example.output}
+              </div>
+              {example.explanation && (
+                <div className="text-muted-foreground mt-1 text-xs">
+                  Explanation:
+                  {" "}
+                  {example.explanation}
+                </div>
+              )}
             </div>
           </div>
-        </div>
-
-        {/* Example 2 */}
-        <div className="bg-muted mb-4 rounded p-3">
-          <strong className="text-primary">Example 2:</strong>
-          <div className="text-muted-foreground my-2 font-mono">
-            <div>Input: nums = [3,2,4], target = 6</div>
-            <div>Output: [1,2]</div>
-            <div className="text-muted-foreground mt-1 text-xs">
-              Explanation: nums[1] + nums[2] = 2 + 4 = 6
-            </div>
-          </div>
-        </div>
-
-        {/* Example 3 */}
-        <div className="bg-muted mb-4 rounded p-3">
-          <strong className="text-primary">Example 3:</strong>
-          <div className="text-muted-foreground my-2 font-mono">
-            <div>Input: nums = [3,3], target = 6</div>
-            <div>Output: [0,1]</div>
-          </div>
-        </div>
+        ))}
 
         {/* Constraints */}
-        <div className="mt-6 border-t pt-4">
-          <strong className="text-primary">Constraints:</strong>
-          <ul className="text-muted-foreground m-0 mt-2">
-            <li>2 ≤ nums.length ≤ 10⁴</li>
-            <li>-10⁹ ≤ nums[i] ≤ 10⁹</li>
-            <li>-10⁹ ≤ target ≤ 10⁹</li>
-            <li>Only one valid answer exists.</li>
-          </ul>
-        </div>
+        {problem.constraints.length > 0 && (
+          <div className="mt-6 border-t pt-4">
+            <strong className="text-primary">Constraints:</strong>
+            <ul className="text-muted-foreground m-0 mt-2">
+              {problem.constraints.map(constraint => (
+                <li key={constraint}>{constraint}</li>
+              ))}
+            </ul>
+          </div>
+        )}
       </div>
     </div>
   );

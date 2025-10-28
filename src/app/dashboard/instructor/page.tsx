@@ -11,14 +11,13 @@ import { ProblemPanel } from "~/components/coding-session/problem/problem-panel"
 import { ThemeToggle } from "~/components/theme-toggle";
 import { Button } from "~/components/ui/button";
 import { useFilesManager, usePlayer, useRecorder, useTestRunner } from "~/hooks/coding-session";
-import { TWO_SUM_STARTER_CODE, TWO_SUM_TEST_CASES } from "~/lib/coding-session/tests/two-sum";
+import { TWO_SUM_PROBLEM } from "~/lib/coding-session/tests/two-sum";
 import { formatDisplayTime } from "~/lib/coding-session/time";
 
 export default function CodeEditor() {
   const [recordedEvents, setRecordedEvents] = useState<RecordedEvent[]>([]);
 
-  const starterCode = TWO_SUM_STARTER_CODE;
-  const TEST_CASES = TWO_SUM_TEST_CASES;
+  const problem = TWO_SUM_PROBLEM;
 
   // Initialize hooks
   const editor = useRef<HTMLDivElement | null>(null);
@@ -29,7 +28,7 @@ export default function CodeEditor() {
     getState: () => { doc: { toString: () => string } } | null;
   } | null>(null);
 
-  const filesManager = useFilesManager(starterCode, editorApiRef);
+  const filesManager = useFilesManager(problem.starterCode, editorApiRef);
   const recorder = useRecorder(
     event => setRecordedEvents(prev => [...prev, event]),
     () => filesManager.activeFile,
@@ -55,7 +54,7 @@ export default function CodeEditor() {
 
   // Initialize test runner hook
   const tester = useTestRunner({
-    testCases: TEST_CASES,
+    testCases: problem.testCases,
     editorApiRef,
     onResultsChange: () => {
       // Callback for when results change
@@ -94,7 +93,7 @@ export default function CodeEditor() {
   };
 
   const resetToStarter = () => {
-    filesManager.resetToStarter(starterCode);
+    filesManager.resetToStarter(problem.starterCode);
     tester.reset();
   };
 
@@ -167,8 +166,8 @@ export default function CodeEditor() {
         </div>
 
         <ProblemPanel
+          problem={problem}
           testResults={tester.testResults}
-          testCases={TEST_CASES}
           testStatusMap={tester.testStatusMap}
           isSubmitting={tester.isSubmitting}
           onSubmit={tester.submit}

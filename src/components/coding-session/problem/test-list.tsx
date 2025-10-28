@@ -4,9 +4,10 @@ export type TestListProps = {
   testCases: TestCase[];
   testStatusMap: Map<string, TestDetail> | null;
   testResults: { passed: number; total: number } | null;
+  renderTestInput?: (input: any) => string;
 };
 
-export function TestList({ testCases, testStatusMap, testResults }: TestListProps) {
+export function TestList({ testCases, testStatusMap, testResults, renderTestInput }: TestListProps) {
   return (
     <div className="mb-6">
       <strong className="text-primary mb-2 block">Test Suite</strong>
@@ -20,6 +21,11 @@ export function TestList({ testCases, testStatusMap, testResults }: TestListProp
           const badgeBackground = isPending ? "bg-muted" : isPassed ? "bg-green-100 dark:bg-green-900" : "bg-red-100 dark:bg-red-900";
           const cardBorder = isPending ? "border-muted" : isPassed ? "border-green-200 dark:border-green-900" : "border-red-200 dark:border-red-900";
           const cardBackground = isPending ? "bg-card" : isPassed ? "bg-green-50/50 dark:bg-green-900" : "bg-red-50/50 dark:bg-red-900";
+
+          // Render test input using custom renderer or JSON.stringify
+          const inputDisplay = renderTestInput
+            ? renderTestInput(testCase.input)
+            : JSON.stringify(testCase.input);
 
           return (
             <div
@@ -46,12 +52,7 @@ export function TestList({ testCases, testStatusMap, testResults }: TestListProp
                 {testCase.description}
               </div>
               <div className="text-muted-foreground mt-1.5 font-mono text-xs">
-                nums =
-                {" "}
-                {JSON.stringify(testCase.input.nums)}
-                , target =
-                {" "}
-                {testCase.input.target}
+                {inputDisplay}
               </div>
               {detail && detail.error && (
                 <div className={`

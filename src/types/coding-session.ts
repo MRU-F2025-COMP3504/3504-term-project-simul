@@ -25,11 +25,38 @@ export type RecordedEvent = {
 /**
  * A test case for a coding challenge
  */
-export type TestCase = {
+export type TestCase<TInput = any, TExpected = any> = {
   name: string;
-  input: { nums: number[]; target: number };
-  expected: [number, number];
+  input: TInput;
+  expected: TExpected;
   description: string;
+};
+
+/**
+ * Example case for displaying in the problem description
+ */
+export type ProblemExample = {
+  title: string;
+  input: string;
+  output: string;
+  explanation?: string;
+};
+
+/**
+ * Complete problem definition including description, examples, and constraints
+ */
+export type ProblemDefinition<TInput = any, TExpected = any> = {
+  title: string;
+  description: string[];
+  examples: ProblemExample[];
+  constraints: string[];
+  starterCode: string;
+  testCases: TestCase<TInput, TExpected>[];
+  /**
+   * Optional function to render test case inputs for display
+   * If not provided, will use JSON.stringify
+   */
+  renderTestInput?: (input: TInput) => string;
 };
 
 /**
