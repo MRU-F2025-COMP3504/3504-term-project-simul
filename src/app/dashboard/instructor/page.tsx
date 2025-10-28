@@ -1,11 +1,10 @@
 "use client";
-import type { ChangeSet, EditorState as CMEditorState } from "@codemirror/state";
-import type { MouseEvent } from "react";
 
-import { Transaction } from "@codemirror/state";
+import type { EditorState as CMEditorState } from "@codemirror/state";
+
 import { useMemo, useRef, useState } from "react";
 
-import type { FileEntry, RecordedEvent, TestDetail, TestResults } from "~/types/coding-session";
+import type { RecordedEvent, TestDetail, TestResults } from "~/types/coding-session";
 
 import { CodeMirrorEditor, CursorOverlay, FileTabs } from "~/components/coding-session/editor";
 import { FileSidebar } from "~/components/coding-session/file-sidebar";
@@ -13,12 +12,12 @@ import { PlaybackControls } from "~/components/coding-session/playback-controls"
 import { ProblemPanel } from "~/components/coding-session/problem/problem-panel";
 import { ThemeToggle } from "~/components/theme-toggle";
 import { Button } from "~/components/ui/button";
+import { useFilesManager, useRecorder } from "~/hooks/coding-session";
 import { TWO_SUM_STARTER_CODE, TWO_SUM_TEST_CASES } from "~/lib/coding-session/tests/two-sum";
 import { formatDisplayTime } from "~/lib/coding-session/time";
 
 export default function CodeEditor() {
   const [recordedEvents, setRecordedEvents] = useState<RecordedEvent[]>([]);
-  const [recording, setRecording] = useState(false);
   const [playbackTime, setPlaybackTime] = useState(0);
   const [isPlaying, setIsPlaying] = useState(false);
   const [testResults, setTestResults] = useState<TestResults | null>(null);
@@ -27,37 +26,47 @@ export default function CodeEditor() {
   const starterCode = TWO_SUM_STARTER_CODE;
   const TEST_CASES = TWO_SUM_TEST_CASES;
 
-  // Multi-file support
-  const [files, setFiles] = useState<Map<string, FileEntry>>(() => new Map([["main.js", { name: "main.js", content: starterCode }]]));
-  const [activeFile, setActiveFile] = useState("main.js");
-  const initialStateRef = useRef<CMEditorState | null>(null);
-  const initialFilesRef = useRef<Map<string, FileEntry> | null>(null);
-  const recordingStartTimeRef = useRef<number | null>(null);
+  // Initialize hooks
   const editor = useRef<HTMLDivElement | null>(null);
   const cursorRef = useRef<HTMLDivElement | null>(null);
   const playingRef = useRef(false);
   const editorApiRef = useRef<{
     setDoc: (content: string) => void;
     setSelection: (selection: { anchor: number; head: number }) => void;
-    getState: () => CMEditorState | null;
+    getState: () => { doc: { toString: () => string } } | null;
   } | null>(null);
 
-  function recordChanges(tr: Transaction) {
-    if (!recording)
-      return;
-    // Only record user-driven transactions
-    if (tr.annotation(Transaction.userEvent)) {
-      let time = tr.annotation(Transaction.time) ?? Date.now();
-      // Convert to relative time from start of recording
-      if (recordingStartTimeRef.current) {
-        time = time - recordingStartTimeRef.current;
-      }
-      // Extract selection range from the transaction's state
-      const selection = tr.selection ? { anchor: tr.selection.main.anchor, head: tr.selection.main.head } : undefined;
-      setRecordedEvents(prev => [...prev, { time, kind: "transaction", fileName: activeFile, transaction: tr, selection }]);
-      setTestResults(prev => (prev ? null : prev));
+  const filesManager = useFilesManager(starterCode, editorApiRef);
+  const recorder = useRecorder(
+    event => setRecordedEvents(prev => [...prev, event]),
+    () => filesManager.activeFile,
+    editor,
+  );
+
+  // Keep for playback control
+  const initialStateRef = useRef<CMEditorState | null>(null);
+
+  // Wrapper to handle recording state transitions
+  const handleToggleRecording = () => {
+    if (!recorder.recording) {
+      // Starting recording - capture initial state and reset events
+      initialStateRef.current = (editorApiRef.current?.getState() as any) ?? null;
+      setRecordedEvents([]);
+      setPlaybackTime(0);
+      recorder.startRecording();
     }
-  }
+    else {
+      // Stopping recording - save current editor state to files
+      if (editorApiRef.current) {
+        const state = editorApiRef.current.getState();
+        if (state) {
+          const currentContent = (state as any).doc.toString();
+          filesManager.updateFileContent(filesManager.activeFile, currentContent);
+        }
+      }
+      recorder.stopRecording();
+    }
+  };
 
   const handlePlayback: () => Promise<void> = async () => {
     if (!editorApiRef.current)
@@ -111,8 +120,8 @@ export default function CodeEditor() {
       if (event.kind === "transaction" && event.transaction && event.transaction.changes && editorApiRef.current) {
         const state = editorApiRef.current.getState();
         if (state) {
-          const changes: ChangeSet = event.transaction.changes;
-          const newDoc = changes.apply(state.doc).toString();
+          const changes = event.transaction.changes as any;
+          const newDoc = changes.apply((state as any).doc).toString();
           editorApiRef.current.setDoc(newDoc);
 
           // Apply selection range if recorded
@@ -124,7 +133,7 @@ export default function CodeEditor() {
 
       if (event.kind === "file-switch" && event.fileName && editorApiRef.current) {
         // Switch to the file during playback
-        const fileEntry = files.get(event.fileName);
+        const fileEntry = filesManager.files.get(event.fileName);
         if (fileEntry) {
           editorApiRef.current.setDoc(fileEntry.content);
         }
@@ -133,13 +142,8 @@ export default function CodeEditor() {
       if (event.kind === "file-create") {
         // File was created during recording (for informational purposes during playback)
         const fileName = event.fileName ?? "";
-        const newFile: FileEntry = { name: fileName, content: event.fileContent ?? "" };
         if (fileName) {
-          setFiles((prev) => {
-            const newMap = new Map(prev);
-            newMap.set(fileName, newFile);
-            return newMap;
-          });
+          filesManager.createFile(fileName, event.fileContent ?? "");
         }
       }
 
@@ -175,118 +179,6 @@ export default function CodeEditor() {
     else {
       playingRef.current = false;
       setIsPlaying(false);
-    }
-  };
-
-  const calculatePlaybackTime = () => {
-    if (recordedEvents.length < 2) {
-      setPlaybackTime(0);
-      return 0;
-    }
-    const firstEvent = recordedEvents[0];
-    const lastEvent = recordedEvents[recordedEvents.length - 1];
-    const playback = (lastEvent.time ?? 0) - (firstEvent.time ?? 0);
-    setPlaybackTime(playback);
-    return playback;
-  };
-
-  // Record a file switch
-  const switchFile = (fileName: string) => {
-    if (activeFile === fileName || !editorApiRef.current)
-      return;
-
-    // Save current file content before switching
-    const state = editorApiRef.current.getState();
-    if (state) {
-      const currentContent = state.doc.toString();
-      setFiles((prev) => {
-        const newMap = new Map(prev);
-        newMap.set(activeFile, { name: activeFile, content: currentContent });
-        return newMap;
-      });
-    }
-
-    // Switch to new file
-    setActiveFile(fileName);
-
-    // Update editor with new file content
-    const fileEntry = files.get(fileName);
-    if (fileEntry && editorApiRef.current) {
-      editorApiRef.current.setDoc(fileEntry.content);
-    }
-
-    // Record file switch if recording
-    if (recording) {
-      let time = Date.now();
-      // Convert to relative time from start of recording
-      if (recordingStartTimeRef.current) {
-        time = time - recordingStartTimeRef.current;
-      }
-      setRecordedEvents(prev => [...prev, { time, kind: "file-switch", fileName }]);
-    }
-  };
-
-  // Create a new file
-  const createNewFile = (fileName: string) => {
-    if (files.has(fileName))
-      return;
-
-    const newFile: FileEntry = { name: fileName, content: "" };
-    setFiles(prev => new Map(prev).set(fileName, newFile));
-
-    if (recording) {
-      let time = Date.now();
-      // Convert to relative time from start of recording
-      if (recordingStartTimeRef.current) {
-        time = time - recordingStartTimeRef.current;
-      }
-      setRecordedEvents(prev => [...prev, { time, kind: "file-create", fileName, fileContent: "" }]);
-    }
-  };
-
-  // record mouse events using event listeners
-  const recordMouseEvents = (event: MouseEvent<HTMLDivElement>) => {
-    if (!recording)
-      return;
-    if (!editor.current)
-      return;
-    const rect = editor.current.getBoundingClientRect();
-    const x = event.clientX - rect.left;
-    const y = event.clientY - rect.top;
-    let time = Date.now();
-    // Convert to relative time from start of recording
-    if (recordingStartTimeRef.current) {
-      time = time - recordingStartTimeRef.current;
-    }
-    setRecordedEvents(prev => [...prev, { time, kind: "mouse", mouse: { x, y, type: event.type, button: (event as any).button } }]);
-  };
-
-  const toggleRecording = async () => {
-    if (!recording) {
-      // starting recording
-      recordingStartTimeRef.current = Date.now();
-      initialStateRef.current = editorApiRef.current?.getState() ?? null;
-      initialFilesRef.current = new Map(files);
-      setRecordedEvents([]);
-      setPlaybackTime(0);
-      setRecording(true);
-    }
-    else {
-      // stopping recording
-      // Save current file content before stopping
-      if (editorApiRef.current) {
-        const state = editorApiRef.current.getState();
-        if (state) {
-          const currentContent = state.doc.toString();
-          setFiles((prev) => {
-            const newMap = new Map(prev);
-            newMap.set(activeFile, { name: activeFile, content: currentContent });
-            return newMap;
-          });
-        }
-      }
-      setRecording(false);
-      calculatePlaybackTime();
     }
   };
 
@@ -391,31 +283,21 @@ export default function CodeEditor() {
   };
 
   const resetToStarter = () => {
-    if (!editorApiRef.current)
-      return;
-
-    editorApiRef.current.setDoc(starterCode);
-
-    setFiles((prev) => {
-      const newMap = new Map(prev);
-      newMap.set(activeFile, { name: activeFile, content: starterCode });
-      return newMap;
-    });
-
+    filesManager.resetToStarter(starterCode);
     setTestResults(null);
   };
 
   return (
     <div
-      onMouseMove={recordMouseEvents}
+      onMouseMove={recorder.recordMouseEvent}
       className="flex h-screen flex-col"
     >
       <div
         className="bg-background border-b p-4"
       >
         <div className="flex items-center gap-2">
-          <Button onClick={toggleRecording}>
-            {recording ? "Stop Recording" : "Start Recording"}
+          <Button onClick={handleToggleRecording}>
+            {recorder.recording ? "Stop Recording" : "Start Recording"}
           </Button>
           <Button onClick={togglePlayback}>
             {isPlaying ? "Stop" : "Play"}
@@ -436,27 +318,38 @@ export default function CodeEditor() {
       <div style={{ display: "flex", flex: 1, overflow: "hidden" }}>
         {/* Left sidebar: File explorer */}
         <FileSidebar
-          files={files}
-          activeFile={activeFile}
-          onCreateFile={createNewFile}
-          onSelectFile={switchFile}
+          files={filesManager.files}
+          activeFile={filesManager.activeFile}
+          onCreateFile={(name) => {
+            recorder.recordFileCreate(name);
+            filesManager.createFile(name);
+          }}
+          onSelectFile={(name) => {
+            recorder.recordFileSwitch(name);
+            filesManager.selectFile(name);
+          }}
         />
 
         {/* Center: Editor and tabs */}
         <div style={{ display: "flex", flexDirection: "column", flex: 1, overflow: "hidden" }}>
           <FileTabs
-            files={files}
-            activeFile={activeFile}
-            onSelectFile={switchFile}
+            files={filesManager.files}
+            activeFile={filesManager.activeFile}
+            onSelectFile={(name) => {
+              recorder.recordFileSwitch(name);
+              filesManager.selectFile(name);
+            }}
           />
-
-          {/* Editor container: relative so we can position the playback cursor over it */}
           <div style={{ position: "relative", flex: 1, overflow: "hidden" }}>
             <CodeMirrorEditor
-              value={files.get(activeFile)?.content ?? ""}
-              onUserTransaction={recordChanges}
+              value={filesManager.files.get(filesManager.activeFile)?.content ?? ""}
+              onUserTransaction={(tr) => {
+                const selection = tr.selection ? { anchor: tr.selection.main.anchor, head: tr.selection.main.head } : undefined;
+                recorder.recordTransaction(tr, selection);
+                setTestResults(prev => (prev ? null : prev));
+              }}
               containerRef={editor}
-              setExternalApiRef={editorApiRef}
+              setExternalApiRef={editorApiRef as any}
             />
             <CursorOverlay cursorRef={cursorRef} />
           </div>
@@ -479,7 +372,7 @@ export default function CodeEditor() {
         onPlay={togglePlayback}
         onPause={togglePlayback}
         recordedEvents={recordedEvents}
-        recording={recording}
+        recording={recorder.recording}
       />
     </div>
   );
