@@ -1,3 +1,4 @@
+/* eslint-disable better-tailwindcss/enforce-consistent-line-wrapping */
 "use client";
 
 import { Moon, Sun } from "lucide-react";
