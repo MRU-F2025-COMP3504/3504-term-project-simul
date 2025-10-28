@@ -9,7 +9,6 @@ on:
       - "**.tsx"
       - package.json
       - pnpm-lock.yaml
-      - next.config.ts
       - "src/**"
       - "__tests__/**"
       - ".github/workflows/*.yaml"
