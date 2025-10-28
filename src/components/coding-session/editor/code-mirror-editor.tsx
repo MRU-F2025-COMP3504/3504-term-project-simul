@@ -56,6 +56,7 @@ export function CodeMirrorEditor({
       setDoc: (content: string) => {
         if (!view)
           return;
+
         const docLength = view.state.doc.length;
         view.dispatch({
           changes: {
@@ -68,6 +69,7 @@ export function CodeMirrorEditor({
       setSelection: (selection: { anchor: number; head: number }) => {
         if (!view)
           return;
+
         const selectionTr = view.state.update({
           selection: EditorSelection.single(selection.anchor, selection.head),
         });
@@ -89,7 +91,9 @@ export function CodeMirrorEditor({
   useEffect(() => {
     if (!view || !value)
       return;
+
     const currentDoc = view.state.doc.toString();
+
     if (currentDoc.length > 0)
       return;
 
@@ -107,7 +111,7 @@ export function CodeMirrorEditor({
       ref={(node) => {
         editorContainerRef.current = node;
         if (containerRef) {
-          (containerRef as React.MutableRefObject<HTMLDivElement | null>).current = node;
+          (containerRef as React.RefObject<HTMLDivElement | null>).current = node;
         }
       }}
       className="relative flex-1 overflow-hidden"

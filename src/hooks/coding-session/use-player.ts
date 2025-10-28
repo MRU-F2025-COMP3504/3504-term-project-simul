@@ -70,15 +70,15 @@ type UsePlayerProps = {
     deleteFile: (name: string) => void;
   };
   /** Reference to CodeMirror editor API for setting document and selection */
-  editorApiRef: React.MutableRefObject<{
+  editorApiRef: React.RefObject<{
     setDoc: (content: string) => void;
     setSelection: (selection: { anchor: number; head: number }) => void;
     getState: () => { doc: { toString: () => string } } | null;
   } | null>;
   /** Reference to initial editor state (captured at recording start) */
-  initialStateRef: React.MutableRefObject<any | null>;
+  initialStateRef: React.RefObject<any | null>;
   /** Reference to cursor overlay element for position updates */
-  cursorRef: React.MutableRefObject<HTMLDivElement | null>;
+  cursorRef: React.RefObject<HTMLDivElement | null>;
   /** Callback when playback time updates (for progress bar) */
   onPlaybackTimeChange: (time: number) => void;
   /** Callback when playback state changes (playing/paused) */

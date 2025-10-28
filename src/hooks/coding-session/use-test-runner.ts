@@ -65,7 +65,7 @@ type UseTestRunnerProps = {
   /** Array of test cases to execute against user code */
   testCases: TestCase[];
   /** Reference to CodeMirror editor API for extracting current code */
-  editorApiRef: React.MutableRefObject<{
+  editorApiRef: React.RefObject<{
     getState: () => { doc: { toString: () => string } } | null;
   } | null>;
   /** Callback fired when test results change (useful for analytics) */

@@ -99,7 +99,6 @@ export default function CodeEditor() {
 
   return (
     <div
-      onMouseMove={recorder.recordMouseEvent}
       className="flex h-screen flex-col"
     >
       <div
@@ -120,7 +119,6 @@ export default function CodeEditor() {
           <div className="ml-auto">
             <ThemeToggle />
           </div>
-
         </div>
       </div>
 
@@ -151,6 +149,7 @@ export default function CodeEditor() {
           />
           <div
             className="relative flex-1 overflow-hidden"
+            onMouseMove={recorder.recordMouseEvent}
           >
             <CodeMirrorEditor
               value={filesManager.files.get(filesManager.activeFile)?.content ?? ""}
