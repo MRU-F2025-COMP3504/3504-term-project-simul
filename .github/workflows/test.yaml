@@ -4,6 +4,14 @@ on:
   pull_request:
     branches:
       - main
+    paths:
+      - "**.ts"
+      - "**.tsx"
+      - package.json
+      - pnpm-lock.yaml
+      - "src/**"
+      - "__tests__/**"
+      - ".github/workflows/*.yaml"
 
 jobs:
   vitest:
