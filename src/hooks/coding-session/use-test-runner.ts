@@ -214,7 +214,7 @@ export function useTestRunner({
     catch (error) {
       const results: TestResults = {
         passed: 0,
-        total: 4,
+        total: testCases.length,
         details: [
           {
             name: "Code Execution",
