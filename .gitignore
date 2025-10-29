@@ -43,3 +43,8 @@ yarn-error.log*
 next-env.d.ts
 
 /.direnv
+
+# vitest and playwright
+.vitest
+/playwright-report
+/test-results
