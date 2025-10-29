@@ -1,6 +1,6 @@
 "use client";
 import type { EditorState as CMEditorState } from "@codemirror/state";
-import type { RefObject } from "react";
+import type { MouseEvent as ReactMouseEvent, ReactNode, RefObject } from "react";
 
 import { javascript } from "@codemirror/lang-javascript";
 import { EditorSelection, EditorState, Transaction } from "@codemirror/state";
@@ -8,22 +8,39 @@ import { useCodeMirror } from "@uiw/react-codemirror";
 import { useTheme } from "next-themes";
 import { useEffect, useImperativeHandle, useRef } from "react";
 
+import type { FileEntry } from "~/types/coding-session";
+
+import { FileSidebar } from "./file-sidebar";
+import { FileTabs } from "./file-tabs";
+
 export type CodeMirrorEditorProps = {
   value: string;
+  files: Map<string, FileEntry>;
+  activeFile: string;
+  onCreateFile: (fileName: string) => void;
+  onSelectFile: (fileName: string) => void;
   onUserTransaction?: (tr: Transaction) => void;
+  onEditorMouseMove?: (event: ReactMouseEvent<HTMLDivElement>) => void;
   containerRef?: RefObject<HTMLDivElement | null>;
   setExternalApiRef?: RefObject<{
     setDoc: (content: string) => void;
     setSelection: (selection: { anchor: number; head: number }) => void;
     getState: () => CMEditorState | null;
   } | null>;
+  children?: ReactNode;
 };
 
 export function CodeMirrorEditor({
   value,
+  files,
+  activeFile,
+  onCreateFile,
+  onSelectFile,
   onUserTransaction,
+  onEditorMouseMove,
   containerRef,
   setExternalApiRef,
+  children,
 }: CodeMirrorEditorProps) {
   const editorContainerRef = useRef<HTMLDivElement | null>(null);
 
@@ -107,14 +124,35 @@ export function CodeMirrorEditor({
   }, [view, value]);
 
   return (
-    <div
-      ref={(node) => {
-        editorContainerRef.current = node;
-        if (containerRef) {
-          (containerRef as React.RefObject<HTMLDivElement | null>).current = node;
-        }
-      }}
-      className="relative flex-1 overflow-hidden"
-    />
+    <div className="flex flex-1 overflow-hidden">
+      <FileSidebar
+        files={files}
+        activeFile={activeFile}
+        onCreateFile={onCreateFile}
+        onSelectFile={onSelectFile}
+      />
+      <div className="flex flex-1 flex-col overflow-hidden">
+        <FileTabs
+          files={files}
+          activeFile={activeFile}
+          onSelectFile={onSelectFile}
+        />
+        <div
+          className="relative flex-1 overflow-hidden"
+          onMouseMove={onEditorMouseMove}
+        >
+          <div
+            ref={(node) => {
+              editorContainerRef.current = node;
+              if (containerRef) {
+                containerRef.current = node;
+              }
+            }}
+            className="h-full w-full"
+          />
+          {children}
+        </div>
+      </div>
+    </div>
   );
 }

@@ -4,8 +4,7 @@ import { useRef, useState } from "react";
 
 import type { RecordedEvent } from "~/types/coding-session";
 
-import { CodeMirrorEditor, CursorOverlay, FileTabs } from "~/components/coding-session/editor";
-import { FileSidebar } from "~/components/coding-session/file-sidebar";
+import { CodeMirrorEditor, CursorOverlay } from "~/components/coding-session/editor";
 import { PlaybackControls } from "~/components/coding-session/playback-controls";
 import { ProblemPanel } from "~/components/coding-session/problem/problem-panel";
 import { ThemeToggle } from "~/components/theme-toggle";
@@ -123,45 +122,29 @@ export default function CodeEditor() {
       </div>
 
       <div className="flex flex-1 overflow-hidden">
-        <FileSidebar
-          files={filesManager.files}
-          activeFile={filesManager.activeFile}
-          onCreateFile={(name) => {
-            recorder.recordFileCreate(name);
-            filesManager.createFile(name);
-          }}
-          onSelectFile={(name) => {
-            recorder.recordFileSwitch(name);
-            filesManager.selectFile(name);
-          }}
-        />
-
-        <div
-          className="flex flex-1 flex-col overflow-hidden"
-        >
-          <FileTabs
+        <div className="flex flex-1 flex-col overflow-hidden">
+          <CodeMirrorEditor
+            value={filesManager.files.get(filesManager.activeFile)?.content ?? ""}
             files={filesManager.files}
             activeFile={filesManager.activeFile}
+            onCreateFile={(name) => {
+              recorder.recordFileCreate(name);
+              filesManager.createFile(name);
+            }}
             onSelectFile={(name) => {
               recorder.recordFileSwitch(name);
               filesManager.selectFile(name);
             }}
-          />
-          <div
-            className="relative flex-1 overflow-hidden"
-            onMouseMove={recorder.recordMouseEvent}
+            onUserTransaction={(tr) => {
+              const selection = tr.selection ? { anchor: tr.selection.main.anchor, head: tr.selection.main.head } : undefined;
+              recorder.recordTransaction(tr, selection);
+            }}
+            onEditorMouseMove={recorder.recordMouseEvent}
+            containerRef={editor}
+            setExternalApiRef={editorApiRef as any}
           >
-            <CodeMirrorEditor
-              value={filesManager.files.get(filesManager.activeFile)?.content ?? ""}
-              onUserTransaction={(tr) => {
-                const selection = tr.selection ? { anchor: tr.selection.main.anchor, head: tr.selection.main.head } : undefined;
-                recorder.recordTransaction(tr, selection);
-              }}
-              containerRef={editor}
-              setExternalApiRef={editorApiRef as any}
-            />
             <CursorOverlay cursorRef={cursorRef} />
-          </div>
+          </CodeMirrorEditor>
         </div>
 
         <ProblemPanel
