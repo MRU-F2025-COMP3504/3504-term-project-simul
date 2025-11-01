@@ -1,4 +1,4 @@
-import type { Transaction } from "@codemirror/state";
+import type { EditorState, Transaction } from "@codemirror/state";
 
 /**
  * A file entry with its name and content
@@ -6,6 +6,17 @@ import type { Transaction } from "@codemirror/state";
 export type FileEntry = {
   name: string;
   content: string;
+};
+
+/**
+ * API reference object for external components (like playback engine)
+ * to interact with the editor directly
+ */
+export type EditorAPI = {
+  setSelection: (selection: { anchor: number; head: number }) => void;
+  getState: () => EditorState | null;
+  dispatch: (tr: Transaction) => void;
+  setState: (state: EditorState) => void;
 };
 
 /**

@@ -38,7 +38,7 @@
 
 import { useCallback, useRef, useState } from "react";
 
-import type { RecordedEvent } from "~/types/coding-session";
+import type { EditorAPI, RecordedEvent } from "~/types/coding-session";
 
 /**
  * API returned by usePlayer hook
@@ -70,11 +70,7 @@ type UsePlayerProps = {
     deleteFile: (name: string) => void;
   };
   /** Reference to CodeMirror editor API for setting document and selection */
-  editorApiRef: React.RefObject<{
-    setDoc: (content: string) => void;
-    setSelection: (selection: { anchor: number; head: number }) => void;
-    getState: () => { doc: { toString: () => string } } | null;
-  } | null>;
+  editorApiRef: React.RefObject<EditorAPI | null>;
   /** Reference to initial editor state (captured at recording start) */
   initialStateRef: React.RefObject<any | null>;
   /** Reference to cursor overlay element for position updates */
@@ -130,7 +126,17 @@ export function usePlayer({
     // Reset editor to initial state
     if (initialStateRef.current) {
       const initialContent = initialStateRef.current.doc.toString();
-      editorApiRef.current.setDoc(initialContent);
+      const state = editorApiRef.current.getState();
+      if (state) {
+        const update = state.update({
+          changes: {
+            from: 0,
+            to: state.doc.length,
+            insert: initialContent,
+          },
+        });
+        editorApiRef.current.dispatch(update);
+      }
     }
 
     // Show cursor overlay
@@ -177,9 +183,9 @@ export function usePlayer({
       if (event.kind === "transaction" && event.transaction && event.transaction.changes && editorApiRef.current) {
         const state = editorApiRef.current.getState();
         if (state) {
-          const changes = event.transaction.changes as any;
-          const newDoc = changes.apply((state as any).doc).toString();
-          editorApiRef.current.setDoc(newDoc);
+          const changes = event.transaction.changes;
+          const update = state.update({ changes });
+          editorApiRef.current.dispatch(update);
 
           // Apply selection range if recorded
           if (event.selection) {
@@ -192,7 +198,17 @@ export function usePlayer({
         // Switch to the file during playback
         const fileEntry = filesManager.files.get(event.fileName);
         if (fileEntry) {
-          editorApiRef.current.setDoc(fileEntry.content);
+          const state = editorApiRef.current.getState();
+          if (state) {
+            const update = state.update({
+              changes: {
+                from: 0,
+                to: state.doc.length,
+                insert: fileEntry.content,
+              },
+            });
+            editorApiRef.current.dispatch(update);
+          }
         }
       }
 

@@ -2,17 +2,7 @@
 
 import { useState } from "react";
 
-import type { FileEntry } from "~/types/coding-session";
-
-/**
- * API reference object for external components (like playback engine)
- * to interact with the editor directly
- */
-type EditorAPI = {
-  setDoc: (content: string) => void;
-  setSelection: (selection: { anchor: number; head: number }) => void;
-  getState: () => { doc: { toString: () => string } } | null;
-};
+import type { EditorAPI, FileEntry } from "~/types/coding-session";
 
 /**
  * Hook for managing multi-file editor state
@@ -86,7 +76,17 @@ export function useFilesManager(
     // Update editor with new file content
     const fileEntry = files.get(fileName);
     if (fileEntry && editorApiRef.current) {
-      editorApiRef.current.setDoc(fileEntry.content);
+      const state = editorApiRef.current.getState();
+      if (state) {
+        const update = state.update({
+          changes: {
+            from: 0,
+            to: state.doc.length,
+            insert: fileEntry.content,
+          },
+        });
+        editorApiRef.current.dispatch(update);
+      }
     }
   };
 
@@ -151,7 +151,17 @@ export function useFilesManager(
 
     // Update editor
     if (editorApiRef.current) {
-      editorApiRef.current.setDoc(starterCode);
+      const state = editorApiRef.current.getState();
+      if (state) {
+        const update = state.update({
+          changes: {
+            from: 0,
+            to: state.doc.length,
+            insert: starterCode,
+          },
+        });
+        editorApiRef.current.dispatch(update);
+      }
     }
   };
 

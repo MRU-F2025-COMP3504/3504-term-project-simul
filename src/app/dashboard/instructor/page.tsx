@@ -2,7 +2,7 @@
 
 import { useRef, useState } from "react";
 
-import type { RecordedEvent } from "~/types/coding-session";
+import type { EditorAPI, RecordedEvent } from "~/types/coding-session";
 
 import { CodeMirrorEditor, CursorOverlay } from "~/components/coding-session/editor";
 import { PlaybackControls } from "~/components/coding-session/playback-controls";
@@ -21,11 +21,7 @@ export default function CodeEditor() {
   // Initialize hooks
   const editor = useRef<HTMLDivElement | null>(null);
   const cursorRef = useRef<HTMLDivElement | null>(null);
-  const editorApiRef = useRef<{
-    setDoc: (content: string) => void;
-    setSelection: (selection: { anchor: number; head: number }) => void;
-    getState: () => { doc: { toString: () => string } } | null;
-  } | null>(null);
+  const editorApiRef = useRef<EditorAPI | null>(null);
 
   const filesManager = useFilesManager(problem.starterCode, editorApiRef);
   const recorder = useRecorder(
