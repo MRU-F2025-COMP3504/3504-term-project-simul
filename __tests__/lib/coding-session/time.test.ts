@@ -17,7 +17,7 @@ describe("formatDisplayTime", () => {
 
   // Test full format with hours, minutes, and seconds
   it("should format hours, minutes, and seconds correctly (HH:MM:SS)", () => {
-    const result = formatDisplayTime(3665000); // 3665 seconds = 1h 1m 5s
+    const result = formatDisplayTime(3665000); // 3665000ms = 3665s = 1h 1m 5s
     expect(result).toBe("01:01:05");
   });
 
