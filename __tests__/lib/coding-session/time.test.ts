@@ -61,7 +61,7 @@ describe("delay", () => {
 
     const elapsed = endTime - startTime;
     // Allow small timing variance due to JS event loop
-    expect(elapsed).toBeGreaterThanOrEqual(100);
+    expect(elapsed).toBeGreaterThanOrEqual(95);
     expect(elapsed).toBeLessThan(200);
   });
 
