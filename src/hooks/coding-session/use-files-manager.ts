@@ -4,6 +4,10 @@ import { useState } from "react";
 
 import type { EditorAPI, FileEntry } from "~/types/coding-session";
 
+// TODO: This assumes that we only start with code in a single file.
+// Needs to take an array of files for multi-file starters.
+// TODO: This should be transitioned to using CodeMirror Transactions
+// Needs to work with an updated FileEntry type that includes EditorState.
 /**
  * Hook for managing multi-file editor state
  *

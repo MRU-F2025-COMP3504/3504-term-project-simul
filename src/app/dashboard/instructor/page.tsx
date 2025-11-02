@@ -1,5 +1,7 @@
 "use client";
 
+import type { EditorState } from "@codemirror/state";
+
 import { useRef, useState } from "react";
 
 import type { EditorAPI, RecordedEvent } from "~/types/coding-session";
@@ -31,7 +33,7 @@ export default function CodeEditor() {
   );
 
   // Keep for playback control
-  const initialStateRef = useRef<any | null>(null);
+  const initialStateRef = useRef<EditorState | null>(null);
 
   // Initialize player hook
   const [playbackTime, setPlaybackTime] = useState(0);
@@ -60,7 +62,7 @@ export default function CodeEditor() {
   const handleToggleRecording = () => {
     if (!recorder.recording) {
       // Starting recording - capture initial state and reset events
-      initialStateRef.current = (editorApiRef.current?.getState() as any) ?? null;
+      initialStateRef.current = editorApiRef.current?.getState() ?? null;
       setRecordedEvents([]);
       setPlaybackTime(0);
       recorder.startRecording();

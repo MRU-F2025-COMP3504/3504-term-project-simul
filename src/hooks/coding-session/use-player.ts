@@ -36,6 +36,8 @@
  * ```
  */
 
+import type { EditorState } from "@codemirror/state";
+
 import { useCallback, useRef, useState } from "react";
 
 import type { EditorAPI, RecordedEvent } from "~/types/coding-session";
@@ -72,7 +74,7 @@ type UsePlayerProps = {
   /** Reference to CodeMirror editor API for setting document and selection */
   editorApiRef: React.RefObject<EditorAPI | null>;
   /** Reference to initial editor state (captured at recording start) */
-  initialStateRef: React.RefObject<any | null>;
+  initialStateRef: React.RefObject<EditorState | null>;
   /** Reference to cursor overlay element for position updates */
   cursorRef: React.RefObject<HTMLDivElement | null>;
   /** Callback when playback time updates (for progress bar) */
@@ -101,8 +103,89 @@ export function usePlayer({
   const [isPlaying, setIsPlaying] = useState(false);
   const [playbackTime, setPlaybackTime] = useState(0);
   const playingRef = useRef(false);
-  const timerIntervalRef = useRef<NodeJS.Timeout | null>(null);
+  const startingWallTime = useRef(0);
+  const pausedAt = useRef(0);
+  const rate = 1;
+  const eventPointer = useRef(0);
+  function applyEvent(event: RecordedEvent) {
+    // Process current event
+    if (event.kind === "transaction" && event.transaction && event.transaction.changes && editorApiRef.current) {
+      const state = editorApiRef.current.getState();
+      if (state) {
+        const changes = event.transaction.changes;
+        const update = state.update({ changes });
+        editorApiRef.current.dispatch(update);
 
+        // Apply selection range if recorded
+        if (event.selection) {
+          editorApiRef.current.setSelection(event.selection);
+        }
+      }
+    }
+
+    if (event.kind === "file-switch" && event.fileName && editorApiRef.current) {
+      // Switch to the file during playback
+      const fileEntry = filesManager.files.get(event.fileName);
+      if (fileEntry) {
+        const state = editorApiRef.current.getState();
+        if (state) {
+          const update = state.update({
+            changes: {
+              from: 0,
+              to: state.doc.length,
+              insert: fileEntry.content,
+            },
+          });
+          editorApiRef.current.dispatch(update);
+        }
+      }
+    }
+
+    if (event.kind === "file-create") {
+      // File was created during recording (for informational purposes during playback)
+      const fileName = event.fileName ?? "";
+      if (fileName) {
+        filesManager.createFile(fileName, event.fileContent ?? "");
+      }
+    }
+
+    if (event.kind === "mouse" && event.mouse && cursorRef.current) {
+      // Position cursor according to recorded coordinates (we store coords relative to editor rect)
+      // Use left/top and keep the translate(-50%,-50%) so the dot centers on the point.
+      cursorRef.current.style.left = `${event.mouse.x}px`;
+      cursorRef.current.style.top = `${event.mouse.y}px`;
+    }
+  }
+
+  function animationLoop() {
+    if (!playingRef.current) {
+      return;
+    }
+    const currentWallTime = performance.now();
+    const currentPlaybackTime = (currentWallTime - startingWallTime.current) * rate + pausedAt.current;
+
+    // Apply all the events up to the current playback time.
+    // since eventPointer is stored outside the function
+    // we only apply events that havent been done yet.
+    while (eventPointer.current < recordedEvents.length && recordedEvents[eventPointer.current].time! <= currentPlaybackTime) {
+      const event = recordedEvents[eventPointer.current];
+      eventPointer.current++;
+      applyEvent(event);
+    }
+
+    if (eventPointer.current >= recordedEvents.length) {
+      // Reached the end of the recording
+      playingRef.current = false;
+      setIsPlaying(false);
+      onPlaybackStateChange(false);
+      return;
+    }
+
+    // Update playback time and schedule next frame
+    setPlaybackTime(currentPlaybackTime);
+    onPlaybackTimeChange(currentPlaybackTime);
+    requestAnimationFrame(animationLoop);
+  }
   /**
    * Main playback loop
    *
@@ -118,24 +201,22 @@ export function usePlayer({
    * 5. Hides cursor when playback ends
    */
   const handlePlayback = useCallback(async () => {
-    if (!editorApiRef.current)
+    if (!editorApiRef.current) {
       return;
-    if (!recordedEvents || recordedEvents.length === 0)
+    }
+    if (!recordedEvents || recordedEvents.length === 0) {
       return;
+    }
 
+    // TODO: What is our inital state? The output of FileManager.resetToStarter?
+    // I guess a recording can start after some edits to the code have been made
+    // So it won't always be resetToStarter.
     // Reset editor to initial state
     if (initialStateRef.current) {
-      const initialContent = initialStateRef.current.doc.toString();
       const state = editorApiRef.current.getState();
+
       if (state) {
-        const update = state.update({
-          changes: {
-            from: 0,
-            to: state.doc.length,
-            insert: initialContent,
-          },
-        });
-        editorApiRef.current.dispatch(update);
+        editorApiRef.current.setState(initialStateRef.current);
       }
     }
 
@@ -143,109 +224,14 @@ export function usePlayer({
     if (cursorRef.current) {
       cursorRef.current.style.display = "block";
     }
-
-    const playbackStartTime = Date.now();
-    const recordingStartTime = recordedEvents[0]?.time ?? 0;
-
-    // Start a timer to continuously update playback time
-    timerIntervalRef.current = setInterval(() => {
-      if (!playingRef.current) {
-        if (timerIntervalRef.current) {
-          clearInterval(timerIntervalRef.current);
-          timerIntervalRef.current = null;
-        }
-        return;
-      }
-      const elapsedTime = Date.now() - playbackStartTime;
-      const newPlaybackTime = recordingStartTime + elapsedTime;
-      setPlaybackTime(newPlaybackTime);
-      onPlaybackTimeChange(newPlaybackTime);
-    }, 50); // Update every 50ms for smooth progress
-
-    let eventIndex = 0;
-
-    while (eventIndex < recordedEvents.length && playingRef.current) {
-      const event = recordedEvents[eventIndex];
-      const nextEvent = eventIndex < recordedEvents.length - 1 ? recordedEvents[eventIndex + 1] : null;
-      const delayToNextEvent = nextEvent ? Math.max(0, (nextEvent.time ?? 0) - (event.time ?? 0)) : 0;
-
-      // Wait for the delay to the next event
-      if (delayToNextEvent > 0) {
-        await new Promise(resolve => setTimeout(resolve, delayToNextEvent));
-      }
-
-      // Check if playback was stopped
-      if (!playingRef.current) {
-        break;
-      }
-
-      // Process current event
-      if (event.kind === "transaction" && event.transaction && event.transaction.changes && editorApiRef.current) {
-        const state = editorApiRef.current.getState();
-        if (state) {
-          const changes = event.transaction.changes;
-          const update = state.update({ changes });
-          editorApiRef.current.dispatch(update);
-
-          // Apply selection range if recorded
-          if (event.selection) {
-            editorApiRef.current.setSelection(event.selection);
-          }
-        }
-      }
-
-      if (event.kind === "file-switch" && event.fileName && editorApiRef.current) {
-        // Switch to the file during playback
-        const fileEntry = filesManager.files.get(event.fileName);
-        if (fileEntry) {
-          const state = editorApiRef.current.getState();
-          if (state) {
-            const update = state.update({
-              changes: {
-                from: 0,
-                to: state.doc.length,
-                insert: fileEntry.content,
-              },
-            });
-            editorApiRef.current.dispatch(update);
-          }
-        }
-      }
-
-      if (event.kind === "file-create") {
-        // File was created during recording (for informational purposes during playback)
-        const fileName = event.fileName ?? "";
-        if (fileName) {
-          filesManager.createFile(fileName, event.fileContent ?? "");
-        }
-      }
-
-      if (event.kind === "mouse" && event.mouse && cursorRef.current) {
-        // Position cursor according to recorded coordinates (we store coords relative to editor rect)
-        // Use left/top and keep the translate(-50%,-50%) so the dot centers on the point.
-        cursorRef.current.style.left = `${event.mouse.x}px`;
-        cursorRef.current.style.top = `${event.mouse.y}px`;
-      }
-
-      eventIndex++;
-    }
-
-    // Clear the timer when playback ends
-    if (timerIntervalRef.current) {
-      clearInterval(timerIntervalRef.current);
-      timerIntervalRef.current = null;
-    }
+    startingWallTime.current = performance.now();
+    requestAnimationFrame(animationLoop);
 
     // Hide cursor overlay when playback ends
     if (cursorRef.current) {
       cursorRef.current.style.display = "none";
     }
-
-    // Stop playing flag
-    playingRef.current = false;
-    setIsPlaying(false);
-    onPlaybackStateChange(false);
-  }, [recordedEvents, filesManager, editorApiRef, initialStateRef, cursorRef, onPlaybackTimeChange, onPlaybackStateChange]);
+  }, [recordedEvents, editorApiRef, initialStateRef, cursorRef, onPlaybackStateChange, startingWallTime]);
 
   /**
    * Starts playback of recorded events
@@ -272,10 +258,8 @@ export function usePlayer({
     playingRef.current = false;
     setIsPlaying(false);
     onPlaybackStateChange(false);
-    if (timerIntervalRef.current) {
-      clearInterval(timerIntervalRef.current);
-      timerIntervalRef.current = null;
-    }
+    const mediaNow = (performance.now() - startingWallTime.current) * rate + pausedAt.current;
+    pausedAt.current = mediaNow;
   }, [onPlaybackStateChange]);
 
   return {

@@ -31,7 +31,7 @@ export function useRecorder(
   editorContainer: React.RefObject<HTMLDivElement | null>,
 ) {
   const [recording, setRecording] = useState(false);
-  const recordingStartTimeRef = useRef<number | null>(null);
+  const recordingStartTime = useRef<number>(0);
 
   /**
    * Record a transaction (code edit)
@@ -50,12 +50,7 @@ export function useRecorder(
       if (!recording)
         return;
 
-      let time = tr.annotation?.(tr.constructor.time) ?? Date.now();
-
-      // Convert to relative time from start of recording
-      if (recordingStartTimeRef.current) {
-        time = time - recordingStartTimeRef.current;
-      }
+      const time = performance.now() - recordingStartTime.current;
 
       const activeFile = getActiveFile();
 
@@ -91,12 +86,7 @@ export function useRecorder(
         event.clientY,
       );
 
-      let time = Date.now();
-
-      // Convert to relative time from start of recording
-      if (recordingStartTimeRef.current) {
-        time = time - recordingStartTimeRef.current;
-      }
+      const time = performance.now() - recordingStartTime.current;
 
       onEvent({
         time,
@@ -125,12 +115,7 @@ export function useRecorder(
       if (!recording)
         return;
 
-      let time = Date.now();
-
-      // Convert to relative time from start of recording
-      if (recordingStartTimeRef.current) {
-        time = time - recordingStartTimeRef.current;
-      }
+      const time = performance.now() - recordingStartTime.current;
 
       onEvent({
         time,
@@ -154,12 +139,7 @@ export function useRecorder(
       if (!recording)
         return;
 
-      let time = Date.now();
-
-      // Convert to relative time from start of recording
-      if (recordingStartTimeRef.current) {
-        time = time - recordingStartTimeRef.current;
-      }
+      const time = performance.now() - recordingStartTime.current;
 
       onEvent({
         time,
@@ -177,8 +157,8 @@ export function useRecorder(
    * Called before beginning to capture events.
    */
   const startRecording = useCallback(() => {
-    recordingStartTimeRef.current = Date.now();
     setRecording(true);
+    recordingStartTime.current = performance.now();
   }, []);
 
   /**
@@ -188,7 +168,6 @@ export function useRecorder(
    */
   const stopRecording = useCallback(() => {
     setRecording(false);
-    recordingStartTimeRef.current = null;
   }, []);
 
   /**

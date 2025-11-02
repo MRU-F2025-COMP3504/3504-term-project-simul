@@ -1,5 +1,6 @@
 import type { EditorState, Transaction } from "@codemirror/state";
 
+// TODO: FileEntry stores content as a string. It should be updated to store EditorState instead.
 /**
  * A file entry with its name and content
  */

@@ -11,7 +11,7 @@ import type { EditorAPI, FileEntry } from "~/types/coding-session";
 
 import { FileSidebar } from "./file-sidebar";
 import { FileTabs } from "./file-tabs";
-
+// TODO: Update value to be EditorState instead of string
 export type CodeMirrorEditorProps = {
   value: string;
   files: Map<string, FileEntry>;
@@ -101,15 +101,14 @@ export function CodeMirrorEditor({
     if (!view || !value)
       return;
 
-    const currentDoc = view.state.doc.toString();
-
-    if (currentDoc.length > 0)
+    const currentDoc = view.state;
+    if (!currentDoc)
       return;
 
     view.dispatch({
       changes: {
         from: 0,
-        to: currentDoc.length,
+        to: currentDoc.doc.length,
         insert: value,
       },
     });
