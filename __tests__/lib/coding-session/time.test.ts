@@ -41,7 +41,7 @@ describe("formatDisplayTime", () => {
 
   // Test boundary where exactly one hour should show hours segment
   it("should handle exactly one hour", () => {
-    const result = formatDisplayTime(3600000); // 3600 seconds = 1h
+    const result = formatDisplayTime(3600000); // 3600000ms = 3600s = 1h
     expect(result).toBe("01:00:00");
   });
 
