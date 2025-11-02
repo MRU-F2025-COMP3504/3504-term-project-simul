@@ -12,6 +12,8 @@ import {
   ChangeSet,
 } from "@codemirror/state";
 
+import type { RecordedEvent } from "~/types/coding-session";
+
 /**
  * Serializable representation of a single change
  *
@@ -31,6 +33,25 @@ export type ChangeJSON = {
  * An ordered array of changes to be applied to a document
  */
 export type ChangeSetJSON = ChangeJSON[];
+
+/**
+ * Serializable representation of a recorded event for storage
+ * Replaces non-serializable Transaction objects with JSON-serializable data
+ */
+export type SerializedRecordedEvent = {
+  time: number;
+  kind: "transaction" | "mouse" | "file-switch" | "file-create";
+  fileName?: string;
+  eventData: {
+    // For transaction events
+    changes?: ChangeSetJSON;
+    selection?: { anchor: number; head: number };
+    // For mouse events
+    mouse?: { x: number; y: number; type?: string; button?: number };
+    // For file-create events
+    fileContent?: string;
+  };
+};
 
 /**
  * Convert a CodeMirror ChangeSet to JSON format
@@ -146,4 +167,79 @@ export function totalDuration(events: Array<{ time: number }>): number {
  */
 export function relativeTime(startTime: number, currentTime: number): number {
   return currentTime - startTime;
+}
+
+/**
+ * Serialize a RecordedEvent to JSON-serializable format
+ *
+ * Converts non-serializable Transaction objects and other complex data
+ * into JSON-compatible structures for storage.
+ *
+ * @param event - The recorded event to serialize
+ * @returns JSON-serializable version of the event
+ */
+export function serializeEvent(event: RecordedEvent): SerializedRecordedEvent {
+  const baseEvent = {
+    time: event.time,
+    kind: event.kind,
+    fileName: event.fileName,
+    eventData: {} as SerializedRecordedEvent["eventData"],
+  };
+
+  switch (event.kind) {
+    case "transaction":
+      if (event.transaction) {
+        baseEvent.eventData.changes = transactionToChangeSetJSON(event.transaction);
+        baseEvent.eventData.selection = event.selection;
+      }
+      break;
+
+    case "mouse":
+      baseEvent.eventData.mouse = event.mouse;
+      break;
+
+    case "file-switch":
+      // already in the base event, no other data needed
+      break;
+
+    case "file-create":
+      baseEvent.eventData.fileContent = event.fileContent;
+      break;
+  }
+
+  return baseEvent;
+}
+
+/**
+ * Deserialize a SerializedRecordedEvent back to RecordedEvent format
+ *
+ * Reconstructs the original event structure from stored JSON data.
+ * Note: Transaction objects cannot be fully reconstructed from JSON,
+ * so this is mainly for data inspection and metadata access.
+ *
+ * @param serializedEvent - The serialized event to deserialize
+ * @returns Deserialized event (without reconstructable Transaction objects)
+ */
+export function deserializeEvent(serializedEvent: SerializedRecordedEvent): Omit<RecordedEvent, "transaction"> {
+  const baseEvent = {
+    time: serializedEvent.time,
+    kind: serializedEvent.kind,
+    fileName: serializedEvent.fileName,
+  } as Omit<RecordedEvent, "transaction">; // we don't need the transaction here
+
+  switch (serializedEvent.kind) {
+    case "transaction":
+      baseEvent.selection = serializedEvent.eventData.selection;
+      break;
+
+    case "mouse":
+      baseEvent.mouse = serializedEvent.eventData.mouse;
+      break;
+
+    case "file-create":
+      baseEvent.fileContent = serializedEvent.eventData.fileContent;
+      break;
+  }
+
+  return baseEvent;
 }
