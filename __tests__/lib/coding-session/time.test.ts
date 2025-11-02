@@ -11,7 +11,7 @@ describe("formatDisplayTime", () => {
 
   // Test minutes and seconds, no hours
   it("should format minutes and seconds correctly (MM:SS)", () => {
-    const result = formatDisplayTime(125000); // 125 seconds = 2m 5s
+    const result = formatDisplayTime(125000); // 125000ms = 125s = 2m 5s
     expect(result).toBe("02:05");
   });
 
