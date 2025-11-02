@@ -47,7 +47,7 @@ describe("formatDisplayTime", () => {
 
   // Test boundary where just under one hour should NOT show hours segment
   it("should not show hours for times under one hour", () => {
-    const result = formatDisplayTime(3599000); // 3599 seconds = 59m 59s
+    const result = formatDisplayTime(3599000); // 3599000ms = 3599s = 59m 59s
     expect(result).toBe("59:59");
   });
 });
