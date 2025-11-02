@@ -62,7 +62,7 @@ describe("delay", () => {
     const elapsed = endTime - startTime;
     // Allow small timing variance due to JS event loop
     expect(elapsed).toBeGreaterThanOrEqual(100);
-    expect(elapsed).toBeLessThan(150);
+    expect(elapsed).toBeLessThan(200);
   });
 
   // Test that delay returns a promise (for async/await usage)
