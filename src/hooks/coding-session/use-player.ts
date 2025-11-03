@@ -41,6 +41,8 @@ import { useCallback, useMemo, useRef, useState } from "react";
 
 import type { EditorAPI, File, GlobalEditorState, IndexRow, KeyFrame, RecordedEvent } from "~/types/coding-session";
 
+import { cloneState, lowerBoundEvents, upperBoundKF } from "~/lib/coding-session/playback";
+
 import type { FilesManager } from "./use-files-manager";
 
 /**
@@ -104,28 +106,6 @@ export function usePlayer({
   const rate = 1;
   const eventPointer = useRef(0);
 
-  /**
-   * Clones a GlobalEditorState by creating new EditorState instances from document content.
-   * Cannot use structuredClone because EditorState contains non-serializable functions.
-   */
-  function cloneState(state: GlobalEditorState): GlobalEditorState {
-    const clonedFiles = new Map<string, File>();
-    for (const [fileName, file] of state.files.entries()) {
-      clonedFiles.set(fileName, {
-        fileName: file.fileName,
-        content: EditorState.create({ doc: file.content.doc.toString() }),
-      });
-    }
-    return {
-      files: clonedFiles,
-      activeFile: {
-        fileName: state.activeFile.fileName,
-        content: EditorState.create({ doc: state.activeFile.content.doc.toString() }),
-      },
-      mouse: { ...state.mouse },
-    };
-  }
-
   const { keyframes, index, events } = useMemo(() => {
     const initialState = initialStateRef.current;
     let state: GlobalEditorState = {
@@ -165,29 +145,6 @@ export function usePlayer({
     return { keyframes, index, events: recordedEvents };
   }, [recordedEvents, initialStateRef]);
 
-  function upperBoundKF(keyframes: { time: number }[], target: number): number {
-    let low = 0;
-    let high = keyframes.length;
-    while (low < high) {
-      const mid = (low + high) >> 1;
-      if (keyframes[mid].time <= target)
-        low = mid + 1;
-      else high = mid;
-    }
-    return low; // index of first keyframe with time > target
-  }
-
-  function lowerBoundEvents(events: { time: number }[], time: number): number {
-    let low = 0;
-    let high = events.length;
-    while (low < high) {
-      const mid = (low + high) >> 1;
-      if (events[mid].time < time)
-        low = mid + 1;
-      else high = mid;
-    }
-    return low; // first event whose time >= ts
-  }
   // TODO: This is dogshit and needs to be cleaned up
   const seek = useCallback((targetTime: number): GlobalEditorState => {
     // Handle empty keyframes or events
@@ -424,47 +381,6 @@ export function usePlayer({
     onPlaybackTimeChange(currentPlaybackTime);
     requestAnimationFrame(animationLoop);
   }, [applyEvent, onPlaybackStateChange, onPlaybackTimeChange, recordedEvents, rate, cursorRef]);
-  /**
-   * Main playback loop
-   *
-   * Processes recorded events in chronological order:
-   * 1. Restores initial editor state
-   * 2. Shows cursor overlay
-   * 3. Iterates through events, applying delays between them
-   * 4. For each event:
-   *    - Transaction: applies code changes to editor
-   *    - File-switch: switches active file
-   *    - File-create: creates new file (for completeness during replay)
-   *    - Mouse: updates cursor position on screen
-   * 5. Hides cursor when playback ends
-   */
-  const handlePlayback = useCallback(async () => {
-    if (!editorApiRef.current) {
-      return;
-    }
-    if (!recordedEvents || recordedEvents.length === 0) {
-      return;
-    }
-
-    // TODO: What is our inital state? The output of FileManager.resetToStarter?
-    // I guess a recording can start after some edits to the code have been made
-    // So it won't always be resetToStarter.
-    // Reset editor to initial state
-    if (initialStateRef.current) {
-      const state = editorApiRef.current.getState();
-
-      if (state) {
-        editorApiRef.current.setState(initialStateRef.current);
-      }
-    }
-
-    // Show cursor overlay
-    if (cursorRef.current) {
-      cursorRef.current.style.display = "block";
-    }
-    startingWallTime.current = performance.now();
-    requestAnimationFrame(animationLoop);
-  }, [recordedEvents, editorApiRef, initialStateRef, cursorRef, startingWallTime, animationLoop]);
 
   /**
    * Starts playback of recorded events
@@ -477,9 +393,30 @@ export function usePlayer({
       playingRef.current = true;
       setIsPlaying(true);
       onPlaybackStateChange(true);
-      await handlePlayback();
+      if (!editorApiRef.current) {
+        return;
+      }
+      if (!recordedEvents || recordedEvents.length === 0) {
+        return;
+      }
+
+      // Reset editor to initial state
+      if (initialStateRef.current) {
+        const state = editorApiRef.current.getState();
+
+        if (state) {
+          editorApiRef.current.setState(initialStateRef.current);
+        }
+      }
+
+      // Show cursor overlay
+      if (cursorRef.current) {
+        cursorRef.current.style.display = "block";
+      }
+      startingWallTime.current = performance.now();
+      requestAnimationFrame(animationLoop);
     }
-  }, [isPlaying, handlePlayback, onPlaybackStateChange]);
+  }, [isPlaying, onPlaybackStateChange, recordedEvents, editorApiRef, initialStateRef, cursorRef, startingWallTime, animationLoop]);
 
   /**
    * Pauses current playback
