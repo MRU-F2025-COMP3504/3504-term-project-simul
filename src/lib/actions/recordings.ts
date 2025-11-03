@@ -1,10 +1,14 @@
 "use server";
 
+import { desc, eq } from "drizzle-orm";
 import { z } from "zod";
 
+import type { RecordingData } from "~/types/recording";
+
+import { db } from "~/lib/db";
+import { recording } from "~/lib/db/schema";
 import { createRecordingData } from "~/lib/recording-utils";
 import { actionClient } from "~/lib/safe-action";
-import { RecordingStorage } from "~/lib/storage/recording-storage";
 
 const saveRecordingSchema = z.object({
   title: z.string(),
@@ -24,15 +28,31 @@ const loadRecordingSchema = z.object({
  * Save a coding session recording
  *
  * @param params - Recording data parameters
- * @returns The saved recording ID and file path
+ * @returns The saved recording ID
  */
 export const saveRecordingAction = actionClient
   .inputSchema(saveRecordingSchema)
   .action(async ({ parsedInput }) => {
     try {
       const recordingData = createRecordingData(parsedInput);
-      const filePath = await RecordingStorage.save(recordingData);
-      return { recordingId: recordingData.id, filePath };
+
+      const [savedRecording] = await db.insert(recording).values({
+        title: recordingData.title,
+        problem: recordingData.problem,
+        initialCode: recordingData.initialCode,
+        files: recordingData.files,
+        activeFile: recordingData.activeFile,
+        events: recordingData.events,
+        duration: recordingData.metadata.duration,
+        instructorId: recordingData.metadata.instructorId || null,
+        // createdAt will use default (now())
+      }).returning();
+
+      if (!savedRecording) {
+        throw new Error("Failed to save recording to database");
+      }
+
+      return { recordingId: savedRecording.id };
     }
     catch (error) {
       console.error("Failed to save recording:", error);
@@ -50,8 +70,31 @@ export const loadRecordingAction = actionClient
   .inputSchema(loadRecordingSchema)
   .action(async ({ parsedInput }) => {
     try {
-      const recording = await RecordingStorage.load(parsedInput.id);
-      return { recording };
+      const [result] = await db
+        .select()
+        .from(recording)
+        .where(eq(recording.id, parsedInput.id));
+
+      if (!result) {
+        throw new Error(`Recording with ID ${parsedInput.id} not found`);
+      }
+
+      const recordingData: RecordingData = {
+        id: result.id,
+        title: result.title,
+        problem: result.problem as any,
+        initialCode: result.initialCode,
+        files: result.files as Record<string, string>,
+        activeFile: result.activeFile,
+        events: result.events as any[],
+        metadata: {
+          createdAt: result.createdAt.toISOString(),
+          duration: result.duration,
+          instructorId: result.instructorId || undefined,
+        },
+      };
+
+      return { recording: recordingData };
     }
     catch (error) {
       console.error("Failed to load recording:", error);
@@ -66,7 +109,28 @@ export const loadRecordingAction = actionClient
  */
 export const listRecordingsAction = actionClient.action(async () => {
   try {
-    const recordings = await RecordingStorage.list();
+    const results = await db
+      .select({
+        id: recording.id,
+        title: recording.title,
+        problemTitle: recording.problem,
+        createdAt: recording.createdAt,
+        duration: recording.duration,
+      })
+      .from(recording)
+      .orderBy(desc(recording.createdAt)); // TODO: pagination, filtering, etc. Realistically a subissue of #119, as I assume instructors can order their courses.
+
+    const recordings = results.map((r) => {
+      const problem = r.problemTitle as any;
+      return {
+        id: r.id,
+        title: r.title,
+        problemTitle: problem?.title || "Unknown Problem",
+        createdAt: r.createdAt.toISOString(),
+        duration: r.duration,
+      };
+    });
+
     return { recordings };
   }
   catch (error) {
@@ -84,7 +148,10 @@ export const deleteRecordingAction = actionClient
   .inputSchema(loadRecordingSchema)
   .action(async ({ parsedInput }) => {
     try {
-      await RecordingStorage.delete(parsedInput.id);
+      await db
+        .delete(recording)
+        .where(eq(recording.id, parsedInput.id));
+
       return {};
     }
     catch (error) {
