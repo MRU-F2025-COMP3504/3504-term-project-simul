@@ -41,6 +41,8 @@ import { useCallback, useMemo, useRef, useState } from "react";
 
 import type { EditorAPI, File, GlobalEditorState, IndexRow, KeyFrame, RecordedEvent } from "~/types/coding-session";
 
+import type { FilesManager } from "./use-files-manager";
+
 /**
  * API returned by usePlayer hook
  */
@@ -64,14 +66,7 @@ type UsePlayerProps = {
   /** Array of recorded events to replay (created by useRecorder) */
   recordedEvents: RecordedEvent[];
   /** Files manager instance for switching files during playback */
-  filesManager: {
-    files: Map<string, { name: string; content: string }>;
-    activeFile: string;
-    createFile: (fileName: string, content?: string) => void;
-    selectFile: (name: string) => void;
-    updateFileContent: (name: string, content: string) => void;
-    deleteFile: (name: string) => void;
-  };
+  filesManager: FilesManager;
   /** Reference to CodeMirror editor API for setting document and selection */
   editorApiRef: React.RefObject<EditorAPI | null>;
   /** Reference to initial editor state (captured at recording start) */
@@ -168,7 +163,7 @@ export function usePlayer({
       }
     }
     return { keyframes, index, events: recordedEvents };
-  }, [recordedEvents, initialStateRef, filesManager]);
+  }, [recordedEvents, initialStateRef]);
 
   function upperBoundKF(keyframes: { time: number }[], target: number): number {
     let low = 0;
@@ -194,7 +189,7 @@ export function usePlayer({
     return low; // first event whose time >= ts
   }
   // TODO: This is dogshit and needs to be cleaned up
-  function seek(targetTime: number): GlobalEditorState {
+  const seek = useCallback((targetTime: number): GlobalEditorState => {
     // Handle empty keyframes or events
     if (keyframes.length === 0) {
       const initialState = initialStateRef.current;
@@ -225,7 +220,7 @@ export function usePlayer({
       state = reduce(state, events[i]);
     }
     return state;
-  }
+  }, [events, keyframes, index, initialStateRef]);
 
   // This function only updates internal state, no UI changes
   // Only used for seeking
@@ -306,7 +301,7 @@ export function usePlayer({
     throw new Error(`Unknown event kind: ${event.kind}`);
   }
 
-  function UpdateUIFromState(state: GlobalEditorState) {
+  const UpdateUIFromState = useCallback((state: GlobalEditorState) => {
     if (!editorApiRef.current) {
       return;
     }
@@ -320,14 +315,14 @@ export function usePlayer({
         filesManager.selectFile(state.activeFile.fileName);
       }
       else {
-        const content = state.activeFile.content.doc.toString();
+        const content = state.activeFile.content;
         filesManager.createFile(state.activeFile.fileName, content);
         filesManager.selectFile(state.activeFile.fileName);
       }
     }
 
     const currentFileContent = filesManager.files.get(state.activeFile.fileName)?.content ?? "";
-    const newFileContent = state.activeFile.content.doc.toString();
+    const newFileContent = state.activeFile.content;
     if (currentFileContent !== newFileContent) {
       filesManager.updateFileContent(state.activeFile.fileName, newFileContent);
     }
@@ -344,9 +339,9 @@ export function usePlayer({
       cursorRef.current.style.top = `${state.mouse.y}px`;
       cursorRef.current.style.display = "block";
     }
-  }
+  }, [cursorRef, editorApiRef, filesManager]);
   // for use in normal playback
-  function applyEvent(event: RecordedEvent) {
+  const applyEvent = useCallback((event: RecordedEvent) => {
     // Process current event
     if (event.kind === "transaction" && event.transaction && event.transaction.changes && editorApiRef.current) {
       const state = editorApiRef.current.getState();
@@ -372,7 +367,7 @@ export function usePlayer({
             changes: {
               from: 0,
               to: state.doc.length,
-              insert: fileEntry.content,
+              insert: fileEntry.content.doc,
             },
           });
           editorApiRef.current.dispatch(update);
@@ -384,7 +379,7 @@ export function usePlayer({
       // File was created during recording (for informational purposes during playback)
       const fileName = event.fileName ?? "";
       if (fileName) {
-        filesManager.createFile(fileName, event.fileContent ?? "");
+        filesManager.createFile(fileName, EditorState.create({ doc: event.fileContent ?? "" }));
       }
     }
 
@@ -394,9 +389,9 @@ export function usePlayer({
       cursorRef.current.style.left = `${event.mouse.x}px`;
       cursorRef.current.style.top = `${event.mouse.y}px`;
     }
-  }
+  }, [cursorRef, editorApiRef, filesManager]);
 
-  function animationLoop() {
+  const animationLoop = useCallback(() => {
     if (!playingRef.current) {
       return;
     }
@@ -414,6 +409,10 @@ export function usePlayer({
 
     if (eventPointer.current >= recordedEvents.length) {
       // Reached the end of the recording
+      // Hide cursor overlay when playback ends
+      if (cursorRef.current) {
+        cursorRef.current.style.display = "none";
+      }
       playingRef.current = false;
       setIsPlaying(false);
       onPlaybackStateChange(false);
@@ -424,7 +423,7 @@ export function usePlayer({
     setPlaybackTime(currentPlaybackTime);
     onPlaybackTimeChange(currentPlaybackTime);
     requestAnimationFrame(animationLoop);
-  }
+  }, [applyEvent, onPlaybackStateChange, onPlaybackTimeChange, recordedEvents, rate, cursorRef]);
   /**
    * Main playback loop
    *
@@ -465,12 +464,7 @@ export function usePlayer({
     }
     startingWallTime.current = performance.now();
     requestAnimationFrame(animationLoop);
-
-    // Hide cursor overlay when playback ends
-    if (cursorRef.current) {
-      cursorRef.current.style.display = "none";
-    }
-  }, [recordedEvents, editorApiRef, initialStateRef, cursorRef, onPlaybackStateChange, startingWallTime]);
+  }, [recordedEvents, editorApiRef, initialStateRef, cursorRef, startingWallTime, animationLoop]);
 
   /**
    * Starts playback of recorded events
@@ -539,7 +533,7 @@ export function usePlayer({
     // Update playback time
     setPlaybackTime(clampedTime);
     onPlaybackTimeChange(clampedTime);
-  }, [recordedEvents, events, keyframes, index, onPlaybackStateChange, onPlaybackTimeChange, filesManager]);
+  }, [recordedEvents, events, onPlaybackStateChange, onPlaybackTimeChange, UpdateUIFromState, seek]);
 
   return {
     play,

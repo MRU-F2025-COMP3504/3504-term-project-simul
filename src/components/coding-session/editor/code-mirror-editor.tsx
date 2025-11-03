@@ -7,14 +7,14 @@ import { useCodeMirror } from "@uiw/react-codemirror";
 import { useTheme } from "next-themes";
 import { useEffect, useImperativeHandle, useRef } from "react";
 
-import type { EditorAPI, FileEntry } from "~/types/coding-session";
+import type { EditorAPI, File } from "~/types/coding-session";
 
 import { FileSidebar } from "./file-sidebar";
 import { FileTabs } from "./file-tabs";
-// TODO: Update value to be EditorState instead of string
+
 export type CodeMirrorEditorProps = {
   value: string;
-  files: Map<string, FileEntry>;
+  files: Map<string, File>;
   activeFile: string;
   onCreateFile: (fileName: string) => void;
   onSelectFile: (fileName: string) => void;

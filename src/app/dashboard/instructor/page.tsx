@@ -1,7 +1,6 @@
 "use client";
 
-import type { EditorState } from "@codemirror/state";
-
+import { EditorState } from "@codemirror/state";
 import { useRef, useState } from "react";
 
 import type { EditorAPI, RecordedEvent } from "~/types/coding-session";
@@ -24,8 +23,10 @@ export default function CodeEditor() {
   const editor = useRef<HTMLDivElement | null>(null);
   const cursorRef = useRef<HTMLDivElement | null>(null);
   const editorApiRef = useRef<EditorAPI | null>(null);
-
-  const filesManager = useFilesManager(problem.starterCode, editorApiRef);
+  const startingState = EditorState.create({
+    doc: problem.starterCode,
+  });
+  const filesManager = useFilesManager(startingState, editorApiRef);
   const recorder = useRecorder(
     event => setRecordedEvents(prev => [...prev, event]),
     () => filesManager.activeFile,
@@ -90,7 +91,7 @@ export default function CodeEditor() {
   };
 
   const resetToStarter = () => {
-    filesManager.resetToStarter(problem.starterCode);
+    filesManager.resetToStarter(startingState);
     tester.reset();
   };
 
@@ -122,12 +123,12 @@ export default function CodeEditor() {
       <div className="flex flex-1 overflow-hidden">
         <div className="flex flex-1 flex-col overflow-hidden">
           <CodeMirrorEditor
-            value={filesManager.files.get(filesManager.activeFile)?.content ?? ""}
+            value={startingState.doc.toString()}
             files={filesManager.files}
             activeFile={filesManager.activeFile}
             onCreateFile={(name) => {
+              filesManager.createFile(name, EditorState.create({ doc: "" }));
               recorder.recordFileCreate(name);
-              filesManager.createFile(name);
             }}
             onSelectFile={(name) => {
               recorder.recordFileSwitch(name);

@@ -26,14 +26,6 @@ export type GlobalEditorState = {
   activeFile: File;
   mouse: MouseState;
 };
-// TODO: FileEntry stores content as a string. It should be updated to store EditorState instead.
-/**
- * A file entry with its name and content
- */
-export type FileEntry = {
-  name: string;
-  content: string;
-};
 
 /**
  * API reference object for external components (like playback engine)

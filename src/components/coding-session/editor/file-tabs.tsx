@@ -1,7 +1,7 @@
-import type { FileEntry } from "~/types/coding-session";
+import type { File } from "~/types/coding-session";
 
 export type FileTabsProps = {
-  files: Map<string, FileEntry>;
+  files: Map<string, File>;
   activeFile: string;
   onSelectFile: (fileName: string) => void;
 };
