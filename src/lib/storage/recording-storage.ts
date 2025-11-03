@@ -47,13 +47,11 @@ export class RecordingStorage {
   static async save(recording: RecordingData): Promise<string> {
     await this.ensureDirectoryExists();
 
-    if (!recording.id) {
-      recording.id = uuidv4();
-    }
+    const recordingToSave: RecordingData = recording.id ? { ...recording } : { ...recording, id: uuidv4() };
 
-    const filePath = path.join(this.RECORDINGS_DIR, `${recording.id}.json`);
+    const filePath = path.join(this.RECORDINGS_DIR, `${recordingToSave.id}.json`);
 
-    await fs.writeFile(filePath, JSON.stringify(recording, null, 2), "utf-8");
+    await fs.writeFile(filePath, JSON.stringify(recordingToSave, null, 2), "utf-8");
 
     await this.updateIndex();
 
@@ -84,14 +82,19 @@ export class RecordingStorage {
    *
    * @returns Array of recording metadata (without full event data for performance)
    */
-  static async list(): Promise<RecordingIndexEntry[]> {
+  static async list(retryCount: number = 0): Promise<RecordingIndexEntry[]> {
+    const MAX_RETRIES = 3;
     try {
       const indexContent = await fs.readFile(this.INDEX_FILE, "utf-8");
       return JSON.parse(indexContent);
     }
-    catch {
+    catch (error) {
+      if (retryCount >= MAX_RETRIES) {
+        throw new Error(`Failed to read recordings index: ${error}`);
+      }
+
       await this.updateIndex();
-      return this.list();
+      return this.list(retryCount + 1);
     }
   }
 

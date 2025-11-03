@@ -25,8 +25,6 @@ export type CreateRecordingDataParams = {
 export function createRecordingData(params: CreateRecordingDataParams): RecordingData {
   const { title, problem, recordedEvents, initialCode, files, activeFile, instructorId } = params;
 
-  const events = recordedEvents as SerializedRecordedEvent[];
-
   const filesObject: Record<string, string> = {};
   for (const [fileName, fileData] of Object.entries(files)) {
     filesObject[fileName] = fileData.content;
@@ -41,7 +39,7 @@ export function createRecordingData(params: CreateRecordingDataParams): Recordin
     initialCode,
     files: filesObject,
     activeFile,
-    events,
+    events: recordedEvents,
     metadata: {
       createdAt: new Date().toISOString(),
       duration,

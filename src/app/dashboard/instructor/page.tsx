@@ -152,7 +152,12 @@ export default function CodeEditor() {
   const handleLoadRecording = async (recordingId: string) => {
     try {
       const result = await loadRecordingAction({ id: recordingId });
-      const recording = result.data!.recording;
+      if (!result.data || !result.data.recording) {
+        console.error("No recording data returned from loadRecordingAction");
+        return;
+      }
+
+      const recording = result.data.recording;
 
       setRecordedEvents([]);
       setPlaybackTime(0);

@@ -156,10 +156,10 @@ export function useFilesManager(
   };
 
   /**
-  * Save the current editor content to the active file
-  * - Called when user makes changes to the document
-  * - Updates the files map with current editor state
-  */
+   * Save the current editor content to the active file
+   * - Called when user makes changes to the document
+   * - Updates the files map with current editor state
+   */
   const saveCurrentFile = () => {
     if (!editorApiRef.current) {
       return;
@@ -173,11 +173,11 @@ export function useFilesManager(
   };
 
   /**
-    * Load multiple files from a saved state
-    * - Replaces the current files map with the provided files
-    * - Sets the active file if specified
-    * - Updates the editor to show the active file content
-    */
+   * Load multiple files from a saved state
+   * - Replaces the current files map with the provided files
+   * - Sets the active file if specified
+   * - Updates the editor to show the active file content
+   */
   const loadFiles = (filesMap: Map<string, FileEntry>, activeFileName?: string) => {
     setFiles(filesMap);
     if (activeFileName && filesMap.has(activeFileName)) {

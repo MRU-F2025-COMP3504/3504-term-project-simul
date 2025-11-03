@@ -24,7 +24,15 @@ export function RecordingList({ onSelectRecording }: RecordingListProps) {
     try {
       setLoading(true);
       const result = await listRecordingsAction();
-      setRecordings(result.data!.recordings);
+
+      if (result.data && Array.isArray(result.data.recordings)) {
+        setRecordings(result.data.recordings);
+      }
+      else {
+        setError("Invalid data format received");
+        console.error("Invalid data format received");
+        setRecordings([]);
+      }
     }
     catch (err) {
       setError(err instanceof Error ? err.message : "Failed to load recordings");
