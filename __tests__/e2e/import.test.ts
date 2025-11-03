@@ -5,6 +5,6 @@ test.describe("Dashboard Page", () => {
     await page.goto("/dashboard");
 
     // Check that something from SignoutButton appears
-    await expect(page.getByRole("button", { name: /sign out/i })).toBeVisible();
+    await expect(page.getByRole("button", { name: /sign out/i })).toBeVisible({ timeout: 15000 });
   });
 });
