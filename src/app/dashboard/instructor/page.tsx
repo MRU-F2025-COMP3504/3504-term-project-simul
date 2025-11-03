@@ -1,5 +1,6 @@
 "use client";
 
+import { EditorState as CMEditorState } from "@codemirror/state";
 import { useRef, useState } from "react";
 
 import type { RecordedEvent } from "~/types/coding-session";
@@ -28,7 +29,7 @@ export default function CodeEditor() {
   const editorApiRef = useRef<{
     setDoc: (content: string) => void;
     setSelection: (selection: { anchor: number; head: number }) => void;
-    getState: () => { doc: { toString: () => string } } | null;
+    getState: () => CMEditorState | null;
   } | null>(null);
 
   const filesManager = useFilesManager(problem.starterCode, editorApiRef);
@@ -39,7 +40,7 @@ export default function CodeEditor() {
   );
 
   // Keep for playback control
-  const initialStateRef = useRef<any | null>(null);
+  const initialStateRef = useRef<CMEditorState | null>(null);
 
   // Initialize player hook
   const [playbackTime, setPlaybackTime] = useState(0);
@@ -68,7 +69,7 @@ export default function CodeEditor() {
   const handleToggleRecording = () => {
     if (!recorder.recording) {
       // Starting recording - capture initial state and reset events
-      initialStateRef.current = (editorApiRef.current?.getState() as any) ?? null;
+      initialStateRef.current = editorApiRef.current?.getState() ?? null;
       setRecordedEvents([]);
       setPlaybackTime(0);
       recorder.startRecording();
@@ -78,7 +79,7 @@ export default function CodeEditor() {
       if (editorApiRef.current) {
         const state = editorApiRef.current.getState();
         if (state) {
-          const currentContent = (state as any).doc.toString();
+          const currentContent = state.doc.toString();
           filesManager.updateFileContent(filesManager.activeFile, currentContent);
         }
       }
@@ -106,7 +107,7 @@ export default function CodeEditor() {
       return;
     }
 
-    // TODO: Replace with proper dialog UI component
+    // TODO: Replace with proper dialog UI component (waiting on #118)
     // eslint-disable-next-line no-alert
     const title = prompt("Enter a title for this recording:");
     if (!title || !title.trim()) {
@@ -134,7 +135,7 @@ export default function CodeEditor() {
         initialCode,
         files: filesObject,
         activeFile: filesManager.activeFile,
-        // instructorId: undefined, // TODO: add when auth is fleshed out (#66)
+        // instructorId: undefined, // TODO: add when auth is fleshed out (waiting on #66 and #119)
       });
 
       setSaveStatus("saved");
@@ -173,7 +174,7 @@ export default function CodeEditor() {
 
       filesManager.loadFiles(filesMap, recording.activeFile);
 
-      initialStateRef.current = { doc: { toString: () => recording.initialCode } } as any;
+      initialStateRef.current = CMEditorState.create({ doc: recording.initialCode });
     }
     catch (error) {
       console.error("Failed to load recording:", error);
@@ -255,7 +256,7 @@ export default function CodeEditor() {
             }}
             onEditorMouseMove={recorder.recordMouseEvent}
             containerRef={editor}
-            setExternalApiRef={editorApiRef as any}
+            setExternalApiRef={editorApiRef}
           >
             <CursorOverlay cursorRef={cursorRef} />
           </CodeMirrorEditor>

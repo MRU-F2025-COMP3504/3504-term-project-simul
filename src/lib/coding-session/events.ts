@@ -221,20 +221,23 @@ export function serializeEvent(event: RecordedEvent): SerializedRecordedEvent {
  * @returns Deserialized event with changes data preserved for playback
  */
 export function deserializeEvent(serializedEvent: SerializedRecordedEvent): RecordedEvent {
-  const baseEvent = {
+  const baseEvent: RecordedEvent = {
     time: serializedEvent.time,
     kind: serializedEvent.kind,
     fileName: serializedEvent.fileName,
-  } as RecordedEvent;
+  };
 
   switch (serializedEvent.kind) {
     case "transaction":
       baseEvent.selection = serializedEvent.eventData.selection;
       // Preserve changes data in a structure compatible with playback
       if (serializedEvent.eventData.changes) {
+        // a full transaction cannot be reconstructed from serialized data, so instead
+        // we create a minimal transaction-like object that holds
+        // the serialized changes during playback.
         baseEvent.transaction = {
           changes: serializedEvent.eventData.changes,
-        } as any;
+        } as unknown as Transaction;
       }
       break;
 
