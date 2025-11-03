@@ -38,7 +38,7 @@ export function PlaybackControls({
   };
 
   const handleSeek = (time: number) => {
-    if (!isPlaying && onSeek) {
+    if (onSeek) {
       onSeek(time);
     }
   };

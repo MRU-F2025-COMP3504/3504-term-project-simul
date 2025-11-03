@@ -79,6 +79,7 @@ export function CodeMirrorEditor({
           return;
         view.setState(state);
       },
+      getView: () => view ?? null,
       getState: () => view?.state ?? null,
       dispatch: (tr: Transaction) => {
         if (!view)

@@ -158,7 +158,7 @@ export default function CodeEditor() {
       <PlaybackControls
         playbackTime={playbackTime}
         isPlaying={isPlaying}
-        onSeek={time => setPlaybackTime(time)}
+        onSeek={player.seek}
         onPlay={togglePlayback}
         onPause={togglePlayback}
         recordedEvents={recordedEvents}

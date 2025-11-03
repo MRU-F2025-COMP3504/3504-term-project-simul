@@ -1,5 +1,31 @@
 import type { EditorState, Transaction } from "@codemirror/state";
+import type { EditorView } from "@codemirror/view";
 
+export type KeyFrame = {
+  time: number; // epoch ms
+  state: GlobalEditorState;
+};
+
+export type IndexRow = {
+  time: number; // epoch ms
+  kfIndex: number; // index into keyframes array
+  eventIndex: number; // index into events array
+};
+export type MouseState = {
+  x: number;
+  y: number;
+  type?: string;
+  button?: number;
+};
+export type File = {
+  fileName: string;
+  content: EditorState;
+};
+export type GlobalEditorState = {
+  files: Map<string, File>;
+  activeFile: File;
+  mouse: MouseState;
+};
 // TODO: FileEntry stores content as a string. It should be updated to store EditorState instead.
 /**
  * A file entry with its name and content
@@ -18,6 +44,7 @@ export type EditorAPI = {
   getState: () => EditorState | null;
   dispatch: (tr: Transaction) => void;
   setState: (state: EditorState) => void;
+  getView: () => EditorView | null;
 };
 
 /**
@@ -30,7 +57,7 @@ export type RecordedEvent = {
   fileName?: string; // which file (for transactions and file ops)
   transaction?: Transaction;
   selection?: { anchor: number; head: number }; // Selection range from transaction
-  mouse?: { x: number; y: number; type?: string; button?: number };
+  mouse?: MouseState;
   fileContent?: string; // for file-create events
 };
 
