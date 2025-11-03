@@ -1,10 +1,12 @@
 import { expect, test } from "@playwright/test";
 
-test.describe("Dashboard Page", () => {
-  test("should render the Dashboard and SignoutButton", async ({ page }) => {
-    await page.goto("/dashboard");
+test.describe("Home Page", () => {
+  test("should render the Home page and show the Sign In button", async ({ page }) => {
+    // Navigate to the home page
+    await page.goto("/");
 
-    // Check that something from SignoutButton appears
-    await expect(page.getByRole("button", { name: /sign out/i })).toBeVisible({ timeout: 15000 });
+    // Wait for the Sign In button to appear
+    const signInButton = page.getByRole("button", { name: /sign in/i });
+    await expect(signInButton).toBeVisible({ timeout: 15000 });
   });
 });
