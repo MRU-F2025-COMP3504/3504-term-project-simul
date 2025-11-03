@@ -2,6 +2,7 @@ import { ArrowLeft, BookOpen, Calendar, Clock, User } from "lucide-react";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 
+import { Badge } from "~/components/ui/badge";
 import { Button } from "~/components/ui/button";
 import {
   Card,
@@ -9,6 +10,7 @@ import {
   CardHeader,
   CardTitle,
 } from "~/components/ui/card";
+import { formatDate } from "~/lib/utils";
 
 // Mock data
 // Courses: course_id, title, description, thumbnail_url, created_by, created_at, updated_at
@@ -106,12 +108,26 @@ type CourseViewPageProps = {
   }>;
 };
 
-function formatDate(date: Date): string {
-  return new Intl.DateTimeFormat("en-US", {
-    month: "short",
-    day: "numeric",
-    year: "numeric",
-  }).format(date);
+// Colocated subcomponent for course detail rows
+function CourseDetailRow({
+  icon: Icon,
+  label,
+  value,
+}: {
+  icon: React.ComponentType<{ className?: string }>;
+  label: string;
+  value: React.ReactNode;
+}) {
+  return (
+    <div className="flex items-center gap-3 text-sm">
+      <Icon className="text-muted-foreground h-4 w-4" />
+      <span className="font-medium">
+        {label}
+        :
+      </span>
+      <span className="text-muted-foreground">{value}</span>
+    </div>
+  );
 }
 
 export default async function CourseViewPage({ params }: CourseViewPageProps) {
@@ -171,41 +187,26 @@ export default async function CourseViewPage({ params }: CourseViewPageProps) {
                   Course Details
                 </h3>
 
-                <div className="flex items-center gap-3 text-sm">
-                  <User className="text-muted-foreground h-4 w-4" />
-                  <span className="font-medium">Instructor:</span>
-                  <span className="text-muted-foreground">
-                    {course.instructor_name}
-                  </span>
-                </div>
-
-                <div className="flex items-center gap-3 text-sm">
-                  <BookOpen className="text-muted-foreground h-4 w-4" />
-                  <span className="font-medium">Lessons:</span>
-                  <span className="text-muted-foreground">
-                    {course.lessons.length}
-                    {" "}
-                    lessons
-                  </span>
-                </div>
-
-                <div className="flex items-center gap-3 text-sm">
-                  <Clock className="text-muted-foreground h-4 w-4" />
-                  <span className="font-medium">Duration:</span>
-                  <span className="text-muted-foreground">
-                    {course.estimated_hours}
-                    {" "}
-                    hours
-                  </span>
-                </div>
-
-                <div className="flex items-center gap-3 text-sm">
-                  <Calendar className="text-muted-foreground h-4 w-4" />
-                  <span className="font-medium">Last Updated:</span>
-                  <span className="text-muted-foreground">
-                    {formatDate(course.updated_at)}
-                  </span>
-                </div>
+                <CourseDetailRow
+                  icon={User}
+                  label="Instructor"
+                  value={course.instructor_name}
+                />
+                <CourseDetailRow
+                  icon={BookOpen}
+                  label="Lessons"
+                  value={`${course.lessons.length} lessons`}
+                />
+                <CourseDetailRow
+                  icon={Clock}
+                  label="Duration"
+                  value={`${course.estimated_hours} hours`}
+                />
+                <CourseDetailRow
+                  icon={Calendar}
+                  label="Last Updated"
+                  value={formatDate(course.updated_at)}
+                />
               </div>
 
               {/* Tags */}
@@ -220,15 +221,9 @@ export default async function CourseViewPage({ params }: CourseViewPageProps) {
                   </h3>
                   <div className="flex flex-wrap gap-2">
                     {course.tags.map(tag => (
-                      <span
-                        key={tag}
-                        className={`
-                          bg-primary/10 text-primary rounded-full px-3 py-1
-                          text-xs font-medium
-                        `}
-                      >
+                      <Badge key={tag} variant="secondary">
                         {tag}
-                      </span>
+                      </Badge>
                     ))}
                   </div>
                 </div>
