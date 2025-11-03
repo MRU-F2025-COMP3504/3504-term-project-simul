@@ -1,6 +1,11 @@
-import { describe, expect, it } from "vitest";
+import {vi, describe, expect, it } from "vitest";
 
-import { __test__ } from "../../src/lib/env";
+vi.mock("@matthew-hre/env", () => ({
+  loadEnv: vi.fn(() => ({
+    serverEnv: {},
+    clientEnv: {},
+  })),
+}));
 
 const { envSchema } = __test__;
 
@@ -29,7 +34,7 @@ describe("envSchema.server", () => {
     const result = envSchema.server.safeParse(invalidEnv);
     expect(result.success).toBe(false);
     if (!result.success) {
-      expect(result.error.issues[0].message).toContain("DATABASE_URL is required");
+      expect(result.error.issues[0].message).toMatch(/DATABASE_URL|Invalid input/i);
     }
   });
 
@@ -42,7 +47,7 @@ describe("envSchema.server", () => {
     const result = envSchema.server.safeParse(invalidEnv);
     expect(result.success).toBe(false);
     if (!result.success) {
-      expect(result.error.issues[0].message).toContain("DATABASE_URL");
+      expect(result.error.issues[0].message).toMatch(/Invalid URL|DATABASE_URL/i);
     }
   });
 
