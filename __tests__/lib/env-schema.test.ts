@@ -1,4 +1,6 @@
-import {vi, describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
+
+import { __test__ } from "../../src/lib/env";
 
 vi.mock("@matthew-hre/env", () => ({
   loadEnv: vi.fn(() => ({
