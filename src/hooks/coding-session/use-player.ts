@@ -45,6 +45,9 @@ import { cloneState, lowerBoundEvents, upperBoundKF } from "~/lib/coding-session
 
 import type { FilesManager } from "./use-files-manager";
 
+// Time bucket size for seek indexing and lookup
+const BUCKET_MS = 250;
+
 /**
  * API returned by usePlayer hook
  */
@@ -108,12 +111,13 @@ export function usePlayer({
 
   const { keyframes, index, events } = useMemo(() => {
     const initialState = initialStateRef.current;
+    const activeFile = {
+      fileName: "main.js",
+      content: initialState ?? EditorState.create(),
+    };
     let state: GlobalEditorState = {
-      files: new Map(),
-      activeFile: {
-        fileName: "main.js",
-        content: initialState ?? EditorState.create(),
-      },
+      files: new Map([[activeFile.fileName, activeFile]]),
+      activeFile,
       mouse: { x: 0, y: 0 },
     };
 
@@ -121,9 +125,7 @@ export function usePlayer({
 
     const index: IndexRow[] = [];
 
-    const KF_EVERY_N = 512;
-    const BUCKET_MS = 250;
-
+    const KF_EVERY_N = 10;
     let lastBucketTime = keyframes[0].time;
     for (let i = 0; i < recordedEvents.length; i++) {
       const event = recordedEvents[i];
@@ -162,9 +164,13 @@ export function usePlayer({
     }
 
     let bucket: IndexRow | undefined;
-    if (index.length > 0) {
-      const bucketIndex = Math.min(Math.floor((targetTime - index[0].time) / 250), index.length - 1);
-      bucket = index[Math.max(0, bucketIndex)];
+    if (index.length > 0 && targetTime >= index[0].time) {
+      const rel = Math.floor((targetTime - index[0].time) / BUCKET_MS);
+      const bucketIndex = Math.min(rel, index.length - 1);
+      const cand = index[Math.max(0, bucketIndex)];
+      if (cand && cand.time <= targetTime) {
+        bucket = cand;
+      }
     }
 
     let kfIndex = bucket?.kfIndex ?? upperBoundKF(keyframes, targetTime) - 1;
@@ -177,30 +183,33 @@ export function usePlayer({
       state = reduce(state, events[i]);
     }
     return state;
-  }, [events, keyframes, index, initialStateRef]);
+  }, [index, keyframes, events, initialStateRef]);
 
   // This function only updates internal state, no UI changes
   // Only used for seeking
   function reduce(state: GlobalEditorState, event: RecordedEvent): GlobalEditorState {
     if (event.kind === "transaction" && event.transaction && event.transaction.changes) {
-      if (!event.transaction || !event.transaction.changes) {
-        throw new Error("Transaction is malformed or missing changes");
-      }
-
       // Determine which file this transaction applies to
       const targetFileName = event.fileName ?? state.activeFile.fileName;
 
-      // TODO: File name is currently hardcoded in reduce :(
-      // const targetFile = state.files.get(targetFileName) ?? state.activeFile;
-      // if (targetFile.fileName !== targetFileName) {
-      //   throw new Error(`File mismatch: transaction is for ${targetFileName} but target file is ${targetFile.fileName}`);
-      // }
+      // Get current file state
+      const currentFile = state.files.get(targetFileName) ?? state.activeFile;
+      const currentEditorState = currentFile.content ?? EditorState.create();
 
-      const newFileState: EditorState = event.transaction.state;
+      const changes = event.transaction.changes;
+      let updatedEditorState: EditorState;
+      try {
+        updatedEditorState = currentEditorState.update({ changes }).state;
+      }
+      catch {
+        const recordedText = event.transaction.state?.doc?.toString?.() ?? "";
+        const replaceAll = { from: 0, to: currentEditorState.doc.length, insert: recordedText } as const;
+        updatedEditorState = currentEditorState.update({ changes: replaceAll }).state;
+      }
 
       const updatedFile: File = {
         fileName: targetFileName,
-        content: newFileState,
+        content: updatedEditorState,
       };
       const newFiles = new Map<string, File>(state.files);
       newFiles.set(targetFileName, updatedFile);
@@ -217,13 +226,17 @@ export function usePlayer({
       };
     }
     if (event.kind === "file-switch" && event.fileName) {
-      const newActiveFile = state.files.get(event.fileName);
-      if (!newActiveFile) {
-        throw new Error(`File not found in global state: ${event.fileName}`);
-      }
+      const existing = state.files.get(event.fileName) ?? {
+        fileName: event.fileName,
+        content: EditorState.create({ doc: "" }),
+      };
+      const newFiles = new Map<string, File>(state.files);
+      newFiles.set(existing.fileName, existing);
+
       return {
         ...state,
-        activeFile: newActiveFile,
+        files: newFiles,
+        activeFile: existing,
       };
     }
 
@@ -232,7 +245,6 @@ export function usePlayer({
       if (!event.fileName) {
         throw new Error("File name is missing for file-create event");
       }
-      // We should not be creating editor state like this, since this also deals with shit like plugins
       const newFileContent = EditorState.create({ doc: event.fileContent ?? "" });
       const newFileName = event.fileName;
       const newFile: File = {
@@ -286,7 +298,7 @@ export function usePlayer({
 
     // Update editor content
     const editorState = editorApiRef.current.getState();
-    if (editorState && state.activeFile.content !== editorState) {
+    if (editorState) {
       editorApiRef.current.setState(state.activeFile.content);
     }
 
@@ -297,6 +309,7 @@ export function usePlayer({
       cursorRef.current.style.display = "block";
     }
   }, [cursorRef, editorApiRef, filesManager]);
+
   // for use in normal playback
   const applyEvent = useCallback((event: RecordedEvent) => {
     // Process current event
@@ -304,8 +317,16 @@ export function usePlayer({
       const state = editorApiRef.current.getState();
       if (state) {
         const changes = event.transaction.changes;
-        const update = state.update({ changes });
-        editorApiRef.current.dispatch(update);
+        try {
+          const update = state.update({ changes });
+          editorApiRef.current.dispatch(update);
+        }
+        catch {
+          const recordedText = event.transaction.state?.doc?.toString?.() ?? "";
+          const replaceAll = { from: 0, to: state.doc.length, insert: recordedText } as const;
+          const update = state.update({ changes: replaceAll });
+          editorApiRef.current.dispatch(update);
+        }
 
         // Apply selection range if recorded
         if (event.selection) {
@@ -320,14 +341,8 @@ export function usePlayer({
       if (fileEntry) {
         const state = editorApiRef.current.getState();
         if (state) {
-          const update = state.update({
-            changes: {
-              from: 0,
-              to: state.doc.length,
-              insert: fileEntry.content.doc,
-            },
-          });
-          editorApiRef.current.dispatch(update);
+          editorApiRef.current.setState(fileEntry.content);
+          filesManager.selectFile(event.fileName);
         }
       }
     }
@@ -401,7 +416,7 @@ export function usePlayer({
       }
 
       // Reset editor to initial state
-      if (initialStateRef.current) {
+      if (initialStateRef.current && playbackTime === 0) {
         const state = editorApiRef.current.getState();
 
         if (state) {
@@ -416,7 +431,7 @@ export function usePlayer({
       startingWallTime.current = performance.now();
       requestAnimationFrame(animationLoop);
     }
-  }, [isPlaying, onPlaybackStateChange, recordedEvents, editorApiRef, initialStateRef, cursorRef, startingWallTime, animationLoop]);
+  }, [isPlaying, onPlaybackStateChange, recordedEvents, editorApiRef, initialStateRef, cursorRef, startingWallTime, animationLoop, playbackTime]);
 
   /**
    * Pauses current playback
@@ -445,14 +460,12 @@ export function usePlayer({
       return;
     }
     const minTime = recordedEvents[0]?.time ?? 0;
-    const maxTime = Math.max(...recordedEvents.map(e => e.time ?? 0));
+    const maxTime = Math.max(...recordedEvents.map(event => event.time ?? 0));
     const clampedTime = Math.max(minTime, Math.min(targetTime, maxTime));
 
     // Pause playback if currently playing
     if (playingRef.current) {
-      playingRef.current = false;
-      setIsPlaying(false);
-      onPlaybackStateChange(false);
+      pause();
     }
 
     // Compute state at target time
@@ -463,6 +476,7 @@ export function usePlayer({
 
     // Update pausedAt to the seek time so playback can continue from here
     pausedAt.current = clampedTime;
+    editorApiRef.current?.setState(state.activeFile.content);
 
     // Update UI from computed state
     UpdateUIFromState(state);
@@ -470,7 +484,7 @@ export function usePlayer({
     // Update playback time
     setPlaybackTime(clampedTime);
     onPlaybackTimeChange(clampedTime);
-  }, [recordedEvents, events, onPlaybackStateChange, onPlaybackTimeChange, UpdateUIFromState, seek]);
+  }, [recordedEvents, events, onPlaybackTimeChange, UpdateUIFromState, seek, pause, editorApiRef]);
 
   return {
     play,
