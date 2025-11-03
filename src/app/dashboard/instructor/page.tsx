@@ -2,6 +2,7 @@
 
 import { EditorState as CMEditorState } from "@codemirror/state";
 import { useRef, useState } from "react";
+import { toast } from "sonner";
 
 import type { RecordedEvent } from "~/types/coding-session";
 
@@ -103,7 +104,7 @@ export default function CodeEditor() {
 
   const handleSaveRecording = async () => {
     if (recordedEvents.length === 0) {
-      console.warn("No recording to save. Please record a session first.");
+      toast.warning("No recording to save. Please record a session first.");
       return;
     }
 
@@ -144,6 +145,7 @@ export default function CodeEditor() {
     }
     catch (error) {
       console.error("Failed to save recording:", error);
+      toast.error("Failed to save recording. Please try again.");
       setSaveStatus("error");
 
       setTimeout(() => setSaveStatus("idle"), 3000);
@@ -154,8 +156,7 @@ export default function CodeEditor() {
     try {
       const result = await loadRecordingAction({ id: recordingId });
       if (!result.data || !result.data.recording) {
-        console.error("No recording data returned from loadRecordingAction");
-        return;
+        throw new Error("No recording data returned from loadRecordingAction");
       }
 
       const recording = result.data.recording;
@@ -178,7 +179,7 @@ export default function CodeEditor() {
     }
     catch (error) {
       console.error("Failed to load recording:", error);
-      console.warn("Failed to load recording. See console for details.");
+      toast.error("Failed to load recording. Please try again.");
     }
   };
 

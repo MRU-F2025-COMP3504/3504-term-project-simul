@@ -12,7 +12,7 @@ import { actionClient } from "~/lib/safe-action";
 
 const saveRecordingSchema = z.object({
   title: z.string(),
-  problem: z.any(), // TODO: #118
+  problem: z.any(), // TODO: #119
   recordedEvents: z.array(z.any()), // already serialized events
   initialCode: z.string(),
   files: z.record(z.string(), z.object({ name: z.string(), content: z.string() })),
