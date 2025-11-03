@@ -5,6 +5,6 @@ test.describe("Home Page", () => {
     await page.goto("/");
 
     // Check that the page loaded with correct title
-    await expect(page).toHaveTitle("Create Next App");
+    await expect(page).toHaveTitle("Simul");
   });
 });
