@@ -1,14 +1,15 @@
-import type { ProblemDefinition, RecordedEvent } from "~/types/coding-session";
+import type { SerializedRecordedEvent } from "~/lib/coding-session/events";
+import type { ProblemDefinition } from "~/types/coding-session";
 import type { RecordingData } from "~/types/recording";
 
-import { serializeEvent, totalDuration } from "~/lib/coding-session/events";
+import { totalDuration } from "~/lib/coding-session/events";
 
 export type CreateRecordingDataParams = {
   title: string;
   problem: ProblemDefinition;
-  recordedEvents: RecordedEvent[];
+  recordedEvents: SerializedRecordedEvent[];
   initialCode: string;
-  files: Map<string, { name: string; content: string }>;
+  files: Record<string, { name: string; content: string }>;
   activeFile: string;
   instructorId?: string;
 };
@@ -24,10 +25,10 @@ export type CreateRecordingDataParams = {
 export function createRecordingData(params: CreateRecordingDataParams): RecordingData {
   const { title, problem, recordedEvents, initialCode, files, activeFile, instructorId } = params;
 
-  const events = recordedEvents.map(serializeEvent);
+  const events = recordedEvents as SerializedRecordedEvent[];
 
   const filesObject: Record<string, string> = {};
-  for (const [fileName, fileData] of files) {
+  for (const [fileName, fileData] of Object.entries(files)) {
     filesObject[fileName] = fileData.content;
   }
 

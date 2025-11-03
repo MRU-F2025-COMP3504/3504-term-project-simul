@@ -215,21 +215,27 @@ export function serializeEvent(event: RecordedEvent): SerializedRecordedEvent {
  *
  * Reconstructs the original event structure from stored JSON data.
  * Note: Transaction objects cannot be fully reconstructed from JSON,
- * so this is mainly for data inspection and metadata access.
+ * but we preserve the changes data in a compatible format for playback.
  *
  * @param serializedEvent - The serialized event to deserialize
- * @returns Deserialized event (without reconstructable Transaction objects)
+ * @returns Deserialized event with changes data preserved for playback
  */
-export function deserializeEvent(serializedEvent: SerializedRecordedEvent): Omit<RecordedEvent, "transaction"> {
+export function deserializeEvent(serializedEvent: SerializedRecordedEvent): RecordedEvent {
   const baseEvent = {
     time: serializedEvent.time,
     kind: serializedEvent.kind,
     fileName: serializedEvent.fileName,
-  } as Omit<RecordedEvent, "transaction">; // we don't need the transaction here
+  } as RecordedEvent;
 
   switch (serializedEvent.kind) {
     case "transaction":
       baseEvent.selection = serializedEvent.eventData.selection;
+      // Preserve changes data in a structure compatible with playback
+      if (serializedEvent.eventData.changes) {
+        baseEvent.transaction = {
+          changes: serializedEvent.eventData.changes,
+        } as any;
+      }
       break;
 
     case "mouse":

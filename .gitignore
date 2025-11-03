@@ -48,3 +48,6 @@ next-env.d.ts
 .vitest
 /playwright-report
 /test-results
+
+# temporary recordings data
+recordings/

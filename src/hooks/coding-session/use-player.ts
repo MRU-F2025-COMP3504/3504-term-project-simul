@@ -178,7 +178,20 @@ export function usePlayer({
         const state = editorApiRef.current.getState();
         if (state) {
           const changes = event.transaction.changes as any;
-          const newDoc = changes.apply((state as any).doc).toString();
+
+          // check if changes is already a ChangeSet (from live recording) or ChangeSetJSON (from loaded recording)
+          let newDoc: string;
+          if (Array.isArray(changes)) {
+            // loaded recording
+            const { applyChangeSetJSON } = await import("~/lib/coding-session/events");
+            const updatedDoc = applyChangeSetJSON((state as any).doc, changes);
+            newDoc = updatedDoc.toString();
+          }
+          else {
+            // live recording
+            newDoc = changes.apply((state as any).doc).toString();
+          }
+
           editorApiRef.current.setDoc(newDoc);
 
           // Apply selection range if recorded
