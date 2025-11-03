@@ -24,6 +24,9 @@ export default function Home() {
 
       {/* Toast Test Buttons */}
       <div className="flex flex-wrap gap-2">
+        <Button onClick={() => toast("Simple toast!")}>
+          Test Toast No Icon
+        </Button>
         <Button onClick={() => toast.success("Success toast!")}>
           Test Success
         </Button>
