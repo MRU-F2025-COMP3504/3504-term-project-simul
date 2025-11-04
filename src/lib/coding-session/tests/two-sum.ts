@@ -12,10 +12,7 @@ export const TWO_SUM_STARTER_CODE = `// Two Sum Problem
 function twoSum(nums, target) {
   // Your code here
   
-}
-
-// Return the result
-return twoSum(nums, target);`;
+}`; // Remove the trailing return statement to avoid duplication (return twoSum(nums, target);)
 
 /**
  * Input type for Two Sum test cases
@@ -30,6 +27,7 @@ export type TwoSumInput = {
  */
 export const TWO_SUM_PROBLEM: ProblemDefinition<TwoSumInput, [number, number]> = {
   title: "Two Sum",
+  functionName: "twoSum",
   description: [
     "Given an array of integers `nums` and an integer `target`, return the indices of the two numbers that add up to the target.",
     "You may assume that each input has exactly one solution, and you may not use the same element twice.",

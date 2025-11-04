@@ -47,6 +47,7 @@ export type ProblemExample = {
  */
 export type ProblemDefinition<TInput = any, TExpected = any> = {
   title: string;
+  functionName: string;
   description: string[];
   examples: ProblemExample[];
   constraints: string[];
