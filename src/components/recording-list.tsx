@@ -66,6 +66,7 @@ export function RecordingList({ onSelectRecording }: RecordingListProps) {
       <div className="text-destructive p-4 text-center">
         <p>
           Error:
+          {" "}
           {error}
         </p>
         <Button onClick={loadRecordings} variant="outline" className="mt-2">

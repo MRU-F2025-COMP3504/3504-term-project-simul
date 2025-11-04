@@ -88,7 +88,7 @@ export const loadRecordingAction = actionClient
         activeFile: result.activeFile,
         events: result.events as any[],
         metadata: {
-          createdAt: result.createdAt.toISOString(),
+          createdAt: result.createdAt?.toISOString() ?? new Date().toISOString(),
           duration: result.duration,
           instructorId: result.instructorId || undefined,
         },
@@ -126,7 +126,7 @@ export const listRecordingsAction = actionClient.action(async () => {
         id: r.id,
         title: r.title,
         problemTitle: problem?.title || "Unknown Problem",
-        createdAt: r.createdAt.toISOString(),
+        createdAt: r.createdAt?.toISOString() ?? new Date().toISOString(),
         duration: r.duration,
       };
     });

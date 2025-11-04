@@ -193,7 +193,7 @@ export function usePlayer({
           }
           else {
             // live recording
-            newDoc = (changes).apply(state.doc).toString();
+            newDoc = changes.apply(state.doc).toString();
           }
 
           editorApiRef.current.setDoc(newDoc);

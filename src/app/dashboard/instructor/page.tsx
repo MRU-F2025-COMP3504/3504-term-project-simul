@@ -12,15 +12,16 @@ import { ProblemPanel } from "~/components/coding-session/problem/problem-panel"
 import { RecordingList } from "~/components/recording-list";
 import { ThemeToggle } from "~/components/theme-toggle";
 import { Button } from "~/components/ui/button";
+import { Input } from "~/components/ui/input";
 import { useFilesManager, usePlayer, useRecorder, useTestRunner } from "~/hooks/coding-session";
-import { loadRecordingAction, saveRecordingAction } from "~/lib/actions/recordings";
-import { deserializeEvent, serializeEvent } from "~/lib/coding-session/events";
+import { useSaveRecording } from "~/hooks/coding-session/use-save-recording";
+import { loadRecordingAction } from "~/lib/actions/recordings";
+import { deserializeEvent } from "~/lib/coding-session/events";
 import { TWO_SUM_PROBLEM } from "~/lib/coding-session/tests/two-sum";
 import { formatDisplayTime } from "~/lib/coding-session/time";
 
 export default function CodeEditor() {
   const [recordedEvents, setRecordedEvents] = useState<RecordedEvent[]>([]);
-  const [saveStatus, setSaveStatus] = useState<"idle" | "saving" | "saved" | "error">("idle");
 
   const problem = TWO_SUM_PROBLEM;
 
@@ -102,55 +103,15 @@ export default function CodeEditor() {
     tester.reset();
   };
 
-  const handleSaveRecording = async () => {
-    if (recordedEvents.length === 0) {
-      toast.warning("No recording to save. Please record a session first.");
-      return;
-    }
-
-    // TODO: Replace with proper dialog UI component (waiting on #118)
-    // eslint-disable-next-line no-alert
-    const title = prompt("Enter a title for this recording:");
-    if (!title || !title.trim()) {
-      return;
-    }
-
-    setSaveStatus("saving");
-
-    try {
-      // convert the Map to a serializable object
-      const filesObject: Record<string, { name: string; content: string }> = {};
-      for (const [fileName, fileData] of filesManager.files) {
-        filesObject[fileName] = fileData;
-      }
-
-      // serialize the events client side before sending to server
-      const serializedEvents = recordedEvents.map(serializeEvent);
-
-      const initialCode = initialStateRef.current?.doc.toString() ?? problem.starterCode;
-
-      await saveRecordingAction({
-        title: title.trim(),
-        problem,
-        recordedEvents: serializedEvents,
-        initialCode,
-        files: filesObject,
-        activeFile: filesManager.activeFile,
-        // instructorId: undefined, // TODO: add when auth is fleshed out (waiting on #66 and #119)
-      });
-
-      setSaveStatus("saved");
-
-      setTimeout(() => setSaveStatus("idle"), 3000);
-    }
-    catch (error) {
-      console.error("Failed to save recording:", error);
-      toast.error("Failed to save recording. Please try again.");
-      setSaveStatus("error");
-
-      setTimeout(() => setSaveStatus("idle"), 3000);
-    }
-  };
+  const {
+    showSaveDialog,
+    openSaveDialog,
+    saveTitleInput,
+    setSaveTitleInput,
+    performSaveRecording,
+    closeSaveDialog,
+    saveStatus,
+  } = useSaveRecording({ recordedEvents, filesManager, initialStateRef, problem });
 
   const handleLoadRecording = async (recordingId: string) => {
     try {
@@ -213,13 +174,50 @@ export default function CodeEditor() {
             {isPlaying ? "Stop" : "Play"}
           </Button>
           {!recorder.recording && recordedEvents.length > 0 && (
-            <Button
-              onClick={handleSaveRecording}
-              disabled={saveStatus === "saving"}
-              variant={saveStatus === "saved" ? "default" : saveStatus === "error" ? "destructive" : "secondary"}
-            >
-              {saveButtonLabel()}
-            </Button>
+            <>
+              {showSaveDialog && (
+                <div className="flex items-center gap-2">
+                  <Input
+                    value={saveTitleInput}
+                    onChange={e => setSaveTitleInput(e.target.value)}
+                    placeholder="Recording title"
+                    className="w-64"
+                    disabled={saveStatus === "saving"}
+                    onKeyDown={(e) => {
+                      // Submit on Enter
+                      if (e.key === "Enter") {
+                        e.preventDefault();
+                        void performSaveRecording(saveTitleInput);
+                      }
+                    }}
+                  />
+                  <Button
+                    onClick={() => void performSaveRecording(saveTitleInput)}
+                    disabled={saveStatus === "saving" || !saveTitleInput.trim()}
+                  >
+                    Confirm
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    onClick={() => {
+                      closeSaveDialog();
+                    }}
+                    disabled={saveStatus === "saving"}
+                  >
+                    Cancel
+                  </Button>
+                </div>
+              )}
+              {!showSaveDialog && (
+                <Button
+                  onClick={openSaveDialog}
+                  disabled={saveStatus === "saving"}
+                  variant={saveStatus === "saved" ? "default" : saveStatus === "error" ? "destructive" : "secondary"}
+                >
+                  {saveButtonLabel()}
+                </Button>
+              )}
+            </>
           )}
           <div className="text-muted-foreground ml-4 text-xs">
             Playback time:
