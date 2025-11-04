@@ -10,5 +10,17 @@ services:
     volumes:
       - simul_pgdata:/var/lib/postgresql/data
 
+  piston:
+    image: ghcr.io/engineer-man/piston
+    container_name: simul-piston-api
+    restart: always
+    privileged: true
+    ports:
+      - "${PISTON_PORT}:${PISTON_PORT}"
+    volumes:
+      - ./data/piston/packages:/piston/packages
+    tmpfs:
+      - /tmp:exec
+
 volumes:
   simul_pgdata:
