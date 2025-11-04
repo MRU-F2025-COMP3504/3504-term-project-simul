@@ -10,15 +10,13 @@ import { CodeMirrorEditor, CursorOverlay } from "~/components/coding-session/edi
 import { PlaybackControls } from "~/components/coding-session/playback-controls";
 import { ProblemPanel } from "~/components/coding-session/problem/problem-panel";
 import { RecordingList } from "~/components/recording-list";
-import { ThemeToggle } from "~/components/theme-toggle";
-import { Button } from "~/components/ui/button";
-import { Input } from "~/components/ui/input";
 import { useFilesManager, usePlayer, useRecorder, useTestRunner } from "~/hooks/coding-session";
 import { useSaveRecording } from "~/hooks/coding-session/use-save-recording";
 import { loadRecordingAction } from "~/lib/actions/recordings";
 import { deserializeEvent } from "~/lib/coding-session/events";
 import { TWO_SUM_PROBLEM } from "~/lib/coding-session/tests/two-sum";
-import { formatDisplayTime } from "~/lib/coding-session/time";
+
+import InstructorToolbar from "./instructor-toolbar";
 
 export default function CodeEditor() {
   const [recordedEvents, setRecordedEvents] = useState<RecordedEvent[]>([]);
@@ -144,91 +142,27 @@ export default function CodeEditor() {
     }
   };
 
-  const saveButtonLabel = () => {
-    switch (saveStatus) {
-      case "idle":
-        return "Save Recording";
-      case "saving":
-        return "Saving...";
-      case "saved":
-        return "✓ Saved";
-      case "error":
-        return "✗ Error";
-      default:
-        return "Save Recording";
-    }
-  };
+  // toolbar handles save button label / UI now
 
   return (
-    <div
-      className="flex h-screen flex-col"
-    >
-      <div
-        className="bg-background border-b p-4"
-      >
-        <div className="flex items-center gap-2">
-          <Button onClick={handleToggleRecording}>
-            {recorder.recording ? "Stop Recording" : "Start Recording"}
-          </Button>
-          <Button onClick={togglePlayback}>
-            {isPlaying ? "Stop" : "Play"}
-          </Button>
-          {!recorder.recording && recordedEvents.length > 0 && (
-            <>
-              {showSaveDialog && (
-                <div className="flex items-center gap-2">
-                  <Input
-                    value={saveTitleInput}
-                    onChange={e => setSaveTitleInput(e.target.value)}
-                    placeholder="Recording title"
-                    className="w-64"
-                    disabled={saveStatus === "saving"}
-                    onKeyDown={(e) => {
-                      // Submit on Enter
-                      if (e.key === "Enter") {
-                        e.preventDefault();
-                        void performSaveRecording(saveTitleInput);
-                      }
-                    }}
-                  />
-                  <Button
-                    onClick={() => void performSaveRecording(saveTitleInput)}
-                    disabled={saveStatus === "saving" || !saveTitleInput.trim()}
-                  >
-                    Confirm
-                  </Button>
-                  <Button
-                    variant="ghost"
-                    onClick={() => {
-                      closeSaveDialog();
-                    }}
-                    disabled={saveStatus === "saving"}
-                  >
-                    Cancel
-                  </Button>
-                </div>
-              )}
-              {!showSaveDialog && (
-                <Button
-                  onClick={openSaveDialog}
-                  disabled={saveStatus === "saving"}
-                  variant={saveStatus === "saved" ? "default" : saveStatus === "error" ? "destructive" : "secondary"}
-                >
-                  {saveButtonLabel()}
-                </Button>
-              )}
-            </>
-          )}
-          <div className="text-muted-foreground ml-4 text-xs">
-            Playback time:
-            {" "}
-            {formatDisplayTime(playbackTime)}
-          </div>
-          <div className="ml-auto">
-            <ThemeToggle />
-          </div>
-        </div>
-      </div>
+    <div className="flex h-screen flex-col">
+
+      <InstructorToolbar
+        isRecording={recorder.recording}
+        onToggleRecordingAction={handleToggleRecording}
+        isPlaying={isPlaying}
+        onTogglePlaybackAction={togglePlayback}
+        recordedEventsCount={recordedEvents.length}
+        playbackTime={playbackTime}
+
+        showSaveDialog={showSaveDialog}
+        openSaveDialogAction={openSaveDialog}
+        closeSaveDialogAction={closeSaveDialog}
+        saveTitleInput={saveTitleInput}
+        setSaveTitleInputAction={setSaveTitleInput}
+        performSaveRecordingAction={performSaveRecording}
+        saveStatus={saveStatus}
+      />
 
       <div className="flex flex-1 overflow-hidden">
         {!recorder.recording && (
