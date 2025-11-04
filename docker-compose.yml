@@ -14,30 +14,33 @@ services:
 
   judge0-server: # API and container that the program will directly interact with
     image: judge0/judge0:1.13.1
+    command: [bash, -c, "sudo mkdir -p /box && sudo chmod 1777 /box && exec ./scripts/server"]
     container_name: simul-judge0-server
     env_file:
       - .env.judge0
     ports:
       - "2358:2358"
     privileged: true
+    volumes:
+      - /sys/fs/cgroup:/sys/fs/cgroup:rw
     depends_on:
       - judge0-db
       - judge0-redis
     restart: unless-stopped
-    # cgroup: host
 
   judge0-workers: # Workers for executing code for queued submissions
     image: judge0/judge0:1.13.1
     container_name: simul-judge0-workers
-    command: [./scripts/workers]
+    command: [bash, -c, "sudo mkdir -p /box && sudo chmod 1777 /box && exec ./scripts/workers"]
     env_file:
       - .env.judge0
     privileged: true
+    volumes:
+      - /sys/fs/cgroup:/sys/fs/cgroup:rw
     depends_on:
       - judge0-db
       - judge0-redis
     restart: unless-stopped
-    # cgroup: host
 
   judge0-db: # Database for Judge0 service and fallback incase Redis fails
     image: postgres:16
