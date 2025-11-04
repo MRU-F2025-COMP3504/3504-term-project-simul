@@ -5,18 +5,20 @@ const envSchema = {
   server: z.object({
     DATABASE_URL: z.url({
       protocol: /^postgres(ql)?/,
-    }).min(1, { message: "DATABASE_URL is required." }),
+    }).min(1, { error: "DATABASE_URL is required." }),
     NODE_ENV: z.enum(["development", "production", "test"]).default("development"),
     POSTGRES_PORT: z.coerce.number().default(5432),
 
     POSTGRES_USER: z.string().min(1, { message: "POSTGRES_USER is required" }),
     POSTGRES_PASSWORD: z.string().min(1, { message: "POSTGRES_PASSWORD is required" }),
 
-    BETTER_AUTH_SECRET: z.string().min(1, { message: "BETTER_AUTH_SECRET is required" }),
-    BETTER_AUTH_URL: z.url().min(1, { message: "BETTER_AUTH_URL is required" }),
+    PISTON_URL: z.url().min(1, { message: "PISTON_URL is required." }),
 
-    GH_CLIENT_ID: z.string().min(1, { message: "GH_CLIENT_ID is required" }),
-    GH_SECRET: z.string().min(1, { message: "GH_SECRET is required" }),
+    BETTER_AUTH_SECRET: z.string().min(1, { error: "BETTER_AUTH_SECRET is required" }),
+    BETTER_AUTH_URL: z.url().min(1, { error: "BETTER_AUTH_URL is required" }),
+
+    GH_CLIENT_ID: z.string().min(1, { error: "GH_CLIENT_ID is required" }),
+    GH_SECRET: z.string().min(1, { error: "GH_SECRET is required" }),
   }),
   client: z.object({}),
 };
