@@ -17,6 +17,8 @@ const envSchema = {
 
     GH_CLIENT_ID: z.string().min(1, { message: "GH_CLIENT_ID is required" }),
     GH_SECRET: z.string().min(1, { message: "GH_SECRET is required" }),
+
+    JUDGE0_URL: z.url().default("http://localhost:2358"),
   }),
   client: z.object({}),
 };

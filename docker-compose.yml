@@ -10,5 +10,59 @@ services:
     volumes:
       - simul_pgdata:/var/lib/postgresql/data
 
+  # Containers specifically for Judge0
+
+  judge0-server: # API and container that the program will directly interact with
+    image: judge0/judge0:1.13.1
+    container_name: simul-judge0-server
+    env_file:
+      - .env.judge0
+    ports:
+      - "2358:2358"
+    privileged: true
+    depends_on:
+      - judge0-db
+      - judge0-redis
+    restart: unless-stopped
+    # cgroup: host
+
+  judge0-workers: # Workers for executing code for queued submissions
+    image: judge0/judge0:1.13.1
+    container_name: simul-judge0-workers
+    command: [./scripts/workers]
+    env_file:
+      - .env.judge0
+    privileged: true
+    depends_on:
+      - judge0-db
+      - judge0-redis
+    restart: unless-stopped
+    # cgroup: host
+
+  judge0-db: # Database for Judge0 service and fallback incase Redis fails
+    image: postgres:16
+    container_name: simul-judge0-db
+    environment:
+      - POSTGRES_USER=judge0
+      - POSTGRES_PASSWORD=judge0
+      - POSTGRES_DB=judge0
+    ports:
+      - "5433:5432"
+    volumes:
+      - judge0_pgdata:/var/lib/postgresql/data
+    restart: unless-stopped
+
+  judge0-redis: # Redis cache for Judge0 service
+    image: redis:7.2-alpine
+    container_name: simul-judge0-redis
+    command: redis-server --requirepass judge0redis
+    ports:
+      - "6380:6379"
+    volumes:
+      - judge0_redis:/data
+    restart: unless-stopped
+
 volumes:
   simul_pgdata:
+  judge0_pgdata:
+  judge0_redis:
