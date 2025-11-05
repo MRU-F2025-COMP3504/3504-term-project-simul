@@ -1,152 +1,152 @@
-# AGENTS.md - Project Guide for AI Assistants
-
-This file contains important information about the Simul project to help AI coding assistants work more effectively.
+# Copilot Instructions for Simul
 
 ## Project Overview
 
-**Simul** is a coding practice and session recording platform built for educational purposes. It allows instructors to create coding challenges and record/playback student coding sessions with CodeMirror integration.
+**Simul** is a Next.js-based educational coding practice platform. It allows instructors to create coding challenges and record/playback student coding sessions with CodeMirror integration. The codebase uses TypeScript, React 19, Tailwind CSS, shadcn/ui, PostgreSQL with Drizzle ORM, and Playwright for E2E testing.
 
-**Repository**: https://github.com/MRU-F2025-COMP3504/3504-term-project-simul
+## Tech Stack & Versions
 
-## Tech Stack
-
-- **Framework**: Next.js 15.5.4 (App Router)
+- **Next.js**: 15.5.4 (App Router)
 - **React**: 19.1.0
 - **TypeScript**: 5.x
-- **Styling**: Tailwind CSS 4 + shadcn/ui (New York style)
-- **Database**: PostgreSQL (Drizzle ORM)
+- **Tailwind CSS**: 4 + shadcn/ui (New York style)
+- **Database**: PostgreSQL with Drizzle ORM
 - **Code Editor**: CodeMirror 6 (@uiw/react-codemirror)
-- **Package Manager**: pnpm
-- **Linting**: ESLint (@antfu/eslint-config)
+- **Testing**: Vitest (unit), Playwright (E2E)
+- **Package Manager**: pnpm (v8+)
 - **Build Tool**: Turbopack
-- **Environment**: Nix (optional dev shell)
+- **Environment**: Nix dev shell (optional; manual setup also supported)
 
-## Frequently Used Commands
+## Critical Setup & Build Information
 
 ### Development
 
-```bash
-# Start development server (with database)
-pnpm dev
-
-# Start dev server only (without database)
-pnpm next dev --turbopack
-
-# Start database only
-pnpm db:start
-
-# Stop database
-pnpm db:stop
-```
-
-### Build & Production
-
-```bash
-# Build for production
-pnpm build
-
-# Start production server
-pnpm start
-```
+- **Start dev server**: `pnpm dev` (includes database via Docker Compose)
+- **Dev server only**: `pnpm next dev --turbopack` (no database)
+- **Build**: `pnpm build` (requires `DATABASE_URL` and auth secrets in `.env`)
 
 ### Database
 
-```bash
-# Push schema changes to database
-pnpm db:push
-
-# Open Drizzle Studio (database GUI)
-pnpm db:studio
-```
-
-### Linting
-
-```bash
-# Run linter
-pnpm lint
-
-# Auto-fix linting issues
-pnpm lint:fix
-```
+- **Push schema changes**: `pnpm db:push`
+- **Open GUI**: `pnpm db:studio`
+- **Docker Compose**: `docker-compose.yml` in root starts PostgreSQL automatically with `pnpm dev`
 
 ### Testing
 
-**⚠️ Note**: Tests are located in `__tests__`, but are not currently needed.
+- **Unit tests**: `pnpm test -- --run` (Vitest)
+- **E2E tests**: First run `pnpm exec playwright install`, then `pnpm test:e2e`
+- **Linting**: `pnpm lint` (ESLint)
+- **Nix formatting**: `nix develop -c alejandra --check .` (if modifying `.nix` files)
 
-### Import Alias
-
-Use `~/*` for imports from `src/`:
-
-```typescript
-import { Button } from "~/components/ui/button";
-// ✅ Correct
-import { db } from "~/lib/db";
-
-// ❌ Wrong
-import { db } from "../../../lib/db";
-```
+All tests and linting run in Nix shells in CI. Locally, you can run them directly if dependencies are installed.
 
 ### Environment Variables
 
-**Never** access `process.env` directly. Always use the validated env:
+Required `.env` file (copy from `.env.example`):
+
+```env
+NODE_ENV=development
+DATABASE_URL=postgresql://postgres:postgres@localhost:5432/simul_db
+POSTGRES_USER=postgres
+POSTGRES_PASSWORD=postgres
+POSTGRES_PORT=5432
+POSTGRES_DB=simul_db
+BETTER_AUTH_SECRET=<generate with: openssl rand -base64 32>
+BETTER_AUTH_URL=http://localhost:3000
+GH_CLIENT_ID=<from GitHub OAuth>
+GH_SECRET=<from GitHub OAuth>
+```
+
+**Never** access `process.env` directly in code. Use the validated env:
 
 ```typescript
-// ✅ Correct
 import { serverEnv } from "~/lib/env";
-
 const dbUrl = serverEnv.DATABASE_URL;
-
-// ❌ Wrong - will fail ESLint
-const dbUrl = process.env.DATABASE_URL;
 ```
 
-### Server Actions
+## Project Layout & Architecture
 
-Use `next-safe-action` with Zod validation:
+### Root Configuration Files
 
-```typescript
-import { z } from "zod";
+- `tsconfig.json` - TypeScript configuration
+- `eslint.config.mjs` - ESLint rules (pre-commit hook validates)
+- `next.config.ts` - Next.js config
+- `vitest.config.ts` / `vitest.setup.ts` - Unit test setup
+- `playwright.config.ts` - E2E test config
+- `drizzle.config.ts` - Database migration config
+- `docker-compose.yml` - PostgreSQL container
+- `flake.nix` / `flake.lock` - Nix environment
 
-import { actionClient } from "~/lib/safe-action";
+### Documentation
 
-export const myAction = actionClient
-  .schema(z.object({ name: z.string() }))
-  .action(async ({ parsedInput }) => {
-    // Server-side logic
-    return { success: true };
-  });
-```
+- `docs/actions.md` - Server action patterns
+- `docs/authentication.md` - OAuth setup & Better Auth config
+- `docs/component-styling-guide.md` - Tailwind & shadcn/ui theming
+- `docs/testing.md` - Test writing guide
 
-### Component Styling
+## Import Alias & Code Style
 
-- Use **Tailwind CSS** for styling
-- Use **shadcn/ui** components when possible
-- Dark mode support via `next-themes`
-- Follow the [component styling guide](docs/component-styling-guide.md) for theming
+- Use `~/*` for imports from `src/` (e.g., `import { db } from "~/lib/db"`)
+- Use Tailwind CSS for styling; use shadcn/ui components when available, and install new ones as needed
+- Validate all server inputs with Zod and `actionClient` from `next-safe-action`
+- Use Drizzle for all database queries; connection: `import { db } from "~/lib/db"`
+- Dark mode support via `next-themes`; always test both themes
 
-## Database
+## Dependencies & Key Libraries
 
-- **ORM**: Drizzle
-- **Dialect**: PostgreSQL
-- **Schema location**: `src/lib/db/scheme/index.ts`
-- **Migrations**: `src/lib/db/migrations/` (auto-generated)
-- **Naming convention**: snake_case (enforced by Drizzle config)
+- **Authentication**: Better Auth (Next.js integration)
+- **Validation**: Zod
+- **Server Actions**: next-safe-action
+- **Database ORM**: Drizzle
+- **UI Components**: shadcn/ui
+- **Styling**: Tailwind CSS 4
+- **Editor**: CodeMirror 6
+- **E2E Testing**: Playwright
+- **Unit Testing**: Vitest
 
-### Database Connection
+## Key Points for Code Changes
 
-```typescript
-import { db } from "~/lib/db";
+- **Secrets**: Never hardcode secrets; use `.env` and validated `serverEnv`
+- **Database**: Always validate requests with Zod before querying; use `db` from `~/lib/db`
+- **Components**: Prefer shadcn/ui over raw HTML elements
+- **Testing**: Unit tests in `__tests__/lib/`, E2E tests in `__tests__/e2e/`
+- **Linting**: Automated via pre-commit hook; focus on logic, not formatting
+- **TODO comments**: Reference the issue tracker number (e.g., `// TODO: Fix X - #123`)
 
-// Use Drizzle queries
-const users = await db.select().from(usersTable);
-```
+## Validation Steps Before Pushing
 
-## Special Files & Ignored Patterns
+1. Run linter: `pnpm lint`
+2. Run unit tests: `pnpm test -- --run`
+3. Build: `pnpm build` (catches TypeScript errors)
+4. Run E2E tests: `pnpm test:e2e`
 
-Files that should **NOT** be linted/modified:
+If any step fails, fix the issue before pushing. The CI pipeline mirrors these steps.
 
-- `src/components/ui/*` - shadcn/ui auto-generated components
-- `src/lib/db/migrations/*` - Drizzle migrations
-- `next-env.d.ts` - Next.js types
-- `reports/*.md` - Project reports
-- `docs/*.md` - Documentation
+## Planning
+
+When asked to plan, your job is to deep-dive on the issue. Find the problem and generate a plan.
+Do not write code. Explain the problem clearly and propose a comprehensive plan
+to solve it.
+
+### Your Tasks for Planning
+
+You are an experienced software developer tasked with diagnosing issues.
+
+1. Review the issue context and details.
+2. Examine the relevant parts of the codebase. Analyze the code thoroughly
+   until you have a solid understanding of how it works.
+3. Explain the issue in detail, including the problem and its root cause.
+4. Create a comprehensive plan to solve the issue. The plan should include:
+   - Required code changes
+   - Potential impacts on other parts of the system
+   - Necessary tests to be written or updated
+   - Documentation updates
+   - Performance considerations
+   - Security implications
+   - Backwards compatibility (if applicable)
+   - Include the reference link to the source issue and any related discussions
+4. Think deeply about all aspects of the task. Consider edge cases, potential
+   challenges, and best practices for addressing the issue. If Context7 is available, use it to query documentation to better inform your plan.
+
+**ONLY CREATE A PLAN. DO NOT WRITE ANY CODE.** Your task is to create
+a thorough, comprehensive strategy for understanding and resolving the issue.

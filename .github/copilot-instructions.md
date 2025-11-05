@@ -1,24 +1,30 @@
 # Code Review Instructions
 
-## General Instructions
+## General Guidelines
 
-When reviewing code, please keep the following general guidelines in mind:
-
-- **TODO**: If you encounter any TODO comments in the code, please note that they should be marked as issues in our issue tracker for future resolution. Also note that the newly created issue number should be referenced in the TODO comment for clarity.
-- **Documentation**: Ensure that any new features or significant changes are well-documented. This includes updating relevant documentation files and adding comments in the code where necessary. Major features should include an entry in the `docs/` directory.
+- **Security First**: Prioritize security vulnerabilities—hardcoded secrets, SQL injection, XSS, input validation, and authentication/authorization logic.
+- **Performance Matters**: Flag N+1 queries, inefficient loops, memory leaks, and missing caching for expensive operations.
+- **Be Specific and Actionable**: Explain the "why" behind recommendations. Acknowledge good patterns when you spot them.
+- **Ask for Clarity**: When code intent is unclear, ask questions rather than assume.
+- **TODO Comments**: Reference the issue tracker number in any TODO comments you find. If one doesn't exist, note that an issue should be created.
 
 ## Front-end
 
-When reviewing front-end code, please consider the following:
-
-- **Linting and Formatting**: Our codebase follows specific linting and formatting rules. This includes rules regarding template literals, indentation, and spacing. When reviewing, ignore these aspects, as they are verified by automated tools before the PR is opened.
-- **Shadcn UI Components**: If you come across components from the Shadcn UI library, please do not review their internal implementation. Instead, focus on how these components are integrated and used within our codebase. If you come across any UI using primitive HTML components instead of the Shadcn UI components, please suggest refactoring them to use the Shadcn UI components for consistency and maintainability. (e.g., using `<Button>` from Shadcn UI instead of a plain `<button>` element).
+- **Ignore Linting/Formatting**: Automated tools catch these before PR submission.
+- **Shadcn UI Integration**: Don't review Shadcn UI internals. Focus on how components are integrated. Suggest refactoring primitive HTML elements to Shadcn UI components for consistency.
+- **Readability**: Extract validation logic, conditionals, and repeated patterns into focused, descriptive functions. This improves both readability and testability.
 
 ## Back-end
 
-When reviewing back-end code, please consider the following:
+- **Input Validation & Sanitization**: Verify all inputs are validated and sanitized appropriately.
+- **Performance**: Evaluate bottlenecks. Check for N+1 problems, inefficient loops, resource cleanup, and caching opportunities.
+- **Error Handling & Logging**: Ensure proper error handling with adequate logging to support debugging and maintenance.
 
-- **Security**: Pay special attention to security aspects, such as input validation, authentication, and authorization. Ensure that sensitive data is handled appropriately.
-- **Performance**: Evaluate the performance implications of the code changes. Look for potential bottlenecks and suggest optimizations where necessary.
-- **Error Handling**: Check that the code includes proper error handling and logging mechanisms to facilitate debugging and maintenance.
+## Code Quality Across All Layers
 
+- Functions should be focused and appropriately sized
+- Use clear, descriptive naming
+- Document significant changes and new features (including `docs/` entries for major features)
+- Ensure proper error handling throughout
+
+Always prioritize security and performance issues that impact users.
