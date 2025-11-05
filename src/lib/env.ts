@@ -12,7 +12,8 @@ const envSchema = {
     POSTGRES_USER: z.string().min(1, { message: "POSTGRES_USER is required" }),
     POSTGRES_PASSWORD: z.string().min(1, { message: "POSTGRES_PASSWORD is required" }),
 
-    PISTON_URL: z.url().min(1, { message: "PISTON_URL is required." }),
+    // PISTON_URL: z.url().min(1, { message: "PISTON_URL is required." }),
+    PISTON_URL: z.url().default("http://localhost:2000"),
 
     BETTER_AUTH_SECRET: z.string().min(1, { error: "BETTER_AUTH_SECRET is required" }),
     BETTER_AUTH_URL: z.url().min(1, { error: "BETTER_AUTH_URL is required" }),
