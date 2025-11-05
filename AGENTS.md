@@ -145,7 +145,7 @@ You are an experienced software developer tasked with diagnosing issues.
    - Security implications
    - Backwards compatibility (if applicable)
    - Include the reference link to the source issue and any related discussions
-4. Think deeply about all aspects of the task. Consider edge cases, potential
+5. Think deeply about all aspects of the task. Consider edge cases, potential
    challenges, and best practices for addressing the issue. If Context7 is available, use it to query documentation to better inform your plan.
 
 **ONLY CREATE A PLAN. DO NOT WRITE ANY CODE.** Your task is to create
