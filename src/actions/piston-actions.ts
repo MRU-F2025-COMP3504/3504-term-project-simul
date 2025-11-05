@@ -2,23 +2,10 @@
 
 import { z } from "zod";
 
+import type { PistonExecuteResponse } from "~/types/piston";
+
 import { serverEnv } from "~/lib/env";
 import { actionClient } from "~/lib/safe-action";
-
-/**
- * Piston API response types
- */
-type PistonExecuteResponse = {
-  run: {
-    stdout: string;
-    stderr: string;
-    code: number;
-    signal: string | null;
-    output: string;
-  };
-  language: string;
-  version: string;
-};
 
 /**
  * Execute code using Piston
