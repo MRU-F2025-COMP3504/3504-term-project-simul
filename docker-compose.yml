@@ -10,6 +10,9 @@ services:
     volumes:
       - simul_pgdata:/var/lib/postgresql/data
 
+  # Unless your host machine is Linux with cgroup v2 or it is enforced in WSL:
+  # Add the .wslconfig to %UserProfile%\ for piston
+  # Then run wsl.exe --shutdown and relaunch wsl
   piston:
     image: ghcr.io/engineer-man/piston
     container_name: simul-piston-api
