@@ -15,10 +15,6 @@ export default async function OnboardingPage() {
     redirect("/");
   }
 
-  if (session.user.role !== "user") {
-    redirect("/dashboard");
-  }
-
   async function handleRoleSelect(role: "student" | "instructor") {
     "use server";
 
