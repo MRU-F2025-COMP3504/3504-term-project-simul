@@ -2,90 +2,10 @@
 
 import { z } from "zod";
 
-import type { PistonExecuteResponse } from "~/types/piston";
+import type { PistonExecuteResponse, TestResult } from "~/types/piston";
 
 import { serverEnv } from "~/lib/env";
 import { actionClient } from "~/lib/safe-action";
-
-/**
- * Execute code using Piston
- *
- * Sends code to Piston API for execution in a sandboxed environment.
- * Supports multiple languages (JavaScript/Node.js, Python, etc.) as long as runtime is installed.
- * Can handle multiple files for complex projects.
- *
- * @example
- * Single file:
- * ```typescript
- * const result = await executeCode({
- *   language: "javascript",
- *   version: "20.11.1",
- *   files: [{ name: "main.js", content: "console.log('Hello');" }],
- * });
- * ```
- *
- * Multiple files:
- * ```typescript
- * const result = await executeCode({
- *   language: "javascript",
- *   version: "20.11.1",
- *   files: [
- *     { name: "index.js", content: "import { greet } from './utils.js'; greet();" },
- *     { name: "utils.js", content: "export const greet = () => console.log('Hi');" }
- *   ],
- * });
- * ```
- */
-export const executeCode = actionClient
-  .inputSchema(
-    z.object({
-      language: z.string(),
-      version: z.string(),
-      files: z.array(
-        z.object({
-          name: z.string(),
-          content: z.string(),
-        }),
-      ).min(1, "At least one file is required"),
-    }),
-  )
-  .action(async ({ parsedInput }) => {
-    const { language, version, files } = parsedInput;
-
-    try {
-      const response = await fetch(`${serverEnv.PISTON_URL}/api/v2/execute`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          language,
-          version,
-          files,
-        }),
-      });
-
-      if (!response.ok) {
-        throw new Error(`Piston API error: ${response.statusText}`);
-      }
-
-      const data = (await response.json()) as PistonExecuteResponse;
-
-      return {
-        success: true,
-        output: data.run.output,
-        stdout: data.run.stdout,
-        stderr: data.run.stderr,
-        exitCode: data.run.code,
-      };
-    }
-    catch (error) {
-      return {
-        success: false,
-        error: error instanceof Error ? error.message : "Unknown error",
-      };
-    }
-  });
 
 /**
  * Execute code with test cases using Piston
@@ -131,8 +51,11 @@ export const executeWithTests = actionClient
   .action(async ({ parsedInput }) => {
     const { language, version, files, functionName, testCases } = parsedInput;
 
-    // Test execution wrapper with original files without return statement call (proper way)
-    const testWrapper = `
+    // Generate test wrapper based on language
+    let testWrapper = "";
+
+    if (language === "javascript" || language === "typescript") {
+      testWrapper = `
 ${files.map(f => f.content).join("\n\n")}
 
 // Test execution
@@ -176,6 +99,60 @@ try {
 
 console.log(JSON.stringify(testResults));
 `;
+    }
+    else if (language === "python" || language.startsWith("python")) {
+      testWrapper = `
+${files.map(f => f.content).join("\n\n")}
+
+import json
+
+test_results = []
+
+def deep_equal(a, b):
+    if isinstance(a, (list, tuple)) and isinstance(b, (list, tuple)):
+        return len(a) == len(b) and all(deep_equal(x, y) for x, y in zip(a, b))
+    elif isinstance(a, dict) and isinstance(b, dict):
+        return a.keys() == b.keys() and all(deep_equal(a[k], b[k]) for k in a)
+    else:
+        return a == b
+
+${testCases
+  .map(
+    tc => `
+try:
+    input_args = ${JSON.stringify(Object.values(tc.input))}
+    result = ${functionName}(*input_args)
+    expected = ${JSON.stringify(tc.expected)}
+    passed = deep_equal(result, expected)
+    if not passed:
+        test_results.append({
+            "name": ${JSON.stringify(tc.name)},
+            "passed": False,
+            "error": f"Expected {json.dumps(expected)}, got {json.dumps(result)}"
+        })
+    else:
+        test_results.append({
+            "name": ${JSON.stringify(tc.name)},
+            "passed": True
+        })
+except Exception as error:
+    test_results.append({
+        "name": ${JSON.stringify(tc.name)},
+        "passed": False,
+        "error": str(error)
+    })
+`,
+  )
+  .join("\n")}
+
+print(json.dumps(test_results))
+`;
+    }
+    else {
+      throw new Error(`Unsupported language: ${language}. Only JavaScript, TypeScript, and Python are supported.`);
+      // // Fallback: just concatenate files, no test logic
+      // testWrapper = files.map(f => f.content).join("\n\n");
+    }
 
     try {
       const response = await fetch(`${serverEnv.PISTON_URL}/api/v2/execute`, {
@@ -188,7 +165,12 @@ console.log(JSON.stringify(testResults));
           version,
           files: [
             {
-              name: "main.js",
+              name:
+                language === "javascript" || language === "typescript"
+                  ? "test.js"
+                  : language === "python" || language.startsWith("python")
+                    ? "main.py"
+                    : files[0].name,
               content: testWrapper,
             },
           ],
@@ -196,15 +178,24 @@ console.log(JSON.stringify(testResults));
       });
 
       if (!response.ok) {
-        throw new Error(`Piston API error: ${response.statusText}`);
+        let errorBody = "";
+        try {
+          errorBody = await response.text();
+        }
+        catch {
+          errorBody = "(Failed to read response body)";
+        }
+        throw new Error(
+          `Piston API error: ${response.status} ${response.statusText}. Response body: ${errorBody}`,
+        );
       }
 
       const data = (await response.json()) as PistonExecuteResponse;
 
       // Parse test results from stdout
-      let testResults;
+      let testResults: TestResult[];
       try {
-        testResults = JSON.parse(data.run.stdout.trim());
+        testResults = JSON.parse(data.run.stdout.trim()) as TestResult[];
       }
       catch {
         // If parsing fails, treat as runtime error
@@ -214,7 +205,7 @@ console.log(JSON.stringify(testResults));
         };
       }
 
-      const passed = testResults.filter((r: any) => r.passed).length;
+      const passed = testResults.filter((r: TestResult) => r.passed).length;
 
       return {
         success: true,

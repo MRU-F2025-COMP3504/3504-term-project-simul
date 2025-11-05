@@ -60,3 +60,15 @@ export type PistonExecuteRequest = {
   /** Execution memory limit in bytes */
   run_memory_limit?: number;
 };
+
+/**
+ * Represents the result of a single test case executed in the sandbox.
+ */
+export type TestResult = {
+  /** Name of the test case. */
+  name: string;
+  /** Whether the test case passed. */
+  passed: boolean;
+  /** Optional error message if the test failed. */
+  error?: string;
+};
