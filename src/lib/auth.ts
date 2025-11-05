@@ -42,15 +42,6 @@ export const auth = betterAuth({
       role: {
         type: "string",
       },
-      banned: {
-        type: "boolean",
-      },
-      banReason: {
-        type: "string",
-      },
-      banExpires: {
-        type: "date",
-      },
     },
   },
   socialProviders: {
