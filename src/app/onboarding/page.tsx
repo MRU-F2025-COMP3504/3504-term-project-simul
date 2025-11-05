@@ -1,4 +1,5 @@
 import { eq } from "drizzle-orm";
+import { revalidatePath } from "next/cache";
 import { headers as nextHeaders } from "next/headers";
 import { redirect } from "next/navigation";
 
@@ -30,6 +31,11 @@ export default async function OnboardingPage() {
     // the user's role can't be updated by our auth api directly,
     // so we perform the update here
     await db.update(user).set({ role }).where(eq(user.id, userId));
+
+    // revalidate the dashboard path so that the user's new role is reflected.
+    // currently this isn't an issue, however if we add the ability to change
+    // roles later, this will be necessary.
+    revalidatePath("/dashboard");
   }
 
   return <OnboardingClient onSelectRoleAction={handleRoleSelect} />;

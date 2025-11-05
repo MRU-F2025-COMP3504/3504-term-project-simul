@@ -2,6 +2,7 @@
 
 import { useRouter } from "next/navigation";
 import { useState } from "react";
+import { toast } from "sonner";
 
 import { Button } from "~/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "~/components/ui/card";
@@ -24,11 +25,10 @@ export default function OnboardingClient({ onSelectRoleAction }: Props) {
       router.push("/dashboard");
     }
     catch (error) {
-      // keep it simple here; server action will surface the error in dev console
-      // but we should reset UI state
       console.error("Failed to set role:", error);
       setIsLoading(false);
       setSelectedRole(null);
+      toast.error("Failed to set role. Please try again.");
     }
   };
 
