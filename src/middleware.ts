@@ -64,6 +64,6 @@ export async function middleware(request: NextRequest) {
  * tl;dr: This middleware protects routes by ensuring proper authentication and role states.
  */
 export const config = {
-  matcher: ["/dashboard", "/onboarding"],
+  matcher: ["/dashboard/:path*", "/onboarding/:path*"],
   runtime: "nodejs",
 };
