@@ -22,5 +22,26 @@ services:
     tmpfs:
       - /tmp:exec
 
+    # Check available runtimes to install:
+    # http://localhost:2000/api/v2/packages
+    #
+    # How docs say to install  runtimes:
+    #
+    # docker exec -it simul-piston-api bash
+    # piston ppman install node or piston ppman install node=20.11.1
+    # piston ppman list
+    # exit
+    #
+    # How I did it with curl
+    # curl -X POST 'http://localhost:2000/api/v2/packages' -H 'Content-Type: application/json' -d '{\"language\":\"node\",\"version\":\"20.11.1\"}'
+    #
+    # if no curl then:
+    # Invoke-RestMethod -Uri "http://localhost:2000/api/v2/packages" -Method POST -ContentType "application/json" -Body '{"language":"node","version":"20.11.1"}'
+    #
+    # Check installed runtimes:
+    # http://localhost:2000/api/v2/runtimes
+    #
+    # Alternatively make a script for this
+
 volumes:
   simul_pgdata:
