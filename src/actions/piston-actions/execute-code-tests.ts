@@ -14,6 +14,12 @@ import { actionClient } from "~/lib/safe-action";
  * Returns structured results for each test case.
  * Supports multiple files for complex solutions.
  *
+ * **Note**: Currently, test results use JSON.stringify for comparison, which requires
+ * exact order matching for arrays. If your problem allows results in any order,
+ * ensure test cases account for this or implement custom equality logic.
+ *
+ * TODO: Implement proper deep equality such that order does not matter for arrays.
+ *
  * @example
  * ```typescript
  * const result = await executeWithTests({
