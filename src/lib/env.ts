@@ -15,7 +15,7 @@ const envSchema = {
     PISTON_URL: z.url().default("http://localhost:2000"),
 
     BETTER_AUTH_SECRET: z.string().min(1, { error: "BETTER_AUTH_SECRET is required" }),
-    BETTER_AUTH_URL: z.url().min(1, { error: "BETTER_AUTH_URL is required" }),
+    BETTER_AUTH_URL: z.url(),
 
     GH_CLIENT_ID: z.string().min(1, { error: "GH_CLIENT_ID is required" }),
     GH_SECRET: z.string().min(1, { error: "GH_SECRET is required" }),
