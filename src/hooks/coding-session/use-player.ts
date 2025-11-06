@@ -36,9 +36,14 @@
  * ```
  */
 
+import type { ChangeSet, EditorState } from "@codemirror/state";
+
 import { useCallback, useRef, useState } from "react";
 
+import type { ChangeSetJSON } from "~/lib/coding-session/events";
 import type { RecordedEvent } from "~/types/coding-session";
+
+import { applyChangeSetJSON } from "~/lib/coding-session";
 
 /**
  * API returned by usePlayer hook
@@ -73,10 +78,10 @@ type UsePlayerProps = {
   editorApiRef: React.RefObject<{
     setDoc: (content: string) => void;
     setSelection: (selection: { anchor: number; head: number }) => void;
-    getState: () => { doc: { toString: () => string } } | null;
+    getState: () => EditorState | null;
   } | null>;
   /** Reference to initial editor state (captured at recording start) */
-  initialStateRef: React.RefObject<any | null>;
+  initialStateRef: React.RefObject<EditorState | null>;
   /** Reference to cursor overlay element for position updates */
   cursorRef: React.RefObject<HTMLDivElement | null>;
   /** Callback when playback time updates (for progress bar) */
@@ -177,8 +182,20 @@ export function usePlayer({
       if (event.kind === "transaction" && event.transaction && event.transaction.changes && editorApiRef.current) {
         const state = editorApiRef.current.getState();
         if (state) {
-          const changes = event.transaction.changes as any;
-          const newDoc = changes.apply((state as any).doc).toString();
+          const changes = event.transaction.changes as ChangeSet | ChangeSetJSON;
+
+          // check if changes is already a ChangeSet (from live recording) or ChangeSetJSON (from loaded recording)
+          let newDoc: string;
+          if (Array.isArray(changes)) {
+            // loaded recording
+            const updatedDoc = applyChangeSetJSON(state.doc, changes);
+            newDoc = updatedDoc.toString();
+          }
+          else {
+            // live recording
+            newDoc = changes.apply(state.doc).toString();
+          }
+
           editorApiRef.current.setDoc(newDoc);
 
           // Apply selection range if recorded
