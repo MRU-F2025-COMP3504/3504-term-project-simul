@@ -26,3 +26,6 @@ export type ServerEnvSchema = z.infer<typeof envSchema.server>;
 export type ClientEnvSchema = z.infer<typeof envSchema.client>;
 
 export const { serverEnv, clientEnv } = loadEnv(envSchema);
+
+// add for testing propose
+export const __test__ = { envSchema };
