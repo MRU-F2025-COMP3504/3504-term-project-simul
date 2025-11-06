@@ -18,7 +18,6 @@ import { actionClient } from "~/lib/safe-action";
  * exact order matching for arrays. If your problem allows results in any order,
  * ensure test cases account for this or implement custom equality logic.
  *
- * TODO: Implement proper deep equality such that order does not matter for arrays.
  *
  * @example
  * ```typescript
@@ -163,8 +162,6 @@ print("${END_MARKER}")
 `;
     }
     else {
-      // TODO: Consider implementing a fallback strategy for unsupported languages.
-      // No issue exists yet; create an issue in the tracker if fallback support is desired.
       throw new Error(`Unsupported language: ${language}. Only JavaScript, TypeScript, and Python are supported.`);
     }
 
