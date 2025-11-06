@@ -95,7 +95,6 @@ export function RecordingList({ onSelectRecording }: RecordingListProps) {
               hover:bg-accent
               cursor-pointer rounded-lg border p-3
             `}
-            onClick={() => onSelectRecording(recording.id)}
           >
             <div className="flex items-start justify-between">
               <div className="flex-1">
