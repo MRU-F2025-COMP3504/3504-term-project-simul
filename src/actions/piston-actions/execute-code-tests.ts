@@ -178,7 +178,7 @@ print(json.dumps(test_results))
       });
 
       if (!response.ok) {
-        let errorBody = "";
+        let errorBody: string | undefined;
         try {
           errorBody = await response.text();
         }
