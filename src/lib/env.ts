@@ -5,7 +5,7 @@ const envSchema = {
   server: z.object({
     DATABASE_URL: z.url({
       protocol: /^postgres(ql)?/,
-    }).min(1, { error: "DATABASE_URL is required." }),
+    }),
     NODE_ENV: z.enum(["development", "production", "test"]).default("development"),
     POSTGRES_PORT: z.coerce.number().default(5432),
 
