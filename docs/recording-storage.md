@@ -10,6 +10,8 @@ Our recording system has several key pieces:
 2. **JSONB Fields** - Complex data (events, problems, files) stored as JSON (for now) in the database
 3. **Server Actions** - Handle all recording CRUD operations
 4. **Event Serialization** - Converts CodeMirror transactions to storable format
+5. **React Hooks** - Client-side hooks for managing recording state and operations
+6. **Context Providers** - Shared state management for instructor sessions
 
 ## Core Concepts
 
@@ -46,24 +48,81 @@ The `recording` table structure:
 export const recording = pgTable("recording", {
   id: uuid("id").primaryKey().defaultRandom(),
   title: text("title").notNull(),
-  
-  // Complex data stored as JSONB
-  problem: jsonb("problem").notNull(),           // ProblemDefinition
-  files: jsonb("files").notNull(),               // Record<string, string>
-  events: jsonb("events").notNull(),             // SerializedRecordedEvent[]
-  
-  // Text fields
+
+  // TODO: create a schema for ProblemDefinition and use it here
+  // currently not doing this for simplicity (#119)
+  problem: jsonb("problem").notNull(),
+
   initialCode: text("initial_code").notNull(),
+  files: jsonb("files").notNull(), // Record<string, string>
   activeFile: text("active_file").notNull(),
-  
-  // Metadata
+
+  events: jsonb("events").notNull(), // SerializedRecordedEvent[]
+
   createdAt: timestamp("created_at").defaultNow().notNull(),
-  duration: integer("duration").notNull(),       // milliseconds
-  
-  // Relations
+  duration: integer("duration").notNull(), // milliseconds
+
   instructorId: uuid("instructor_id")
     .references(() => user.id, { onDelete: "cascade" }),
 });
+```
+
+## Client-Side State Management
+
+Recording operations are managed through React hooks and context providers:
+
+### Instructor Session Context
+
+The `InstructorSessionProvider` manages shared state for instructor coding sessions:
+
+```typescript
+type InstructorSessionContextValue = {
+  // Editor refs - shared between recorder, player, files manager
+  editorApiRef: React.RefObject<{...}>;
+  cursorRef: React.RefObject<HTMLDivElement | null>;
+  editorContainerRef: React.RefObject<HTMLDivElement | null>;
+
+  // Recording state - shared between player, toolbar, playback controls
+  recordedEvents: RecordedEvent[];
+  setRecordedEvents: React.Dispatch<React.SetStateAction<RecordedEvent[]>>;
+
+  // Playback state - shared between player, toolbar, playback controls
+  playbackTime: number;
+  setPlaybackTime: React.Dispatch<React.SetStateAction<number>>;
+  isPlaying: boolean;
+  setIsPlaying: React.Dispatch<React.SetStateAction<boolean>>;
+
+  // Initial state ref - used by player for playback reset
+  initialStateRef: React.RefObject<CMEditorState | null>;
+};
+```
+
+### Save Recording Hook
+
+The `useSaveRecording` hook handles the recording save process:
+
+```typescript
+export function useSaveRecording({
+  recordedEvents,
+  filesManager,
+  initialStateRef,
+  problem
+}: SaveRecordingOptions) {
+  // Returns: showSaveDialog, openSaveDialog, saveTitleInput, setSaveTitleInput,
+  // performSaveRecording, closeSaveDialog, saveStatus
+}
+```
+
+### Load Recording Hook
+
+The `useLoadRecording` hook handles loading saved recordings:
+
+```typescript
+export function useLoadRecording(filesManager: EditorFiles) {
+  const loadRecording = useCallback(async (recordingId: string) => {
+    // Loads recording data and restores editor state
+  }, [filesManager]);
+}
 ```
 
 ## Using Recording Actions
@@ -74,59 +133,93 @@ export const recording = pgTable("recording", {
 
 ### Save a Recording
 
-Create and save a new recording:
+Saving recordings is handled through the `useSaveRecording` hook:
 
 ```typescript
-import { saveRecordingAction } from "~/lib/actions/recordings";
+import { useSaveRecording } from "~/hooks/coding-session/use-save-recording";
 
-// Prepare the recording data
-const result = await saveRecordingAction({
-  title: "Two Sum Solution",
-  problem: TWO_SUM_PROBLEM,
-  recordedEvents: serializedEvents,
-  initialCode: "function twoSum() {...}",
-  files: {
-    "solution.js": { name: "solution.js", content: "..." },
-  },
-  activeFile: "solution.js",
-  instructorId: "optional-instructor-id",
-});
+function InstructorToolbar() {
+  const { recordedEvents, filesManager, initialStateRef } = useInstructorSession();
+  const { problem } = useProblemContext(); // hypothetical
+  
+  const {
+    showSaveDialog,
+    openSaveDialog,
+    saveTitleInput,
+    setSaveTitleInput,
+    performSaveRecording,
+    closeSaveDialog,
+    saveStatus,
+  } = useSaveRecording({
+    recordedEvents,
+    filesManager,
+    initialStateRef,
+    problem,
+  });
 
-if (result.data) {
-  console.log("Saved with ID:", result.data.recordingId);
+  // Render save dialog and button
+  return (
+    <>
+      <button onClick={openSaveDialog}>Save Recording</button>
+      {showSaveDialog && (
+        <SaveDialog
+          title={saveTitleInput}
+          onTitleChange={setSaveTitleInput}
+          onSave={() => performSaveRecording(saveTitleInput)}
+          onCancel={closeSaveDialog}
+          status={saveStatus}
+        />
+      )}
+    </>
+  );
 }
 ```
 
-The action automatically:
+The hook automatically:
 
-- Validates the input with Zod
-- Creates a `RecordingData` object with metadata
-- Inserts into the database with Drizzle ORM
-- Returns the new recording's UUID
+- Validates that there are events to save
+- Serializes events client-side before sending to server
+- Converts file Map to serializable object
+- Calls the server action with proper error handling
+- Provides UI state for save dialog and status
 
 ### Load a Recording
 
-Retrieve a recording by its ID:
+Loading recordings is handled through the `useLoadRecording` hook:
 
 ```typescript
-import { loadRecordingAction } from "~/lib/actions/recordings";
+import { useLoadRecording } from "~/hooks/coding-session/use-load-recording";
 
-const result = await loadRecordingAction({ 
-  id: "recording-uuid-here" 
-});
+function RecordingList({ recordings }) {
+  const filesManager = useFilesManager();
+  const { loadRecording } = useLoadRecording(filesManager);
 
-if (result.data?.recording) {
-  const { title, problem, events, files } = result.data.recording;
-  // Use the recording data for playback
+  const handleLoadRecording = async (recordingId: string) => {
+    await loadRecording(recordingId);
+  };
+
+  return (
+    <div>
+      {recordings.map(recording => (
+        <button
+          key={recording.id}
+          onClick={() => handleLoadRecording(recording.id)}
+        >
+          {recording.title}
+        </button>
+      ))}
+    </div>
+  );
 }
 ```
 
-The action:
+The hook:
 
-- Queries the database by ID
-- Transforms the flat database row into nested `RecordingData` structure
-- Converts timestamp to ISO string
-- Handles JSONB field type casting
+- Loads recording data from the server
+- Deserializes events for playback
+- Restores file state in the editor
+- Resets playback state
+- Sets initial editor state for playback
 
 ### List All Recordings
 
@@ -171,7 +264,7 @@ await deleteRecordingAction({
 
 ### Serializing Events
 
-Before saving, convert CodeMirror events to JSON:
+Before saving, convert CodeMirror events to JSON. This happens automatically in the `useSaveRecording` hook:
 
 ```typescript
 import { serializeEvent } from "~/lib/coding-session/events";
@@ -185,19 +278,18 @@ const recordedEvent: RecordedEvent = {
   selection: { anchor: 10, head: 15 },
 };
 
-// Serialize for storage
+// Serialize for storage (happens automatically in useSaveRecording)
 const serialized = serializeEvent(recordedEvent);
-// Now it's JSON-serializable and can be saved
 ```
 
 ### Deserializing Events
 
-When loading, convert JSON back to events:
+When loading, convert JSON back to events. This happens automatically in the `useLoadRecording` hook:
 
 ```typescript
 import { deserializeEvent } from "~/lib/coding-session/events";
 
-// After loading from database
+// After loading from database (happens automatically in useLoadRecording)
 const recording = await loadRecordingAction({ id: "..." });
 
 const events = recording.data.recording.events.map(deserializeEvent);
@@ -206,18 +298,69 @@ const events = recording.data.recording.events.map(deserializeEvent);
 
 ### Event Types
 
-Recordings capture four types of events:
+Recordings capture five types of events:
 
-1. **Transaction Events** - Code changes (insertions, deletions)
-2. **Mouse Events** - Cursor position and movements
-3. **File Switch Events** - When the user changes active file
-4. **File Create Events** - When a new file is created
+1. **Transaction Events** - Code changes (insertions, deletions, replacements)
+2. **Mouse Events** - Cursor position and movements with optional click data
+3. **File Switch Events** - When the user changes the active file
+4. **File Create Events** - When a new file is created during recording
+5. **File Operations** - File management actions
 
 All events include a timestamp for precise playback.
 
+## Playback Features
+
+### Timeline Scrubbing
+
+The playback system supports seeking to any point in the recording timeline:
+
+```typescript
+import { PlaybackControls } from "~/components/coding-session/playback-controls";
+
+function InstructorInterface() {
+  const { recordedEvents, playbackTime, isPlaying } = useInstructorSession();
+  
+  const handleSeek = (time: number) => {
+    // Seek to specific time in recording
+    setPlaybackTime(time);
+    // Player will automatically update editor state
+  };
+
+  return (
+    <PlaybackControls
+      recording={false}
+      onPlay={() => setIsPlaying(true)}
+      onPause={() => setIsPlaying(false)}
+      onSeek={handleSeek}
+    />
+  );
+}
+```
+
+The `PlaybackControls` component provides:
+
+- Play/pause toggle
+- Current time and total duration display
+- Interactive progress bar for seeking
+- Recording indicator when actively recording
+
+### Playback State Management
+
+Playback state is managed through the instructor session context:
+
+```typescript
+const {
+  recordedEvents,      // Array of events for playback
+  playbackTime,        // Current playback position (ms)
+  setPlaybackTime,     // Seek to new position
+  isPlaying,          // Whether playback is active
+  setIsPlaying,       // Start/stop playback
+} = useInstructorSession();
+```
+
 ## Creating Recording Data
 
-The `createRecordingData` helper transforms instructor state into a `RecordingData` object:
+The `createRecordingData` helper transforms instructor state into a `RecordingData` object. This is called internally by the server action:
 
 ```typescript
 import { createRecordingData } from "~/lib/recording-utils";

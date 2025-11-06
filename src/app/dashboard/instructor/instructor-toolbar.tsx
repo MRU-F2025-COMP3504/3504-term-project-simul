@@ -70,7 +70,7 @@ export default function InstructorToolbar(props: Props) {
               <div className="flex items-center gap-2">
                 <Input
                   value={saveTitleInput}
-                  onChange={e => setSaveTitleInputAction((e.target as HTMLInputElement).value)}
+                  onChange={e => setSaveTitleInputAction(e.target.value)}
                   placeholder="Recording title"
                   className="w-64"
                   disabled={saveStatus === SaveStatus.Saving}
