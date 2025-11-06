@@ -28,7 +28,7 @@ services:
   # Check available runtimes to install:
   # http://localhost:2000/api/v2/packages
   #
-  # How docs say to install  runtimes:
+  # How docs say to install runtimes:
   #
   # docker exec -it simul-piston-api bash
   # piston ppman install node or piston ppman install node=20.11.1
