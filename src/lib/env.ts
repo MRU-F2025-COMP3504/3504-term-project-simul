@@ -10,6 +10,7 @@ const envSchema = {
 
     POSTGRES_USER: z.string().min(1, { error: "POSTGRES_USER is required" }),
     POSTGRES_PASSWORD: z.string().min(1, { error: "POSTGRES_PASSWORD is required" }),
+    POSTGRES_PORT: z.coerce.number().default(5432),
 
     PISTON_URL: z.url().default("http://localhost:2000"),
 
