@@ -55,6 +55,7 @@ export default function CodeEditor() {
   const tester = useTestRunner({
     testCases: problem.testCases,
     functionName: problem.functionName,
+    renderTestArgs: problem.renderTestArgs,
     editorApiRef,
     onResultsChange: () => {
       // Callback for when results change

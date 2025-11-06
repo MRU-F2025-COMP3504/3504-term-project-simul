@@ -68,6 +68,8 @@ type UseTestRunnerProps = {
   testCases: TestCase[];
   /** Name of the function to test (e.g., "twoSum") */
   functionName: string;
+  /** Function to convert test input to array of function arguments in correct order */
+  renderTestArgs: (input: any) => any[];
   /** Reference to CodeMirror editor API for extracting current code */
   editorApiRef: React.RefObject<{
     getState: () => { doc: { toString: () => string } } | null;
@@ -95,9 +97,15 @@ type UseTestRunnerProps = {
  * @param code - User-submitted source code
  * @param testCases - Array of test cases with inputs and expected outputs
  * @param functionName - Name of the function to test
+ * @param renderTestArgs - Function to convert input object to array of arguments
  * @returns Promise<TestResults> with pass/fail status and details for each test
  */
-async function evaluateCode(code: string, testCases: TestCase[], functionName: string): Promise<TestResults> {
+async function evaluateCode(
+  code: string,
+  testCases: TestCase[],
+  functionName: string,
+  renderTestArgs: (input: any) => any[],
+): Promise<TestResults> {
   try {
     const result = await executeWithTests({
       language: "javascript",
@@ -111,7 +119,9 @@ async function evaluateCode(code: string, testCases: TestCase[], functionName: s
       ],
       testCases: testCases.map(tc => ({
         name: tc.name,
-        input: tc.input,
+        // Use renderTestArgs to convert input to function arguments in correct order
+        // This avoids fragile Object.values() approach that depends on property order
+        input: renderTestArgs(tc.input),
         expected: tc.expected,
       })),
     });
@@ -156,6 +166,7 @@ async function evaluateCode(code: string, testCases: TestCase[], functionName: s
 export function useTestRunner({
   testCases,
   functionName,
+  renderTestArgs,
   editorApiRef,
   onResultsChange,
 }: UseTestRunnerProps): TestRunnerHandle {
@@ -212,7 +223,7 @@ export function useTestRunner({
         return;
       }
 
-      const results = await evaluateCode(code, testCases, functionName);
+      const results = await evaluateCode(code, testCases, functionName, renderTestArgs);
       setTestResults(results);
       onResultsChange(results);
     }
@@ -234,7 +245,7 @@ export function useTestRunner({
     finally {
       setIsSubmitting(false);
     }
-  }, [testCases, functionName, editorApiRef, onResultsChange]);
+  }, [testCases, functionName, renderTestArgs, editorApiRef, onResultsChange]);
 
   /**
    * Clears all test results

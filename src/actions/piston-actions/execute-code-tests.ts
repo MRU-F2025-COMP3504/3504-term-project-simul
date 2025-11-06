@@ -103,7 +103,9 @@ try {
   )
   .join("\n")}
 
+console.log("__TEST_RESULTS_START__");
 console.log(JSON.stringify(testResults));
+console.log("__TEST_RESULTS_END__");
 `;
     }
     else if (language === "python" || language.startsWith("python")) {
@@ -151,7 +153,9 @@ except Exception as error:
   )
   .join("\n")}
 
+print("__TEST_RESULTS_START__")
 print(json.dumps(test_results))
+print("__TEST_RESULTS_END__")
 `;
     }
     else {
@@ -201,13 +205,27 @@ print(json.dumps(test_results))
       // Parse test results from stdout
       let testResults: TestResult[];
       try {
-        testResults = JSON.parse(data.run.stdout.trim()) as TestResult[];
+        const stdout = data.run.stdout.trim();
+        const startMarker = "__TEST_RESULTS_START__";
+        const endMarker = "__TEST_RESULTS_END__";
+
+        const startIdx = stdout.indexOf(startMarker);
+        const endIdx = stdout.indexOf(endMarker);
+
+        if (startIdx === -1 || endIdx === -1) {
+          throw new Error("Test results markers not found in output");
+        }
+
+        // Extract only the JSON between markers
+        const jsonStr = stdout
+          .slice(startIdx + startMarker.length, endIdx)
+          .trim();
+        testResults = JSON.parse(jsonStr) as TestResult[];
       }
-      catch {
-        // If parsing fails, treat as runtime error
+      catch (error) {
         return {
           success: false,
-          error: data.run.stderr || data.run.output || "Failed to parse test results",
+          error: data.run.stderr || data.run.output || `Failed to parse test results: ${error instanceof Error ? error.message : String(error)}`,
         };
       }
 

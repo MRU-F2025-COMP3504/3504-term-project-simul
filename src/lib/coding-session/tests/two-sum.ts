@@ -88,6 +88,11 @@ export const TWO_SUM_PROBLEM: ProblemDefinition<TwoSumInput, [number, number]> =
   renderTestInput: (input) => {
     return `nums = ${JSON.stringify(input.nums)}, target = ${input.target}`;
   },
+  renderTestArgs: (input) => {
+    // Explicitly map input object to function arguments in correct order
+    // twoSum(nums, target) requires [nums, target]
+    return [input.nums, input.target];
+  },
 };
 
 /**
