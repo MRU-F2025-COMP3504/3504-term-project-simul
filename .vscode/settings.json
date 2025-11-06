@@ -83,5 +83,6 @@
     "toml",
     "xml",
     "css"
-  ]
+  ],
+  "typescript.tsdk": "node_modules/typescript/lib"
 }
