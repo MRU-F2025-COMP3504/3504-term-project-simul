@@ -12,7 +12,7 @@ export const TWO_SUM_STARTER_CODE = `// Two Sum Problem
 function twoSum(nums, target) {
   // Your code here
   
-}`; // Remove the trailing return statement to avoid duplication (return twoSum(nums, target);)
+}`; // Function definition only - return statement is added by test runner
 
 /**
  * Input type for Two Sum test cases
