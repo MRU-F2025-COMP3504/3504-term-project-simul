@@ -19,7 +19,7 @@ services:
     restart: always
     privileged: true
     ports:
-      - "${PISTON_PORT}:${PISTON_PORT}"
+      - "${PISTON_PORT}:2000"
     volumes:
       - ./data/piston/packages:/piston/packages
     tmpfs:
