@@ -164,7 +164,7 @@ print("${END_MARKER}")
     }
     else {
       // TODO: Consider implementing a fallback strategy for unsupported languages.
-      // Reference: Create an issue in the tracker if fallback support is desired.
+      // No issue exists yet; create an issue in the tracker if fallback support is desired.
       throw new Error(`Unsupported language: ${language}. Only JavaScript, TypeScript, and Python are supported.`);
     }
 
