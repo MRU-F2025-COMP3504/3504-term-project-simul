@@ -150,8 +150,8 @@ print(json.dumps(test_results))
     }
     else {
       throw new Error(`Unsupported language: ${language}. Only JavaScript, TypeScript, and Python are supported.`);
-      // // Fallback: just concatenate files, no test logic
-      // testWrapper = files.map(f => f.content).join("\n\n");
+      // TODO: Consider implementing a fallback strategy for unsupported languages.
+      // Reference: Create an issue in the tracker if fallback support is desired.
     }
 
     try {
