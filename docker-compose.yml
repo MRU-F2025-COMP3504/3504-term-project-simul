@@ -35,10 +35,13 @@ services:
   # piston ppman list
   # exit
   #
-  # How I did it with curl
+  # How I did it with curl (Powershell or CMD):
   # curl -X POST 'http://localhost:2000/api/v2/packages' -H 'Content-Type: application/json' -d '{\"language\":\"node\",\"version\":\"20.11.1\"}'
   #
-  # if no curl then:
+  # How I did it with curl (Linux):
+  # curl -X POST 'http://localhost:2000/api/v2/packages' -H 'Content-Type: application/json' -d '{"language":"node","version":"20.11.1"}'
+  #
+  # if no curl (on Windows) then (on Powershell):
   # Invoke-RestMethod -Uri "http://localhost:2000/api/v2/packages" -Method POST -ContentType "application/json" -Body '{"language":"node","version":"20.11.1"}'
   #
   # Check installed runtimes:
