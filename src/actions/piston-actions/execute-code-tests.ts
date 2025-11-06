@@ -42,7 +42,7 @@ export const executeWithTests = actionClient
       testCases: z.array(
         z.object({
           name: z.string(),
-          input: z.any().describe("Input object with parameters for the function"),
+          input: z.array(z.any()).describe("Array of input parameters for the function"),
           expected: z.any().describe("Expected output"),
         }),
       ),
@@ -66,7 +66,7 @@ ${testCases
     tc => `
 try {
   // Call the function with the input parameters
-  const inputArgs = ${JSON.stringify(Object.values(tc.input))};
+  const inputArgs = ${JSON.stringify(tc.input)};
   const result = ${functionName}(...inputArgs);
   
   const expected = ${JSON.stringify(tc.expected)};
@@ -120,7 +120,7 @@ ${testCases
   .map(
     tc => `
 try:
-    input_args = ${JSON.stringify(Object.values(tc.input))}
+    input_args = ${JSON.stringify(tc.input)}
     result = ${functionName}(*input_args)
     expected = ${JSON.stringify(tc.expected)}
     passed = deep_equal(result, expected)
