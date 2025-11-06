@@ -57,6 +57,10 @@ export const executeWithTests = actionClient
   .action(async ({ parsedInput }) => {
     const { language, version, files, functionName, testCases } = parsedInput;
 
+    // Make JSON markers/delimiters unique to avoid collisions with user output
+    const START_MARKER = `__SIMUL_TEST_RESULTS_START_${Date.now()}_${Math.random().toString(36)}__`;
+    const END_MARKER = `__SIMUL_TEST_RESULTS_END_${Date.now()}_${Math.random().toString(36)}__`;
+
     // Generate test wrapper based on language
     let testWrapper = "";
 
@@ -103,9 +107,9 @@ try {
   )
   .join("\n")}
 
-console.log("__TEST_RESULTS_START__");
+console.log("${START_MARKER}");
 console.log(JSON.stringify(testResults));
-console.log("__TEST_RESULTS_END__");
+console.log("${END_MARKER}");
 `;
     }
     else if (language === "python" || language.startsWith("python")) {
@@ -153,9 +157,9 @@ except Exception as error:
   )
   .join("\n")}
 
-print("__TEST_RESULTS_START__")
+print("${START_MARKER}")
 print(json.dumps(test_results))
-print("__TEST_RESULTS_END__")
+print("${END_MARKER}")
 `;
     }
     else {
@@ -206,11 +210,9 @@ print("__TEST_RESULTS_END__")
       let testResults: TestResult[];
       try {
         const stdout = data.run.stdout.trim();
-        const startMarker = "__TEST_RESULTS_START__";
-        const endMarker = "__TEST_RESULTS_END__";
 
-        const startIdx = stdout.indexOf(startMarker);
-        const endIdx = stdout.indexOf(endMarker);
+        const startIdx = stdout.indexOf(START_MARKER);
+        const endIdx = stdout.indexOf(END_MARKER);
 
         if (startIdx === -1 || endIdx === -1) {
           throw new Error("Test results markers not found in output");
@@ -218,7 +220,7 @@ print("__TEST_RESULTS_END__")
 
         // Extract only the JSON between markers
         const jsonStr = stdout
-          .slice(startIdx + startMarker.length, endIdx)
+          .slice(startIdx + START_MARKER.length, endIdx)
           .trim();
         testResults = JSON.parse(jsonStr) as TestResult[];
       }
