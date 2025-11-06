@@ -1,29 +1,16 @@
-import type { EditorState as CMEditorState } from "@codemirror/state";
-
 import { useState } from "react";
 import { toast } from "sonner";
 
-import type { RecordedEvent } from "~/types/coding-session";
+import type { SaveRecordingOptions } from "~/types/recording";
 
 import { saveRecordingAction } from "~/lib/actions/recordings";
 import { serializeEvent } from "~/lib/coding-session/events";
+import { SaveStatus } from "~/types/recording";
 
-type FilesManagerLike = {
-  files: Map<string, { name: string; content: string }>;
-  activeFile: string;
-};
-
-type UseSaveRecordingArgs = {
-  recordedEvents: RecordedEvent[];
-  filesManager: FilesManagerLike;
-  initialStateRef: React.RefObject<CMEditorState | null>;
-  problem: any;
-};
-
-export function useSaveRecording({ recordedEvents, filesManager, initialStateRef, problem }: UseSaveRecordingArgs) {
+export function useSaveRecording({ recordedEvents, filesManager, initialStateRef, problem }: SaveRecordingOptions) {
   const [showSaveDialog, setShowSaveDialog] = useState(false);
   const [saveTitleInput, setSaveTitleInput] = useState("");
-  const [saveStatus, setSaveStatus] = useState<"idle" | "saving" | "saved" | "error">("idle");
+  const [saveStatus, setSaveStatus] = useState<SaveStatus>(SaveStatus.Idle);
 
   const openSaveDialog = () => {
     if (recordedEvents.length === 0) {
@@ -38,7 +25,7 @@ export function useSaveRecording({ recordedEvents, filesManager, initialStateRef
       return;
     }
 
-    setSaveStatus("saving");
+    setSaveStatus(SaveStatus.Saving);
 
     try {
       // convert the Map to a serializable object
@@ -61,21 +48,21 @@ export function useSaveRecording({ recordedEvents, filesManager, initialStateRef
         activeFile: filesManager.activeFile,
       });
 
-      setSaveStatus("saved");
+      setSaveStatus(SaveStatus.Saved);
 
       // close dialog and reset title
       setShowSaveDialog(false);
       setSaveTitleInput("");
 
-      setTimeout(() => setSaveStatus("idle"), 3000);
+      setTimeout(() => setSaveStatus(SaveStatus.Idle), 3000);
     }
     catch (error) {
       // bubble and log
       console.error("Failed to save recording:", error);
       toast.error("Failed to save recording. Please try again.");
-      setSaveStatus("error");
+      setSaveStatus(SaveStatus.Error);
 
-      setTimeout(() => setSaveStatus("idle"), 3000);
+      setTimeout(() => setSaveStatus(SaveStatus.Idle), 3000);
     }
   };
 

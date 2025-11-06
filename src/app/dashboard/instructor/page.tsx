@@ -1,50 +1,40 @@
 "use client";
 
-import { EditorState as CMEditorState } from "@codemirror/state";
-import { useRef, useState } from "react";
-import { toast } from "sonner";
-
-import type { RecordedEvent } from "~/types/coding-session";
-
 import { CodeMirrorEditor, CursorOverlay } from "~/components/coding-session/editor";
 import { PlaybackControls } from "~/components/coding-session/playback-controls";
 import { ProblemPanel } from "~/components/coding-session/problem/problem-panel";
 import { RecordingList } from "~/components/recording-list";
-import { useFilesManager, usePlayer, useRecorder, useTestRunner } from "~/hooks/coding-session";
+import { useFilesManager, useLoadRecording, usePlayer, useRecorder, useRecordingControls, useTestRunner } from "~/hooks/coding-session";
 import { useSaveRecording } from "~/hooks/coding-session/use-save-recording";
-import { loadRecordingAction } from "~/lib/actions/recordings";
-import { deserializeEvent } from "~/lib/coding-session/events";
 import { TWO_SUM_PROBLEM } from "~/lib/coding-session/tests/two-sum";
 
+import { useInstructorSession } from "./instructor-session-context";
 import InstructorToolbar from "./instructor-toolbar";
 
 export default function CodeEditor() {
-  const [recordedEvents, setRecordedEvents] = useState<RecordedEvent[]>([]);
+  const {
+    editorApiRef,
+    cursorRef,
+    editorContainerRef,
+    recordedEvents,
+    setRecordedEvents,
+    setPlaybackTime,
+    setIsPlaying,
+    initialStateRef,
+  } = useInstructorSession();
 
   const problem = TWO_SUM_PROBLEM;
 
-  // Initialize hooks
-  const editor = useRef<HTMLDivElement | null>(null);
-  const cursorRef = useRef<HTMLDivElement | null>(null);
-  const editorApiRef = useRef<{
-    setDoc: (content: string) => void;
-    setSelection: (selection: { anchor: number; head: number }) => void;
-    getState: () => CMEditorState | null;
-  } | null>(null);
-
   const filesManager = useFilesManager(problem.starterCode, editorApiRef);
+
   const recorder = useRecorder(
     event => setRecordedEvents(prev => [...prev, event]),
     () => filesManager.activeFile,
-    editor,
+    editorContainerRef,
   );
 
-  // Keep for playback control
-  const initialStateRef = useRef<CMEditorState | null>(null);
-
-  // Initialize player hook
-  const [playbackTime, setPlaybackTime] = useState(0);
-  const [isPlaying, setIsPlaying] = useState(false);
+  const { toggleRecording } = useRecordingControls(recorder, filesManager);
+  const { loadRecording } = useLoadRecording(filesManager);
 
   const player = usePlayer({
     recordedEvents,
@@ -64,28 +54,6 @@ export default function CodeEditor() {
       // Callback for when results change
     },
   });
-
-  // Wrapper to handle recording state transitions
-  const handleToggleRecording = () => {
-    if (!recorder.recording) {
-      // Starting recording - capture initial state and reset events
-      initialStateRef.current = editorApiRef.current?.getState() ?? null;
-      setRecordedEvents([]);
-      setPlaybackTime(0);
-      recorder.startRecording();
-    }
-    else {
-      // Stopping recording - save current editor state to files
-      if (editorApiRef.current) {
-        const state = editorApiRef.current.getState();
-        if (state) {
-          const currentContent = state.doc.toString();
-          filesManager.updateFileContent(filesManager.activeFile, currentContent);
-        }
-      }
-      recorder.stopRecording();
-    }
-  };
 
   const togglePlayback = () => {
     if (!player.isPlaying) {
@@ -111,49 +79,13 @@ export default function CodeEditor() {
     saveStatus,
   } = useSaveRecording({ recordedEvents, filesManager, initialStateRef, problem });
 
-  const handleLoadRecording = async (recordingId: string) => {
-    try {
-      const result = await loadRecordingAction({ id: recordingId });
-      if (!result.data || !result.data.recording) {
-        throw new Error("No recording data returned from loadRecordingAction");
-      }
-
-      const recording = result.data.recording;
-
-      setRecordedEvents([]);
-      setPlaybackTime(0);
-      setIsPlaying(false);
-
-      const deserializedEvents = recording.events.map(deserializeEvent);
-      setRecordedEvents(deserializedEvents);
-
-      const filesMap = new Map<string, { name: string; content: string }>();
-      Object.entries(recording.files).forEach(([fileName, content]) => {
-        filesMap.set(fileName, { name: fileName, content });
-      });
-
-      filesManager.loadFiles(filesMap, recording.activeFile);
-
-      initialStateRef.current = CMEditorState.create({ doc: recording.initialCode });
-    }
-    catch (error) {
-      console.error("Failed to load recording:", error);
-      toast.error("Failed to load recording. Please try again.");
-    }
-  };
-
-  // toolbar handles save button label / UI now
-
   return (
     <div className="flex h-screen flex-col">
 
       <InstructorToolbar
         isRecording={recorder.recording}
-        onToggleRecordingAction={handleToggleRecording}
-        isPlaying={isPlaying}
+        onToggleRecordingAction={toggleRecording}
         onTogglePlaybackAction={togglePlayback}
-        recordedEventsCount={recordedEvents.length}
-        playbackTime={playbackTime}
 
         showSaveDialog={showSaveDialog}
         openSaveDialogAction={openSaveDialog}
@@ -167,7 +99,7 @@ export default function CodeEditor() {
       <div className="flex flex-1 overflow-hidden">
         {!recorder.recording && (
           <div className="bg-background w-80 border-r">
-            <RecordingList onSelectRecording={handleLoadRecording} />
+            <RecordingList onSelectRecording={loadRecording} />
           </div>
         )}
         <div className="flex flex-1 flex-col overflow-hidden">
@@ -188,7 +120,7 @@ export default function CodeEditor() {
               recorder.recordTransaction(tr, selection);
             }}
             onEditorMouseMove={recorder.recordMouseEvent}
-            containerRef={editor}
+            containerRef={editorContainerRef}
             setExternalApiRef={editorApiRef}
           >
             <CursorOverlay cursorRef={cursorRef} />
@@ -206,12 +138,9 @@ export default function CodeEditor() {
       </div>
 
       <PlaybackControls
-        playbackTime={playbackTime}
-        isPlaying={isPlaying}
         onSeek={time => setPlaybackTime(time)}
         onPlay={togglePlayback}
         onPause={togglePlayback}
-        recordedEvents={recordedEvents}
         recording={recorder.recording}
       />
     </div>

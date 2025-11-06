@@ -6,16 +6,14 @@ import { ThemeToggle } from "~/components/theme-toggle";
 import { Button } from "~/components/ui/button";
 import { Input } from "~/components/ui/input";
 import { formatDisplayTime } from "~/lib/coding-session/time";
+import { SaveStatus } from "~/types/recording";
 
-type SaveStatus = "idle" | "saving" | "saved" | "error";
+import { useInstructorSession } from "./instructor-session-context";
 
 type Props = {
   isRecording: boolean;
   onToggleRecordingAction: () => void;
-  isPlaying: boolean;
   onTogglePlaybackAction: () => void;
-  recordedEventsCount: number;
-  playbackTime: number;
 
   showSaveDialog: boolean;
   openSaveDialogAction: () => void;
@@ -30,10 +28,7 @@ export default function InstructorToolbar(props: Props) {
   const {
     isRecording,
     onToggleRecordingAction,
-    isPlaying,
     onTogglePlaybackAction,
-    recordedEventsCount,
-    playbackTime,
 
     showSaveDialog,
     openSaveDialogAction,
@@ -44,15 +39,17 @@ export default function InstructorToolbar(props: Props) {
     saveStatus,
   } = props;
 
+  const { recordedEvents, playbackTime, isPlaying } = useInstructorSession();
+
   const saveButtonLabel = () => {
     switch (saveStatus) {
-      case "idle":
+      case SaveStatus.Idle:
         return "Save Recording";
-      case "saving":
+      case SaveStatus.Saving:
         return "Saving...";
-      case "saved":
+      case SaveStatus.Saved:
         return "✓ Saved";
-      case "error":
+      case SaveStatus.Error:
         return "✗ Error";
       default:
         return "Save Recording";
@@ -67,7 +64,7 @@ export default function InstructorToolbar(props: Props) {
         </Button>
         <Button onClick={onTogglePlaybackAction}>{isPlaying ? "Stop" : "Play"}</Button>
 
-        {!isRecording && recordedEventsCount > 0 && (
+        {!isRecording && recordedEvents.length > 0 && (
           <>
             {showSaveDialog && (
               <div className="flex items-center gap-2">
@@ -76,7 +73,7 @@ export default function InstructorToolbar(props: Props) {
                   onChange={e => setSaveTitleInputAction((e.target as HTMLInputElement).value)}
                   placeholder="Recording title"
                   className="w-64"
-                  disabled={saveStatus === "saving"}
+                  disabled={saveStatus === SaveStatus.Saving}
                   onKeyDown={(e: React.KeyboardEvent<HTMLInputElement>) => {
                     if (e.key === "Enter") {
                       e.preventDefault();
@@ -84,16 +81,16 @@ export default function InstructorToolbar(props: Props) {
                     }
                   }}
                 />
-                <Button onClick={() => void performSaveRecordingAction(saveTitleInput)} disabled={saveStatus === "saving" || !saveTitleInput.trim()}>
+                <Button onClick={() => void performSaveRecordingAction(saveTitleInput)} disabled={saveStatus === SaveStatus.Saving || !saveTitleInput.trim()}>
                   Confirm
                 </Button>
-                <Button variant="ghost" onClick={closeSaveDialogAction} disabled={saveStatus === "saving"}>
+                <Button variant="ghost" onClick={closeSaveDialogAction} disabled={saveStatus === SaveStatus.Saving}>
                   Cancel
                 </Button>
               </div>
             )}
             {!showSaveDialog && (
-              <Button onClick={openSaveDialogAction} disabled={saveStatus === "saving"} variant={saveStatus === "saved" ? "default" : saveStatus === "error" ? "destructive" : "secondary"}>
+              <Button onClick={openSaveDialogAction} disabled={saveStatus === SaveStatus.Saving} variant={saveStatus === SaveStatus.Saved ? "default" : saveStatus === SaveStatus.Error ? "destructive" : "secondary"}>
                 {saveButtonLabel()}
               </Button>
             )}

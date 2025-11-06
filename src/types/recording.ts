@@ -1,5 +1,35 @@
+import type { EditorState as CMEditorState } from "@codemirror/state";
+
 import type { SerializedRecordedEvent } from "~/lib/coding-session/events";
-import type { ProblemDefinition } from "~/types/coding-session";
+import type { ProblemDefinition, RecordedEvent } from "~/types/coding-session";
+
+/**
+ * Status of a save recording operation
+ */
+export enum SaveStatus {
+  Idle = "idle",
+  Saving = "saving",
+  Saved = "saved",
+  Error = "error",
+}
+
+/**
+ * Represents the current state of files in the code editor
+ */
+export type EditorFiles = {
+  files: Map<string, { name: string; content: string }>;
+  activeFile: string;
+};
+
+/**
+ * Options for saving a recording
+ */
+export type SaveRecordingOptions = {
+  recordedEvents: RecordedEvent[];
+  filesManager: EditorFiles;
+  initialStateRef: React.RefObject<CMEditorState | null>;
+  problem: ProblemDefinition;
+};
 
 /**
  * Complete recording data structure for storage
