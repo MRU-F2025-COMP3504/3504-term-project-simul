@@ -7,7 +7,6 @@ const envSchema = {
       protocol: /^postgres(ql)?/,
     }),
     NODE_ENV: z.enum(["development", "production", "test"]).default("development"),
-    POSTGRES_PORT: z.coerce.number().default(5432),
 
     POSTGRES_USER: z.string().min(1, { error: "POSTGRES_USER is required" }),
     POSTGRES_PASSWORD: z.string().min(1, { error: "POSTGRES_PASSWORD is required" }),
