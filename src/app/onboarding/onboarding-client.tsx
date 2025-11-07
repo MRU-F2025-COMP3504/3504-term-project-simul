@@ -4,7 +4,6 @@ import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { toast } from "sonner";
 
-import { Button } from "~/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "~/components/ui/card";
 
 type Props = {
@@ -34,59 +33,124 @@ export default function OnboardingClient({ onSelectRoleAction }: Props) {
 
   return (
     <div className={`
-      bg-background flex min-h-screen items-center justify-center
+      bg-background flex min-h-screen items-center justify-center px-4
     `}
     >
-      <Card className="w-full max-w-md border-0 shadow-2xl">
-        <CardHeader className="pb-6 text-center">
-          <CardTitle className="text-primary text-2xl font-bold">
-            Welcome to Simul!
-          </CardTitle>
-          <CardDescription className="text-muted-foreground text-lg">
-            Choose your role to get started with coding practice and lessons.
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="grid grid-cols-1 gap-4">
-            <Button
-              variant={selectedRole === "student" ? "default" : "outline"}
-              size="lg"
-              className={`
-                flex h-20 flex-col items-center justify-center text-lg
-                font-semibold
-              `}
+      <div className="mx-auto w-full max-w-2xl text-center">
+        <div className={`
+          bg-muted text-muted-foreground mb-6 inline-flex items-center
+          rounded-full border px-3 py-1 text-sm font-medium
+        `}
+        >
+          <span className="bg-primary mr-2 h-2 w-2 rounded-full" aria-hidden="true"></span>
+          Getting Started
+        </div>
+
+        <h1 className={`
+          mb-6 text-4xl font-bold tracking-tight
+          sm:text-5xl
+          md:text-6xl
+        `}
+        >
+          Welcome to
+          <span className={`
+            from-primary to-primary/60 block bg-gradient-to-r bg-clip-text
+            text-transparent
+          `}
+          >
+            Simul
+          </span>
+        </h1>
+
+        <p className={`
+          text-muted-foreground mx-auto mb-10 max-w-xl text-lg
+          sm:text-xl
+        `}
+        >
+          Choose your role to get started.
+        </p>
+
+        <div className={`
+          grid gap-6
+          sm:grid-cols-2
+        `}
+        >
+          <Card className={`
+            group cursor-pointer border-2 transition-all
+            hover:shadow-lg
+            ${selectedRole === "student" ? "border-primary shadow-lg" : ""}
+          `}
+          >
+            <button
+              type="button"
               onClick={() => handleRoleSelect("student")}
               disabled={isLoading}
+              className="w-full cursor-pointer text-left"
             >
-              Student
-              <span className="text-sm font-normal opacity-75">View courses & practice coding</span>
-            </Button>
+              <CardHeader className="mb-2">
+                <CardTitle className={`
+                  group-hover:text-primary
+                  text-2xl transition-colors
+                `}
+                >
+                  Student
+                </CardTitle>
+                <CardDescription className="text-primary">
+                  View courses & practice coding
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <p className="text-muted-foreground text-sm">
+                  Watch instructor playbacks, take control of the editor, and practice with
+                  hands-on exercises.
+                </p>
+              </CardContent>
+            </button>
+          </Card>
 
-            <Button
-              variant={selectedRole === "instructor" ? "default" : "outline"}
-              size="lg"
-              className={`
-                flex h-20 flex-col items-center justify-center text-lg
-                font-semibold
-              `}
+          <Card className={`
+            group cursor-pointer border-2 transition-all
+            hover:shadow-lg
+            ${selectedRole === "instructor" ? "border-primary shadow-lg" : ""}
+          `}
+          >
+            <button
+              type="button"
               onClick={() => handleRoleSelect("instructor")}
               disabled={isLoading}
+              className="w-full cursor-pointer text-left"
             >
-              Instructor
-              <span className="text-sm font-normal opacity-75">Create & manage courses</span>
-            </Button>
-          </div>
+              <CardHeader className="mb-2">
+                <CardTitle className={`
+                  group-hover:text-primary
+                  text-2xl transition-colors
+                `}
+                >
+                  Instructor
+                </CardTitle>
+                <CardDescription className="text-primary">
+                  Create & manage courses
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <p className="text-muted-foreground text-sm">
+                  Create interactive coding session recordings and manage lessons for your
+                  students.
+                </p>
+              </CardContent>
+            </button>
+          </Card>
+        </div>
 
-          {isLoading && (
-            <div className={`
-              text-muted-foreground animate-pulse text-center text-sm
-            `}
-            >
-              Setting up your account...
-            </div>
-          )}
-        </CardContent>
-      </Card>
+        {/* we use invisible here to avoid layout shift */}
+        <div className={`
+          text-muted-foreground mt-8 animate-pulse text-center text-base
+          ${isLoading ? "" : "invisible"}
+        `}
+        >
+          Setting up your account...
+        </div>
+      </div>
     </div>
   );
 }
