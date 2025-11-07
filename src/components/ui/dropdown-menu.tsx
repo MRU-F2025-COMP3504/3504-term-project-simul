@@ -54,7 +54,7 @@ function DropdownMenuContent({
             data-[side=top]:slide-in-from-bottom-2
             z-50 max-h-(--radix-dropdown-menu-content-available-height)
             min-w-[8rem] origin-(--radix-dropdown-menu-content-transform-origin)
-            overflow-x-hidden overflow-y-auto rounded-md border p-1 shadow-md
+            overflow-x-hidden overflow-y-auto border p-1 shadow-md
             data-[state=open]:animate-in
             data-[state=closed]:animate-out
           `,
@@ -97,7 +97,7 @@ function DropdownMenuItem({
           dark:data-[variant=destructive]:focus:bg-destructive/20
           data-[variant=destructive]:*:[svg]:!text-destructive
           [&_svg:not([class*='text-'])]:text-muted-foreground
-          relative flex cursor-default items-center gap-2 rounded-sm px-2 py-1.5
+          relative flex cursor-default items-center gap-2 px-2 py-1.5
           text-sm outline-hidden select-none
           data-[disabled]:pointer-events-none data-[disabled]:opacity-50
           data-[inset]:pl-8
@@ -123,7 +123,7 @@ function DropdownMenuCheckboxItem({
       className={cn(
         `
           focus:bg-accent focus:text-accent-foreground
-          relative flex cursor-default items-center gap-2 rounded-sm py-1.5 pr-2
+          relative flex cursor-default items-center gap-2 py-1.5 pr-2
           pl-8 text-sm outline-hidden select-none
           data-[disabled]:pointer-events-none data-[disabled]:opacity-50
           [&_svg]:pointer-events-none [&_svg]:shrink-0
@@ -170,7 +170,7 @@ function DropdownMenuRadioItem({
       className={cn(
         `
           focus:bg-accent focus:text-accent-foreground
-          relative flex cursor-default items-center gap-2 rounded-sm py-1.5 pr-2
+          relative flex cursor-default items-center gap-2 py-1.5 pr-2
           pl-8 text-sm outline-hidden select-none
           data-[disabled]:pointer-events-none data-[disabled]:opacity-50
           [&_svg]:pointer-events-none [&_svg]:shrink-0
@@ -268,7 +268,7 @@ function DropdownMenuSubTrigger({
         `
           focus:bg-accent focus:text-accent-foreground
           data-[state=open]:bg-accent data-[state=open]:text-accent-foreground
-          flex cursor-default items-center rounded-sm px-2 py-1.5 text-sm
+          flex cursor-default items-center px-2 py-1.5 text-sm
           outline-hidden select-none
           data-[inset]:pl-8
         `,
@@ -302,7 +302,7 @@ function DropdownMenuSubContent({
           data-[side=top]:slide-in-from-bottom-2
           z-50 min-w-[8rem]
           origin-(--radix-dropdown-menu-content-transform-origin)
-          overflow-hidden rounded-md border p-1 shadow-lg
+          overflow-hidden border p-1 shadow-lg
           data-[state=open]:animate-in
           data-[state=closed]:animate-out
         `,
