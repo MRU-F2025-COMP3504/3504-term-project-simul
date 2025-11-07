@@ -9,12 +9,7 @@ export default function Footer() {
           sm:flex-row
         `}
         >
-          <div className="flex items-center gap-2">
-            <div className="bg-primary flex h-6 w-6 items-center justify-center">
-              <Logo />
-            </div>
-            <span className="font-semibold">Simul</span>
-          </div>
+          <Logo />
           <p className="text-muted-foreground text-sm">
             ©
             {" "}

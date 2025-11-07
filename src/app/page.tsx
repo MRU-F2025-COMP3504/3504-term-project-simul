@@ -55,7 +55,7 @@ export default async function Home() {
               rounded-full border px-3 py-1 text-sm font-medium
             `}
             >
-              <span className="bg-primary mr-2 h-2 w-2 rounded-full"></span>
+              <span className="bg-primary mr-2 h-2 w-2 rounded-full" aria-hidden="true"></span>
               Educational Coding Platform
             </div>
 

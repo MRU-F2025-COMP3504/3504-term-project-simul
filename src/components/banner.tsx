@@ -19,12 +19,7 @@ export default async function Banner() {
         container mx-auto flex h-16 items-center justify-between px-4
       `}
       >
-        <div className="flex items-center gap-2">
-          <div className="bg-primary flex h-8 w-8 items-center justify-center">
-            <Logo />
-          </div>
-          <span className="text-xl font-bold tracking-tight">Simul</span>
-        </div>
+        <Logo />
         <div className="flex items-center gap-3">
           <ThemeToggle />
           {session
