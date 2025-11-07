@@ -1,5 +1,5 @@
 import { relations } from "drizzle-orm";
-import { integer, pgTable, text, timestamp, uuid } from "drizzle-orm/pg-core";
+import { integer, pgTable, text, timestamp, uniqueIndex, uuid } from "drizzle-orm/pg-core";
 
 import { user } from "./auth";
 import { recording } from "./recordings";
@@ -20,7 +20,7 @@ export const course = pgTable("course", {
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at")
     .defaultNow()
-    .$onUpdate(() => new Date())
+    .$onUpdate(() => /* @__PURE__ */ new Date())
     .notNull(),
 });
 
@@ -37,7 +37,12 @@ export const lesson = pgTable("lesson", {
     .references(() => recording.id, { onDelete: "set null" }),
 
   createdAt: timestamp("created_at").defaultNow().notNull(),
-});
+}, table => [{
+  uniqueCourseOrderIndex: uniqueIndex("lesson_course_order_index_unique").on(
+    table.courseId,
+    table.orderIndex,
+  ),
+}]);
 
 export const enrollment = pgTable("enrollment", {
   id: uuid("id").primaryKey().defaultRandom(),
@@ -51,7 +56,12 @@ export const enrollment = pgTable("enrollment", {
     .references(() => course.id, { onDelete: "cascade" }),
 
   enrolledAt: timestamp("enrolled_at").defaultNow().notNull(),
-});
+}, table => [{
+  userCourseUnique: uniqueIndex("enrollment_user_course_unique").on(
+    table.userId,
+    table.courseId,
+  ),
+}]);
 
 // relations
 export const courseRelations = relations(course, ({ one, many }) => ({
