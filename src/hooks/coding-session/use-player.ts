@@ -36,9 +36,12 @@
  * ```
  */
 
+import type { ChangeSet } from "@codemirror/state";
+
 import { EditorState } from "@codemirror/state";
 import { useCallback, useMemo, useRef, useState } from "react";
 
+import type { ChangeSetJSON } from "~/lib/coding-session/events";
 import type { EditorAPI, File, GlobalEditorState, IndexRow, KeyFrame, RecordedEvent } from "~/types/coding-session";
 
 import { cloneState, lowerBoundEvents, upperBoundKF } from "~/lib/coding-session/playback";
@@ -341,8 +344,26 @@ export function usePlayer({
       if (fileEntry) {
         const state = editorApiRef.current.getState();
         if (state) {
-          editorApiRef.current.setState(fileEntry.content);
-          filesManager.selectFile(event.fileName);
+          const _changes = event.transaction!.changes as ChangeSet | ChangeSetJSON;
+
+          // check if changes is already a ChangeSet (from live recording) or ChangeSetJSON (from loaded recording)
+          // let newDoc: string;
+          // if (Array.isArray(changes)) {
+          //   // loaded recording
+          //   const updatedDoc = applyChangeSetJSON(state.doc, changes);
+          //   newDoc = updatedDoc.toString();
+          // }
+          // else {
+          //   // live recording
+          //   newDoc = changes.apply(state.doc).toString();
+          // }
+
+          // editorApiRef.current.setDoc(newDoc);
+
+          // Apply selection range if recorded
+          if (event.selection) {
+            editorApiRef.current.setSelection(event.selection);
+          }
         }
       }
     }

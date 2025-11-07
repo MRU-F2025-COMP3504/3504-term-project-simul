@@ -1,44 +1,49 @@
 "use client";
 
 import { EditorState } from "@codemirror/state";
-import { useRef, useState } from "react";
-
-import type { EditorAPI, RecordedEvent } from "~/types/coding-session";
+import { useMemo } from "react";
 
 import { CodeMirrorEditor, CursorOverlay } from "~/components/coding-session/editor";
 import { PlaybackControls } from "~/components/coding-session/playback-controls";
 import { ProblemPanel } from "~/components/coding-session/problem/problem-panel";
-import { ThemeToggle } from "~/components/theme-toggle";
-import { Button } from "~/components/ui/button";
-import { useFilesManager, usePlayer, useRecorder, useTestRunner } from "~/hooks/coding-session";
+import { RecordingList } from "~/components/recording-list";
+import { useFilesManager, useLoadRecording, usePlayer, useRecorder, useRecordingControls, useTestRunner } from "~/hooks/coding-session";
+import { useSaveRecording } from "~/hooks/coding-session/use-save-recording";
 import { TWO_SUM_PROBLEM } from "~/lib/coding-session/tests/two-sum";
-import { formatDisplayTime } from "~/lib/coding-session/time";
+
+import { useInstructorSession } from "./instructor-session-context";
+import InstructorToolbar from "./instructor-toolbar";
 
 export default function CodeEditor() {
-  const [recordedEvents, setRecordedEvents] = useState<RecordedEvent[]>([]);
+  const {
+    editorApiRef,
+    cursorRef,
+    editorContainerRef,
+    recordedEvents,
+    setRecordedEvents,
+    setPlaybackTime,
+    setIsPlaying,
+    initialStateRef,
+  } = useInstructorSession();
 
   const problem = TWO_SUM_PROBLEM;
 
-  // Initialize hooks
-  const editor = useRef<HTMLDivElement | null>(null);
-  const cursorRef = useRef<HTMLDivElement | null>(null);
-  const editorApiRef = useRef<EditorAPI | null>(null);
-  const startingState = EditorState.create({
-    doc: problem.starterCode,
-  });
+  const startingState = useMemo(() => {
+    const state = EditorState.create({ doc: problem.starterCode });
+    initialStateRef.current = state;
+    return state;
+  }, [problem.starterCode, initialStateRef]);
+
   const filesManager = useFilesManager(startingState, editorApiRef);
+
   const recorder = useRecorder(
     event => setRecordedEvents(prev => [...prev, event]),
     () => filesManager.activeFile,
-    editor,
+    editorContainerRef,
   );
 
-  // Keep for playback control
-  const initialStateRef = useRef<EditorState | null>(null);
-
-  // Initialize player hook
-  const [playbackTime, setPlaybackTime] = useState(0);
-  const [isPlaying, setIsPlaying] = useState(false);
+  const { toggleRecording } = useRecordingControls(recorder, filesManager);
+  const { loadRecording } = useLoadRecording(filesManager);
 
   const player = usePlayer({
     recordedEvents,
@@ -59,28 +64,6 @@ export default function CodeEditor() {
     },
   });
 
-  // Wrapper to handle recording state transitions
-  const handleToggleRecording = () => {
-    if (!recorder.recording) {
-      // Starting recording - capture initial state and reset events
-      initialStateRef.current = editorApiRef.current?.getState() ?? null;
-      setRecordedEvents([]);
-      setPlaybackTime(0);
-      recorder.startRecording();
-    }
-    else {
-      // Stopping recording - save current editor state to files
-      if (editorApiRef.current) {
-        const state = editorApiRef.current.getState();
-        if (state) {
-          const currentContent = (state as any).doc.toString();
-          filesManager.updateFileContent(filesManager.activeFile, currentContent);
-        }
-      }
-      recorder.stopRecording();
-    }
-  };
-
   const togglePlayback = () => {
     if (!player.isPlaying) {
       void player.play();
@@ -95,32 +78,39 @@ export default function CodeEditor() {
     tester.reset();
   };
 
+  const {
+    showSaveDialog,
+    openSaveDialog,
+    saveTitleInput,
+    setSaveTitleInput,
+    performSaveRecording,
+    closeSaveDialog,
+    saveStatus,
+  } = useSaveRecording({ recordedEvents, filesManager, initialStateRef, problem });
+
   return (
-    <div
-      className="flex h-screen flex-col"
-    >
-      <div
-        className="bg-background border-b p-4"
-      >
-        <div className="flex items-center gap-2">
-          <Button onClick={handleToggleRecording}>
-            {recorder.recording ? "Stop Recording" : "Start Recording"}
-          </Button>
-          <Button onClick={togglePlayback}>
-            {isPlaying ? "Stop" : "Play"}
-          </Button>
-          <div className="text-muted-foreground ml-4 text-xs">
-            Playback time:
-            {" "}
-            {formatDisplayTime(playbackTime)}
-          </div>
-          <div className="ml-auto">
-            <ThemeToggle />
-          </div>
-        </div>
-      </div>
+    <div className="flex h-screen flex-col">
+
+      <InstructorToolbar
+        isRecording={recorder.recording}
+        onToggleRecordingAction={toggleRecording}
+        onTogglePlaybackAction={togglePlayback}
+
+        showSaveDialog={showSaveDialog}
+        openSaveDialogAction={openSaveDialog}
+        closeSaveDialogAction={closeSaveDialog}
+        saveTitleInput={saveTitleInput}
+        setSaveTitleInputAction={setSaveTitleInput}
+        performSaveRecordingAction={performSaveRecording}
+        saveStatus={saveStatus}
+      />
 
       <div className="flex flex-1 overflow-hidden">
+        {!recorder.recording && (
+          <div className="bg-background w-80 border-r">
+            <RecordingList onSelectRecording={loadRecording} />
+          </div>
+        )}
         <div className="flex flex-1 flex-col overflow-hidden">
           <CodeMirrorEditor
             value={startingState.doc.toString()}
@@ -139,8 +129,8 @@ export default function CodeEditor() {
               recorder.recordTransaction(tr, selection);
             }}
             onEditorMouseMove={recorder.recordMouseEvent}
-            containerRef={editor}
-            setExternalApiRef={editorApiRef as any}
+            containerRef={editorContainerRef}
+            setExternalApiRef={editorApiRef}
           >
             <CursorOverlay cursorRef={cursorRef} />
           </CodeMirrorEditor>
@@ -157,12 +147,9 @@ export default function CodeEditor() {
       </div>
 
       <PlaybackControls
-        playbackTime={playbackTime}
-        isPlaying={isPlaying}
         onSeek={player.seek}
         onPlay={togglePlayback}
         onPause={togglePlayback}
-        recordedEvents={recordedEvents}
         recording={recorder.recording}
       />
     </div>

@@ -197,6 +197,23 @@ export function useFilesManager(
     }
   };
 
+  /**
+   * Load multiple files from a saved state
+   * - Replaces the current files map with the provided files
+   * - Sets the active file if specified
+   * - Updates the editor to show the active file content
+   */
+  const loadFiles = (filesMap: Map<string, FileEntry>, activeFileName?: string) => {
+    setFiles(filesMap);
+    if (activeFileName && filesMap.has(activeFileName)) {
+      setActiveFile(activeFileName);
+      const fileEntry = filesMap.get(activeFileName);
+      if (fileEntry && editorApiRef.current) {
+        editorApiRef.current.setDoc(fileEntry.content);
+      }
+    }
+  };
+
   return {
     files,
     activeFile,
@@ -206,5 +223,6 @@ export function useFilesManager(
     deleteFile,
     resetToStarter,
     saveCurrentFile,
+    loadFiles,
   };
 }

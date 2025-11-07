@@ -1,15 +1,11 @@
 import { Pause, Play } from "lucide-react";
 
-import type { RecordedEvent } from "~/types/coding-session";
-
+import { useInstructorSession } from "~/app/dashboard/instructor/instructor-session-context";
 import { formatDisplayTime } from "~/lib/coding-session/time";
 
 import styles from "./playback-controls.module.css";
 
 export type PlaybackControlsProps = {
-  isPlaying: boolean;
-  playbackTime: number;
-  recordedEvents: RecordedEvent[];
   recording: boolean;
   onPlay: () => void;
   onPause: () => void;
@@ -17,14 +13,12 @@ export type PlaybackControlsProps = {
 };
 
 export function PlaybackControls({
-  isPlaying,
-  playbackTime,
-  recordedEvents,
   recording,
   onPlay,
   onPause,
   onSeek,
 }: PlaybackControlsProps) {
+  const { recordedEvents, playbackTime, isPlaying } = useInstructorSession();
   const totalTime = recordedEvents.length > 0 ? Math.max(...recordedEvents.map(e => e.time), 0) : 0;
   const progressPercentage = recordedEvents.length > 0 ? (playbackTime / Math.max(...recordedEvents.map(e => e.time), 1)) * 100 : 0;
 
