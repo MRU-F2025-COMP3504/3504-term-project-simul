@@ -8,6 +8,8 @@ import { Button } from "~/components/ui/button";
 
 export type SignInButtonProps = {
   callbackURL?: string;
+  className?: string;
+  size?: "sm" | "default" | "lg";
 };
 
 /**
@@ -22,12 +24,16 @@ export type SignInButtonProps = {
  */
 export default function SignInButton({
   callbackURL = "/dashboard",
+  className,
+  size = "default",
 }: SignInButtonProps) {
   const { execute, isExecuting } = useAction(signInWithGithubAction);
 
   return (
     <Button
       disabled={isExecuting}
+      size={size}
+      className={className}
       onClick={() => execute({
         callbackURL,
       })}
