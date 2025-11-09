@@ -77,6 +77,7 @@ export function useFilesManager(
     }
 
     // Switch to new file
+    // eslint-disable-next-line react-hooks-extra/no-direct-set-state-in-use-effect
     setActiveFile(fileName);
 
     // Update editor with new file content
@@ -102,6 +103,7 @@ export function useFilesManager(
   useEffect(() => {
     if (pendingSelectFile) {
       selectFile(pendingSelectFile);
+      // eslint-disable-next-line react-hooks-extra/no-direct-set-state-in-use-effect
       setPendingSelectFile(null);
     }
   }, [files, pendingSelectFile, selectFile]);
@@ -203,13 +205,13 @@ export function useFilesManager(
    * - Sets the active file if specified
    * - Updates the editor to show the active file content
    */
-  const loadFiles = (filesMap: Map<string, FileEntry>, activeFileName?: string) => {
+  const loadFiles = (filesMap: Map<string, File>, activeFileName?: string) => {
     setFiles(filesMap);
     if (activeFileName && filesMap.has(activeFileName)) {
       setActiveFile(activeFileName);
       const fileEntry = filesMap.get(activeFileName);
       if (fileEntry && editorApiRef.current) {
-        editorApiRef.current.setDoc(fileEntry.content);
+        editorApiRef.current.setState(fileEntry.content);
       }
     }
   };

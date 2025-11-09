@@ -36,12 +36,9 @@
  * ```
  */
 
-import type { ChangeSet } from "@codemirror/state";
-
 import { EditorState } from "@codemirror/state";
 import { useCallback, useMemo, useRef, useState } from "react";
 
-import type { ChangeSetJSON } from "~/lib/coding-session/events";
 import type { EditorAPI, File, GlobalEditorState, IndexRow, KeyFrame, RecordedEvent } from "~/types/coding-session";
 
 import { cloneState, lowerBoundEvents, upperBoundKF } from "~/lib/coding-session/playback";
@@ -340,25 +337,12 @@ export function usePlayer({
 
     if (event.kind === "file-switch" && event.fileName && editorApiRef.current) {
       // Switch to the file during playback
-      const fileEntry = filesManager.files.get(event.fileName);
-      if (fileEntry) {
-        const state = editorApiRef.current.getState();
-        if (state) {
-          const _changes = event.transaction!.changes as ChangeSet | ChangeSetJSON;
-
-          // check if changes is already a ChangeSet (from live recording) or ChangeSetJSON (from loaded recording)
-          // let newDoc: string;
-          // if (Array.isArray(changes)) {
-          //   // loaded recording
-          //   const updatedDoc = applyChangeSetJSON(state.doc, changes);
-          //   newDoc = updatedDoc.toString();
-          // }
-          // else {
-          //   // live recording
-          //   newDoc = changes.apply(state.doc).toString();
-          // }
-
-          // editorApiRef.current.setDoc(newDoc);
+      const targetFile = filesManager.files.get(event.fileName);
+      if (targetFile) {
+        const oldState = editorApiRef.current.getState();
+        if (oldState) {
+          filesManager.selectFile(event.fileName);
+          editorApiRef.current.setState(targetFile.content);
 
           // Apply selection range if recorded
           if (event.selection) {

@@ -6,6 +6,8 @@ import { useInstructorSession } from "~/app/dashboard/instructor/instructor-sess
 import { loadRecordingAction } from "~/lib/actions/recordings";
 import { deserializeEvent } from "~/lib/coding-session/events";
 
+import type { FilesManager } from "./use-files-manager";
+
 /**
  * Hook for loading saved recordings
  *
@@ -16,9 +18,7 @@ import { deserializeEvent } from "~/lib/coding-session/events";
  * - Setting initial editor state
  * - Resetting playback state
  */
-export function useLoadRecording(filesManager: {
-  loadFiles: (filesMap: Map<string, { name: string; content: string }>, activeFileName?: string) => void;
-}) {
+export function useLoadRecording(filesManager: FilesManager) {
   const {
     setRecordedEvents,
     setPlaybackTime,
