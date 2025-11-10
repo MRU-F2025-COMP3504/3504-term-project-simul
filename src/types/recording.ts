@@ -15,14 +15,6 @@ export enum SaveStatus {
 }
 
 /**
- * Represents the current state of files in the code editor
- */
-export type EditorFiles = {
-  files: Map<string, { name: string; content: string }>;
-  activeFile: string;
-};
-
-/**
  * Options for saving a recording
  */
 export type SaveRecordingOptions = {

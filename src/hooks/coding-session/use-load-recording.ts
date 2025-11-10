@@ -2,6 +2,8 @@ import { EditorState as CMEditorState } from "@codemirror/state";
 import { useCallback } from "react";
 import { toast } from "sonner";
 
+import type { File } from "~/types/coding-session";
+
 import { useInstructorSession } from "~/app/dashboard/instructor/instructor-session-context";
 import { loadRecordingAction } from "~/lib/actions/recordings";
 import { deserializeEvent } from "~/lib/coding-session/events";
@@ -46,9 +48,12 @@ export function useLoadRecording(filesManager: FilesManager) {
         setRecordedEvents(deserializedEvents);
 
         // Restore file state
-        const filesMap = new Map<string, { name: string; content: string }>();
+        // create EditorState for each file
+        const filesMap = new Map<string, File>();
+
         Object.entries(recording.files).forEach(([fileName, content]) => {
-          filesMap.set(fileName, { name: fileName, content });
+          const newFile: File = { fileName, content: CMEditorState.create({ doc: content }) };
+          filesMap.set(fileName, newFile);
         });
 
         filesManager.loadFiles(filesMap, recording.activeFile);

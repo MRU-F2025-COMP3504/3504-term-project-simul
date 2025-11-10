@@ -14,6 +14,7 @@ export type FilesManager = {
   updateFileContent: (fileName: string, content: EditorState) => void;
   deleteFile: (fileName: string) => void;
   resetToStarter: (starterCode: EditorState) => void;
+  loadFiles: (filesMap: Map<string, File>, activeFileName?: string) => void;
   saveCurrentFile: () => void;
 };
 
