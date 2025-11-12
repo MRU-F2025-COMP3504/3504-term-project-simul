@@ -24,6 +24,7 @@ export default function CodeEditor() {
     setPlaybackTime,
     setIsPlaying,
     initialStateRef,
+    isLoadingRecording,
   } = useInstructorSession();
 
   const problem = TWO_SUM_PROBLEM;
@@ -53,6 +54,7 @@ export default function CodeEditor() {
     cursorRef,
     onPlaybackTimeChange: setPlaybackTime,
     onPlaybackStateChange: setIsPlaying,
+    isLoadingRecording,
   });
 
   // Initialize test runner hook
@@ -151,6 +153,7 @@ export default function CodeEditor() {
         onPlay={togglePlayback}
         onPause={togglePlayback}
         recording={recorder.recording}
+        isLoadingRecording={isLoadingRecording}
       />
     </div>
   );

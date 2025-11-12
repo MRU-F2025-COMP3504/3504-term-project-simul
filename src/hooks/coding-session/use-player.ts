@@ -82,6 +82,8 @@ type UsePlayerProps = {
   onPlaybackTimeChange: (time: number) => void;
   /** Callback when playback state changes (playing/paused) */
   onPlaybackStateChange: (isPlaying: boolean) => void;
+  /** Whether a recording is currently being loaded */
+  isLoadingRecording: boolean;
 };
 
 /**
@@ -100,6 +102,7 @@ export function usePlayer({
   cursorRef,
   onPlaybackTimeChange,
   onPlaybackStateChange,
+  isLoadingRecording,
 }: UsePlayerProps): PlayerHandle {
   const [isPlaying, setIsPlaying] = useState(false);
   const [playbackTime, setPlaybackTime] = useState(0);
@@ -111,6 +114,14 @@ export function usePlayer({
 
   const { keyframes, index, events } = useMemo(() => {
     const initialState = initialStateRef.current;
+
+    if (!initialState && recordedEvents.length > 0) {
+      console.warn(
+        "Building keyframes with incomplete initial state. "
+        + "This may indicate a race condition during recording load.",
+      );
+    }
+
     const activeFile = {
       fileName: "main.js",
       content: initialState ?? EditorState.create(),
@@ -409,6 +420,10 @@ export function usePlayer({
    * Safe to call multiple times - will be no-op if already playing.
    */
   const play = useCallback(async () => {
+    if (isLoadingRecording) {
+      return;
+    }
+
     if (!isPlaying) {
       playingRef.current = true;
       setIsPlaying(true);
@@ -436,7 +451,7 @@ export function usePlayer({
       startingWallTime.current = performance.now();
       requestAnimationFrame(animationLoop);
     }
-  }, [isPlaying, onPlaybackStateChange, recordedEvents, editorApiRef, initialStateRef, cursorRef, startingWallTime, animationLoop, playbackTime]);
+  }, [isLoadingRecording, isPlaying, onPlaybackStateChange, recordedEvents, editorApiRef, initialStateRef, cursorRef, startingWallTime, animationLoop, playbackTime]);
 
   /**
    * Pauses current playback
@@ -481,7 +496,6 @@ export function usePlayer({
 
     // Update pausedAt to the seek time so playback can continue from here
     pausedAt.current = clampedTime;
-    editorApiRef.current?.setState(state.activeFile.content);
 
     // Update UI from computed state
     UpdateUIFromState(state);
@@ -489,7 +503,7 @@ export function usePlayer({
     // Update playback time
     setPlaybackTime(clampedTime);
     onPlaybackTimeChange(clampedTime);
-  }, [recordedEvents, events, onPlaybackTimeChange, UpdateUIFromState, seek, pause, editorApiRef]);
+  }, [recordedEvents, events, onPlaybackTimeChange, UpdateUIFromState, seek, pause]);
 
   return {
     play,

@@ -27,14 +27,15 @@ export type SaveRecordingOptions = {
 /**
  * Complete recording data structure for storage
  *
- * Note: the `files` field maps filenames to their content (filename -> content)
+ * Note: the `files` field maps filenames to file objects with name and content
+ * (filename -> { name: string; content: string })
  */
 export type RecordingData = {
   id: string;
   title: string;
   problem: ProblemDefinition;
   initialCode: string;
-  files: Record<string, string>;
+  files: Record<string, { name: string; content: string }>;
   activeFile: string;
   events: SerializedRecordedEvent[];
   metadata: {

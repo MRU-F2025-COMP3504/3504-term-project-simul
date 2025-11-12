@@ -26,11 +26,14 @@ export function useLoadRecording(filesManager: FilesManager) {
     setPlaybackTime,
     setIsPlaying,
     initialStateRef,
+    setIsLoadingRecording,
   } = useInstructorSession();
 
   const loadRecording = useCallback(
     async (recordingId: string) => {
       try {
+        setIsLoadingRecording(true);
+
         const result = await loadRecordingAction({ id: recordingId });
         if (!result.data || !result.data.recording) {
           throw new Error("No recording data returned from loadRecordingAction");
@@ -43,30 +46,39 @@ export function useLoadRecording(filesManager: FilesManager) {
         setPlaybackTime(0);
         setIsPlaying(false);
 
-        // Deserialize and load events
+        // Deserialize and load before updates
         const deserializedEvents = recording.events.map(deserializeEvent);
-        setRecordedEvents(deserializedEvents);
+        const initialState = CMEditorState.create({ doc: recording.initialCode });
 
         // Restore file state
         // create EditorState for each file
         const filesMap = new Map<string, File>();
 
-        Object.entries(recording.files).forEach(([fileName, content]) => {
+        Object.entries(recording.files).forEach(([fileName, fileData]) => {
+          const content = (fileData as any).content;
           const newFile: File = { fileName, content: CMEditorState.create({ doc: content }) };
           filesMap.set(fileName, newFile);
         });
 
+        // Apply file state first
         filesManager.loadFiles(filesMap, recording.activeFile);
 
-        // Set initial editor state for playback
-        initialStateRef.current = CMEditorState.create({ doc: recording.initialCode });
+        // Set initial state ref before updating events
+        // ref is set before the memo re-runs
+        initialStateRef.current = initialState;
+
+        // triggers memo re-run
+        setRecordedEvents(deserializedEvents);
       }
       catch (error) {
         console.error("Failed to load recording:", error);
         toast.error("Failed to load recording. Please try again.");
       }
+      finally {
+        setIsLoadingRecording(false);
+      }
     },
-    [filesManager, setRecordedEvents, setPlaybackTime, setIsPlaying, initialStateRef],
+    [filesManager, setRecordedEvents, setPlaybackTime, setIsPlaying, initialStateRef, setIsLoadingRecording],
   );
 
   return { loadRecording };

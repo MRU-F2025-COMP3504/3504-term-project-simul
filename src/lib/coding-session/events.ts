@@ -44,7 +44,7 @@ export type SerializedRecordedEvent = {
   fileName?: string;
   eventData: {
     // For transaction events
-    changes?: ChangeSetJSON;
+    changes?: ChangeSet;
     selection?: { anchor: number; head: number };
     // For mouse events
     mouse?: { x: number; y: number; type?: string; button?: number };
@@ -119,7 +119,7 @@ export function applyChangeSetJSON(
  * @returns Serialized changes from the transaction
  */
 export function transactionToChangeSetJSON(tr: Transaction): ChangeSetJSON {
-  return toChangeSetJSON(tr.changes);
+  return tr.changes.toJSON();
 }
 
 /**
@@ -189,7 +189,7 @@ export function serializeEvent(event: RecordedEvent): SerializedRecordedEvent {
   switch (event.kind) {
     case "transaction":
       if (event.transaction) {
-        baseEvent.eventData.changes = transactionToChangeSetJSON(event.transaction);
+        baseEvent.eventData.changes = event.transaction.changes.toJSON();
         baseEvent.eventData.selection = event.selection;
       }
       break;
@@ -235,8 +235,9 @@ export function deserializeEvent(serializedEvent: SerializedRecordedEvent): Reco
         // a full transaction cannot be reconstructed from serialized data, so instead
         // we create a minimal transaction-like object that holds
         // the serialized changes during playback.
+        const changes = ChangeSet.fromJSON(serializedEvent.eventData.changes);
         baseEvent.transaction = {
-          changes: serializedEvent.eventData.changes,
+          changes,
         } as unknown as Transaction;
       }
       break;

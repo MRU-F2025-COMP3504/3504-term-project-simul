@@ -11,7 +11,7 @@ export const recording = pgTable("recording", {
   problem: jsonb("problem").notNull(),
 
   initialCode: text("initial_code").notNull(),
-  files: jsonb("files").notNull(), // Record<string, string>
+  files: jsonb("files").notNull(), // Record<string, { name: string; content: string }>
   activeFile: text("active_file").notNull(),
 
   events: jsonb("events").notNull(), // SerializedRecordedEvent[]

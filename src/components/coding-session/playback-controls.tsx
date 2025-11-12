@@ -10,6 +10,7 @@ export type PlaybackControlsProps = {
   onPlay: () => void;
   onPause: () => void;
   onSeek?: (time: number) => void;
+  isLoadingRecording?: boolean;
 };
 
 export function PlaybackControls({
@@ -17,12 +18,16 @@ export function PlaybackControls({
   onPlay,
   onPause,
   onSeek,
+  isLoadingRecording,
 }: PlaybackControlsProps) {
   const { recordedEvents, playbackTime, isPlaying } = useInstructorSession();
   const totalTime = recordedEvents.length > 0 ? Math.max(...recordedEvents.map(e => e.time), 0) : 0;
   const progressPercentage = recordedEvents.length > 0 ? (playbackTime / Math.max(...recordedEvents.map(e => e.time), 1)) * 100 : 0;
 
   const handleTogglePlayback = () => {
+    if (isLoadingRecording) {
+      return;
+    }
     if (isPlaying) {
       onPause();
     }
@@ -43,9 +48,11 @@ export function PlaybackControls({
         <button
           type="button"
           onClick={handleTogglePlayback}
+          disabled={isLoadingRecording}
           className={`
             text-primary flex size-8 cursor-pointer items-center justify-center
             rounded border-none text-base transition-colors
+            ${isLoadingRecording ? "cursor-not-allowed opacity-50" : ""}
             ${isPlaying
       ? `
         bg-red-500
@@ -56,7 +63,7 @@ export function PlaybackControls({
         hover:bg-blue-700
       `}
           `}
-          title={isPlaying ? "Pause" : "Play"}
+          title={isLoadingRecording ? "Loading..." : (isPlaying ? "Pause" : "Play")}
         >
           {isPlaying
             ? <Pause className="fill-white text-white" />

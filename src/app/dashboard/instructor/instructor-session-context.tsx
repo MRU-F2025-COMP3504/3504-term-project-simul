@@ -34,6 +34,10 @@ type InstructorSessionContextValue = {
 
   // Initial state ref - used by player for playback reset
   initialStateRef: React.RefObject<CMEditorState | null>;
+
+  // Loading state
+  isLoadingRecording: boolean;
+  setIsLoadingRecording: React.Dispatch<React.SetStateAction<boolean>>;
 };
 
 const InstructorSessionContext = createContext<InstructorSessionContextValue | null>(null);
@@ -48,6 +52,7 @@ export function InstructorSessionProvider({ children }: { children: ReactNode })
   const [recordedEvents, setRecordedEvents] = useState<RecordedEvent[]>([]);
   const [playbackTime, setPlaybackTime] = useState(0);
   const [isPlaying, setIsPlaying] = useState(false);
+  const [isLoadingRecording, setIsLoadingRecording] = useState(false);
 
   const value = useMemo(
     () => ({
@@ -61,8 +66,10 @@ export function InstructorSessionProvider({ children }: { children: ReactNode })
       isPlaying,
       setIsPlaying,
       initialStateRef,
+      isLoadingRecording,
+      setIsLoadingRecording,
     }),
-    [recordedEvents, playbackTime, isPlaying],
+    [recordedEvents, playbackTime, isPlaying, isLoadingRecording],
   );
 
   return <InstructorSessionContext value={value}>{children}</InstructorSessionContext>;
