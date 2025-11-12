@@ -128,7 +128,8 @@ export default function CodeEditor() {
             }}
             onUserTransaction={(tr) => {
               const selection = tr.selection ? { anchor: tr.selection.main.anchor, head: tr.selection.main.head } : undefined;
-              recorder.recordTransaction(tr, selection);
+              const docSnapshot = typeof tr.newDoc?.toString === "function" ? tr.newDoc.toString() : undefined;
+              recorder.recordTransaction(tr, selection, docSnapshot);
             }}
             onEditorMouseMove={recorder.recordMouseEvent}
             containerRef={editorContainerRef}

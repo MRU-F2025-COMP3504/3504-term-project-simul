@@ -204,18 +204,31 @@ export function usePlayer({
       const targetFileName = event.fileName ?? state.activeFile.fileName;
 
       // Get current file state
-      const currentFile = state.files.get(targetFileName) ?? state.activeFile;
+      const fallbackFile = state.files.get(targetFileName);
+      const currentFile: File = fallbackFile ?? {
+        fileName: targetFileName,
+        content: state.activeFile.fileName === targetFileName ? state.activeFile.content : EditorState.create(),
+      };
       const currentEditorState = currentFile.content ?? EditorState.create();
 
-      const changes = event.transaction.changes;
+      const snapshotText = event.docSnapshot;
       let updatedEditorState: EditorState;
-      try {
-        updatedEditorState = currentEditorState.update({ changes }).state;
-      }
-      catch {
-        const recordedText = event.transaction.state?.doc?.toString?.() ?? "";
-        const replaceAll = { from: 0, to: currentEditorState.doc.length, insert: recordedText } as const;
+      if (snapshotText !== undefined) {
+        const replaceAll = { from: 0, to: currentEditorState.doc.length, insert: snapshotText } as const;
         updatedEditorState = currentEditorState.update({ changes: replaceAll }).state;
+      }
+      else {
+        const changes = event.transaction.changes;
+        try {
+          updatedEditorState = currentEditorState.update({ changes }).state;
+        }
+        catch {
+          const fallbackText
+            = event.transaction.state?.doc?.toString?.()
+              ?? currentEditorState.doc.toString();
+          const replaceAll = { from: 0, to: currentEditorState.doc.length, insert: fallbackText } as const;
+          updatedEditorState = currentEditorState.update({ changes: replaceAll }).state;
+        }
       }
 
       const updatedFile: File = {
@@ -286,34 +299,18 @@ export function usePlayer({
       return;
     }
 
-    // Check if we need to switch files
-    const currentActiveFile = filesManager.activeFile;
-    if (state.activeFile.fileName !== currentActiveFile) {
-      // Switch to the file from state
-      const fileEntry = filesManager.files.get(state.activeFile.fileName);
-      if (fileEntry) {
-        filesManager.selectFile(state.activeFile.fileName);
-      }
-      else {
-        const content = state.activeFile.content;
-        filesManager.createFile(state.activeFile.fileName, content);
-        filesManager.selectFile(state.activeFile.fileName);
-      }
-    }
+    // Replace filesManager state with the computed playback snapshot to avoid stale content
+    const snapshot = new Map<string, File>();
+    state.files.forEach((file, name) => {
+      snapshot.set(name, {
+        fileName: file.fileName,
+        content: file.content,
+      });
+    });
 
-    const currentFileContent = filesManager.files.get(state.activeFile.fileName)?.content ?? "";
-    const newFileContent = state.activeFile.content;
-    if (currentFileContent !== newFileContent) {
-      filesManager.updateFileContent(state.activeFile.fileName, newFileContent);
-    }
+    filesManager.loadFiles(snapshot, state.activeFile.fileName);
 
-    // Update editor content
-    const editorState = editorApiRef.current.getState();
-    if (editorState) {
-      editorApiRef.current.setState(state.activeFile.content);
-    }
-
-    // Update cursor position if mouse data is available
+    // loadFiles already sets the editor content; ensure cursor overlay matches
     if (state.mouse && cursorRef.current) {
       cursorRef.current.style.left = `${state.mouse.x}px`;
       cursorRef.current.style.top = `${state.mouse.y}px`;
@@ -321,22 +318,49 @@ export function usePlayer({
     }
   }, [cursorRef, editorApiRef, filesManager]);
 
+  const getNextEventIndex = useCallback((time: number) => {
+    let pointer = lowerBoundEvents(events, time);
+    while (pointer < events.length && (events[pointer].time ?? 0) <= time) {
+      pointer++;
+    }
+    return pointer;
+  }, [events]);
+
+  const resetToBeginning = useCallback(() => {
+    const baselineState = seek(0);
+    eventPointer.current = getNextEventIndex(0);
+    pausedAt.current = 0;
+    setPlaybackTime(0);
+    onPlaybackTimeChange(0);
+    UpdateUIFromState(baselineState);
+  }, [UpdateUIFromState, getNextEventIndex, onPlaybackTimeChange, seek]);
+
   // for use in normal playback
   const applyEvent = useCallback((event: RecordedEvent) => {
     // Process current event
     if (event.kind === "transaction" && event.transaction && event.transaction.changes && editorApiRef.current) {
       const state = editorApiRef.current.getState();
       if (state) {
-        const changes = event.transaction.changes;
-        try {
-          const update = state.update({ changes });
-          editorApiRef.current.dispatch(update);
-        }
-        catch {
-          const recordedText = event.transaction.state?.doc?.toString?.() ?? "";
-          const replaceAll = { from: 0, to: state.doc.length, insert: recordedText } as const;
+        const snapshotText = event.docSnapshot;
+        if (snapshotText !== undefined) {
+          const replaceAll = { from: 0, to: state.doc.length, insert: snapshotText } as const;
           const update = state.update({ changes: replaceAll });
           editorApiRef.current.dispatch(update);
+        }
+        else {
+          const changes = event.transaction.changes;
+          try {
+            const update = state.update({ changes });
+            editorApiRef.current.dispatch(update);
+          }
+          catch {
+            const fallbackText
+              = event.transaction.state?.doc?.toString?.()
+                ?? state.doc.toString();
+            const replaceAll = { from: 0, to: state.doc.length, insert: fallbackText } as const;
+            const update = state.update({ changes: replaceAll });
+            editorApiRef.current.dispatch(update);
+          }
         }
 
         // Apply selection range if recorded
@@ -352,7 +376,7 @@ export function usePlayer({
       if (targetFile) {
         const oldState = editorApiRef.current.getState();
         if (oldState) {
-          filesManager.selectFile(event.fileName);
+          filesManager.selectFile(event.fileName, { skipEditorUpdate: true });
           editorApiRef.current.setState(targetFile.content);
 
           // Apply selection range if recorded
@@ -367,7 +391,7 @@ export function usePlayer({
       // File was created during recording (for informational purposes during playback)
       const fileName = event.fileName ?? "";
       if (fileName) {
-        filesManager.createFile(fileName, EditorState.create({ doc: event.fileContent ?? "" }));
+        filesManager.createFile(fileName, EditorState.create({ doc: event.fileContent ?? "" }), false);
       }
     }
 
@@ -401,6 +425,12 @@ export function usePlayer({
       if (cursorRef.current) {
         cursorRef.current.style.display = "none";
       }
+      if (recordedEvents.length > 0) {
+        const endTime = recordedEvents[recordedEvents.length - 1]?.time ?? pausedAt.current;
+        pausedAt.current = endTime;
+        setPlaybackTime(endTime);
+        onPlaybackTimeChange(endTime);
+      }
       playingRef.current = false;
       setIsPlaying(false);
       onPlaybackStateChange(false);
@@ -420,38 +450,42 @@ export function usePlayer({
    * Safe to call multiple times - will be no-op if already playing.
    */
   const play = useCallback(async () => {
-    if (isLoadingRecording) {
+    if (isLoadingRecording || isPlaying) {
       return;
     }
 
-    if (!isPlaying) {
-      playingRef.current = true;
-      setIsPlaying(true);
-      onPlaybackStateChange(true);
-      if (!editorApiRef.current) {
-        return;
-      }
-      if (!recordedEvents || recordedEvents.length === 0) {
-        return;
-      }
-
-      // Reset editor to initial state
-      if (initialStateRef.current && playbackTime === 0) {
-        const state = editorApiRef.current.getState();
-
-        if (state) {
-          editorApiRef.current.setState(initialStateRef.current);
-        }
-      }
-
-      // Show cursor overlay
-      if (cursorRef.current) {
-        cursorRef.current.style.display = "block";
-      }
-      startingWallTime.current = performance.now();
-      requestAnimationFrame(animationLoop);
+    if (!editorApiRef.current) {
+      return;
     }
-  }, [isLoadingRecording, isPlaying, onPlaybackStateChange, recordedEvents, editorApiRef, initialStateRef, cursorRef, startingWallTime, animationLoop, playbackTime]);
+
+    if (!recordedEvents || recordedEvents.length === 0) {
+      return;
+    }
+
+    if (eventPointer.current >= recordedEvents.length) {
+      resetToBeginning();
+    }
+
+    playingRef.current = true;
+    setIsPlaying(true);
+    onPlaybackStateChange(true);
+
+    // Reset editor to initial state
+    if (initialStateRef.current && playbackTime === 0) {
+      const state = editorApiRef.current.getState();
+
+      if (state) {
+        editorApiRef.current.setState(initialStateRef.current);
+      }
+    }
+
+    // Show cursor overlay
+    if (cursorRef.current) {
+      cursorRef.current.style.display = "block";
+    }
+    startingWallTime.current = performance.now();
+    requestAnimationFrame(animationLoop);
+  }, [animationLoop, cursorRef, editorApiRef, initialStateRef, isLoadingRecording, isPlaying, onPlaybackStateChange, playbackTime, recordedEvents, resetToBeginning, startingWallTime]);
 
   /**
    * Pauses current playback
@@ -492,18 +526,18 @@ export function usePlayer({
     const state = seek(clampedTime);
 
     // Update event pointer to the first event after the seek time
-    eventPointer.current = lowerBoundEvents(events, clampedTime);
+    eventPointer.current = getNextEventIndex(clampedTime);
 
     // Update pausedAt to the seek time so playback can continue from here
     pausedAt.current = clampedTime;
 
-    // Update UI from computed state
+    // Update UI from computed state (this handles all editor state updates)
     UpdateUIFromState(state);
 
     // Update playback time
     setPlaybackTime(clampedTime);
     onPlaybackTimeChange(clampedTime);
-  }, [recordedEvents, events, onPlaybackTimeChange, UpdateUIFromState, seek, pause]);
+  }, [recordedEvents, onPlaybackTimeChange, UpdateUIFromState, seek, pause, getNextEventIndex]);
 
   return {
     play,

@@ -46,6 +46,7 @@ export type SerializedRecordedEvent = {
     // For transaction events
     changes?: ChangeSet;
     selection?: { anchor: number; head: number };
+    docSnapshot?: string;
     // For mouse events
     mouse?: { x: number; y: number; type?: string; button?: number };
     // For file-create events
@@ -191,6 +192,9 @@ export function serializeEvent(event: RecordedEvent): SerializedRecordedEvent {
       if (event.transaction) {
         baseEvent.eventData.changes = event.transaction.changes.toJSON();
         baseEvent.eventData.selection = event.selection;
+        if (event.docSnapshot !== undefined) {
+          baseEvent.eventData.docSnapshot = event.docSnapshot;
+        }
       }
       break;
 
@@ -239,6 +243,9 @@ export function deserializeEvent(serializedEvent: SerializedRecordedEvent): Reco
         baseEvent.transaction = {
           changes,
         } as unknown as Transaction;
+      }
+      if (serializedEvent.eventData.docSnapshot !== undefined) {
+        baseEvent.docSnapshot = serializedEvent.eventData.docSnapshot;
       }
       break;
 

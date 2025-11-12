@@ -51,6 +51,7 @@ export type RecordedEvent = {
   selection?: { anchor: number; head: number }; // Selection range from transaction
   mouse?: MouseState;
   fileContent?: string; // for file-create events
+  docSnapshot?: string; // Snapshot of file contents immediately after the event
 };
 
 /**

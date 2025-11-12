@@ -2,6 +2,8 @@
  * Utilities for recording and playback
  */
 
+import { EditorState } from "@codemirror/state";
+
 import type { File, GlobalEditorState } from "~/types/coding-session";
 
 export function lowerBoundEvents(events: { time: number }[], time: number): number {
@@ -37,15 +39,14 @@ export function cloneState(state: GlobalEditorState): GlobalEditorState {
   for (const [name, file] of state.files) {
     files.set(name, {
       fileName: file.fileName,
-      content: file.content,
+      content: EditorState.create({ doc: file.content.doc }),
     });
   }
   const activeFromMap
-    = files.get(state.activeFile.fileName)
-      ?? {
-        fileName: state.activeFile.fileName,
-        content: state.activeFile.content,
-      };
+    = {
+      fileName: state.activeFile.fileName,
+      content: EditorState.create({ doc: state.activeFile.content.doc }),
+    };
   return {
     files,
     activeFile: activeFromMap,

@@ -46,6 +46,7 @@ export function useRecorder(
     (
       tr: any,
       selection?: { anchor: number; head: number },
+      docSnapshot?: string,
     ) => {
       if (!recording)
         return;
@@ -60,6 +61,7 @@ export function useRecorder(
         fileName: activeFile,
         transaction: tr,
         selection,
+        docSnapshot,
       });
     },
     [recording, onEvent, getActiveFile],

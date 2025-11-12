@@ -9,8 +9,13 @@ import type { EditorAPI, File } from "~/types/coding-session";
 export type FilesManager = {
   files: Map<string, File>;
   activeFile: string;
-  createFile: (fileName: string, content: EditorState) => void;
-  selectFile: (fileName: string) => void;
+  createFile: (
+    fileName: string,
+    content: EditorState,
+    autoSelect?: boolean,
+    selectOptions?: { skipEditorUpdate?: boolean },
+  ) => void;
+  selectFile: (fileName: string, options?: { skipEditorUpdate?: boolean }) => void;
   updateFileContent: (fileName: string, content: EditorState) => void;
   deleteFile: (fileName: string) => void;
   resetToStarter: (starterCode: EditorState) => void;
@@ -41,22 +46,33 @@ export function useFilesManager(
   const [files, setFiles] = useState<Map<string, File>>(() =>
     new Map([["main.js", { fileName: "main.js", content: initialStarter }]]),
   );
-  const [pendingSelectFile, setPendingSelectFile] = useState<string | null>(null);
+  const [pendingSelectFile, setPendingSelectFile]
+    = useState<{ fileName: string; options?: { skipEditorUpdate?: boolean } } | null>(null);
   const [activeFile, setActiveFile] = useState("main.js");
 
   /**
    * Create a new file in the editor
    * - Checks for duplicates (no-op if file exists)
-   * - Initializes with empty content
+   * - Initializes with provided content
+   * @param fileName - Name of the file to create
+   * @param content - Initial content (EditorState) for the file
+   * @param autoSelect - If true, automatically selects the file after creation (default: true)
    */
-  const createFile = (fileName: string, content: EditorState) => {
+  const createFile = (
+    fileName: string,
+    content: EditorState,
+    autoSelect = true,
+    selectOptions?: { skipEditorUpdate?: boolean },
+  ) => {
     if (files.has(fileName)) {
       throw new Error(`File "${fileName}" already exists.`);
       return;
     }
     const newFile: File = { fileName, content };
     setFiles(prev => new Map(prev).set(fileName, newFile));
-    setPendingSelectFile(fileName);
+    if (autoSelect) {
+      setPendingSelectFile({ fileName, options: selectOptions });
+    }
   };
 
   /**
@@ -68,7 +84,7 @@ export function useFilesManager(
    * Note: Recording of file-switch events is handled by the caller
    * (useRecorder hook) to keep separation of concerns
    */
-  const selectFile = useCallback((fileName: string) => {
+  const selectFile = useCallback((fileName: string, options?: { skipEditorUpdate?: boolean }) => {
     // No-op if file doesn't exist or already active
     if (!files.has(fileName)) {
       throw new Error(`File "${fileName}" does not exist.`);
@@ -81,20 +97,14 @@ export function useFilesManager(
     // eslint-disable-next-line react-hooks-extra/no-direct-set-state-in-use-effect
     setActiveFile(fileName);
 
+    if (options?.skipEditorUpdate) {
+      return;
+    }
+
     // Update editor with new file content
     const fileEntry = files.get(fileName);
     if (fileEntry && editorApiRef.current) {
-      const state = editorApiRef.current.getState();
-      if (state) {
-        const update = state.update({
-          changes: {
-            from: 0,
-            to: state.doc.length,
-            insert: fileEntry.content.doc,
-          },
-        });
-        editorApiRef.current.dispatch(update);
-      }
+      editorApiRef.current.setState(fileEntry.content);
     }
   }, [files, editorApiRef, activeFile]);
 
@@ -103,7 +113,7 @@ export function useFilesManager(
   // batches state updates.
   useEffect(() => {
     if (pendingSelectFile) {
-      selectFile(pendingSelectFile);
+      selectFile(pendingSelectFile.fileName, pendingSelectFile.options);
       // eslint-disable-next-line react-hooks-extra/no-direct-set-state-in-use-effect
       setPendingSelectFile(null);
     }
@@ -207,10 +217,15 @@ export function useFilesManager(
    * - Updates the editor to show the active file content
    */
   const loadFiles = (filesMap: Map<string, File>, activeFileName?: string) => {
-    setFiles(filesMap);
+    const clonedMap = new Map<string, File>();
+    filesMap.forEach((file, name) => {
+      clonedMap.set(name, { fileName: file.fileName, content: file.content });
+    });
+
+    setFiles(clonedMap);
     if (activeFileName && filesMap.has(activeFileName)) {
       setActiveFile(activeFileName);
-      const fileEntry = filesMap.get(activeFileName);
+      const fileEntry = clonedMap.get(activeFileName);
       if (fileEntry && editorApiRef.current) {
         editorApiRef.current.setState(fileEntry.content);
       }
