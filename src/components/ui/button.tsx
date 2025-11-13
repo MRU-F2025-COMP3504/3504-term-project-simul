@@ -12,7 +12,7 @@ const buttonVariants = cva(
     focus-visible:ring-[3px]
     aria-invalid:ring-destructive/20 aria-invalid:border-destructive
     dark:aria-invalid:ring-destructive/40
-    inline-flex shrink-0 items-center justify-center gap-2 rounded-md text-sm
+    inline-flex shrink-0 items-center justify-center gap-2 text-sm
     font-medium whitespace-nowrap transition-all outline-none
     disabled:pointer-events-none disabled:opacity-50
     [&_svg]:pointer-events-none [&_svg]:shrink-0
@@ -59,11 +59,11 @@ const buttonVariants = cva(
           has-[>svg]:px-3
         `,
         sm: `
-          h-8 gap-1.5 rounded-md px-3
+          h-8 gap-1.5 px-3
           has-[>svg]:px-2.5
         `,
         lg: `
-          h-10 rounded-md px-6
+          h-10 px-6
           has-[>svg]:px-4
         `,
         icon: "size-9",
