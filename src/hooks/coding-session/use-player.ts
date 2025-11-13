@@ -132,7 +132,11 @@ export function usePlayer({
       mouse: { x: 0, y: 0 },
     };
 
-    const keyframes: KeyFrame[] = [{ time: recordedEvents[0]?.time ?? 0, state: cloneState(state) }];
+    const keyframes: KeyFrame[] = [{
+      time: recordedEvents[0]?.time ?? 0,
+      state: cloneState(state),
+      eventIndex: 0,
+    }];
 
     const index: IndexRow[] = [];
 
@@ -142,16 +146,24 @@ export function usePlayer({
       const event = recordedEvents[i];
       state = reduce(state, event);
       // keyframe every N events or when enough time has passed
+      const nextEventIndex = i + 1;
+
       if ((i + 1) % KF_EVERY_N === 0) {
-        keyframes.push({ time: event.time!, state: cloneState(state) });
+        keyframes.push({
+          time: event.time ?? keyframes[keyframes.length - 1].time,
+          state: cloneState(state),
+          eventIndex: nextEventIndex,
+        });
       }
       // time bucket index for fast seeks
-      while (lastBucketTime + BUCKET_MS <= event.time!) {
+      const eventTime = event.time ?? lastBucketTime;
+      while (lastBucketTime + BUCKET_MS <= eventTime) {
         lastBucketTime += BUCKET_MS;
+        const activeKeyframeIndex = Math.max(0, upperBoundKF(keyframes, lastBucketTime) - 1);
         index.push({
           time: lastBucketTime,
-          kfIndex: keyframes.length - 1,
-          eventIndex: i + 1, // first event strictly after bucket
+          kfIndex: activeKeyframeIndex,
+          eventIndex: keyframes[activeKeyframeIndex]?.eventIndex ?? 0,
         });
       }
     }
@@ -186,11 +198,14 @@ export function usePlayer({
 
     let kfIndex = bucket?.kfIndex ?? upperBoundKF(keyframes, targetTime) - 1;
     kfIndex = Math.max(0, Math.min(kfIndex, keyframes.length - 1));
-    let state = cloneState(keyframes[kfIndex].state);
+    const baseKeyframe = keyframes[kfIndex];
+    let state = cloneState(baseKeyframe.state);
 
     // find event start around eventIndex, then scan forward
-    let i = bucket?.eventIndex ?? lowerBoundEvents(events, keyframes[kfIndex].time);
-    for (; i < events.length && events[i].time! <= targetTime; i++) {
+    const startingIndexFromKF = baseKeyframe.eventIndex ?? 0;
+    const startingIndexFromBucket = bucket?.eventIndex ?? startingIndexFromKF;
+    let i = Math.max(startingIndexFromKF, startingIndexFromBucket);
+    for (; i < events.length && (events[i].time ?? Number.POSITIVE_INFINITY) <= targetTime; i++) {
       state = reduce(state, events[i]);
     }
     return state;

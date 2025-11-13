@@ -4,12 +4,13 @@ import type { EditorView } from "@codemirror/view";
 export type KeyFrame = {
   time: number; // epoch ms
   state: GlobalEditorState;
+  eventIndex: number; // first event not yet applied in this keyframe
 };
 
 export type IndexRow = {
   time: number; // epoch ms
   kfIndex: number; // index into keyframes array
-  eventIndex: number; // index into events array
+  eventIndex: number; // first event that still needs to be applied after this keyframe
 };
 export type MouseState = {
   x: number;

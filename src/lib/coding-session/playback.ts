@@ -39,13 +39,13 @@ export function cloneState(state: GlobalEditorState): GlobalEditorState {
   for (const [name, file] of state.files) {
     files.set(name, {
       fileName: file.fileName,
-      content: EditorState.create({ doc: file.content.doc }),
+      content: EditorState.create({ doc: file.content.doc.toString() }),
     });
   }
   const activeFromMap
     = {
       fileName: state.activeFile.fileName,
-      content: EditorState.create({ doc: state.activeFile.content.doc }),
+      content: EditorState.create({ doc: state.activeFile.content.doc.toString() }),
     };
   return {
     files,
