@@ -42,7 +42,7 @@ import { useCallback, useMemo, useState } from "react";
 
 import type { EditorAPI, TestCase, TestResults } from "~/types/coding-session";
 
-import { useEditorController } from "./use-update-code-editor";
+import { useEditorController } from "./use-editor-controller";
 
 /**
  * API returned by useTestRunner hook
@@ -227,7 +227,7 @@ export function useTestRunner({
     finally {
       setIsSubmitting(false);
     }
-  }, [testCases, editorApiRef, onResultsChange]);
+  }, [testCases, onResultsChange, editorController]);
 
   /**
    * Clears all test results

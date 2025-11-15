@@ -45,7 +45,7 @@ import { cloneState, getNextEventIndex, upperBoundKF } from "~/lib/coding-sessio
 
 import type { FilesManager } from "./use-files-manager";
 
-import { useEditorController } from "./use-update-code-editor";
+import { useEditorController } from "./use-editor-controller";
 
 // Time bucket size for seek indexing and lookup
 const BUCKET_MS = 250;
@@ -477,7 +477,7 @@ export function usePlayer({
     }
     startingWallTime.current = performance.now();
     requestAnimationFrame(animationLoop);
-  }, [animationLoop, cursorRef, editorApiRef, initialStateRef, isLoadingRecording, isPlaying, onPlaybackStateChange, playbackTime, recordedEvents, resetToBeginning, startingWallTime, editorController]);
+  }, [animationLoop, cursorRef, initialStateRef, isLoadingRecording, isPlaying, onPlaybackStateChange, playbackTime, recordedEvents, resetToBeginning, startingWallTime, editorController]);
 
   /**
    * Pauses the playback loop and saves the current media clock.

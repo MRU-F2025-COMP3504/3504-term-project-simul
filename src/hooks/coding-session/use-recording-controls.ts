@@ -4,7 +4,7 @@ import type { FilesManager } from "~/hooks/coding-session/use-files-manager";
 
 import { useInstructorSession } from "~/app/dashboard/instructor/instructor-session-context";
 
-import { useEditorController } from "./use-update-code-editor";
+import { useEditorController } from "./use-editor-controller";
 
 /**
  * Hook for managing recording start/stop controls

@@ -6,7 +6,7 @@ import { useCallback, useEffect, useState } from "react";
 
 import type { EditorAPI, File } from "~/types/coding-session";
 
-import { useEditorController } from "./use-update-code-editor";
+import { useEditorController } from "./use-editor-controller";
 
 export type FilesManager = {
   files: Map<string, File>;

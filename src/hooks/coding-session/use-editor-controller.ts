@@ -1,27 +1,33 @@
 import type { EditorState, Transaction } from "@codemirror/state";
 
+import { useCallback } from "react";
+
 import type { EditorAPI } from "~/types/coding-session";
 
 export function useEditorController(editorApiRef: React.RefObject<EditorAPI | null>,
 ) {
-  const setEditorState = (content: EditorState) => {
+  const setEditorState = useCallback((state: EditorState): void => {
     if (editorApiRef.current) {
-      editorApiRef.current.setState(content);
+      editorApiRef.current.setState(state);
     }
     else {
       throw new Error("Editor API is not available");
     }
-  };
-  const getEditorState = (): EditorState | null => {
-    if (editorApiRef.current) {
-      return editorApiRef.current.getState();
+  }, [editorApiRef]);
+  const getEditorState = useCallback((): EditorState => {
+    try {
+      const state = editorApiRef.current!.getState();
+      if (!state) {
+        throw new Error("Editor state is not available");
+      }
+      return state;
     }
-    else {
-      throw new Error("Editor API is not available");
+    catch (error) {
+      throw new Error("Editor API is not available", error as Error);
     }
-  };
+  }, [editorApiRef]);
 
-  const applyTransaction = (transaction: Transaction) => {
+  const applyTransaction = useCallback((transaction: Transaction): void => {
     try {
       if (editorApiRef.current) {
         const update = getEditorState()!.update(transaction);
@@ -32,7 +38,7 @@ export function useEditorController(editorApiRef: React.RefObject<EditorAPI | nu
       console.error("Failed to dispatch transaction:", error);
       throw error;
     }
-  };
+  }, [editorApiRef, getEditorState]);
 
   return { setEditorState, getEditorState, applyTransaction };
 }
