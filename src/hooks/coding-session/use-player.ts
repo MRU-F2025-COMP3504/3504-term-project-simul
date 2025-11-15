@@ -1,20 +1,21 @@
 /**
  * usePlayer Hook - Playback Engine for Recorded Coding Sessions
  *
- * Manages the playback of recorded coding events (edits, file operations, mouse movements).
+ * Manages the playback of recorded events (edits, file operations, mouse movements).
  * Handles timeline progression, editor state restoration, and cursor position updates.
  *
- * Key Features:
- * - Replays editor transactions at correct timestamps
- * - Restores file state from recording start
- * - Displays cursor position during playback
- * - Maintains playback timeline and state
- * - Graceful pause/resume support
+ * Responsibilities:
+ * - Replays CodeMirror transactions, file switches, file creations, and cursor updates in order.
+ * - Maintains keyframe snapshots and time buckets so seeks resolve quickly without replaying
+ *   the entire history.
+ * - Keeps UI state in sync with the reconstructed snapshot via the shared FilesManager and
+ *   cursor overlay refs.
  *
  * Performance Notes:
- * - Uses refs for high-frequency updates (playback time, cursor position)
- * - Timer runs at 50ms intervals for smooth progress bar updates
- * - Does NOT store cursor position in component state (would cause excessive rerenders)
+ * - Uses refs for high-frequency updates (playback clock, cursor position, event pointer).
+ * - Uses `requestAnimationFrame` for the playback loop so updates happen when the browser rerenders.
+ * - Prefers recorded document snapshots when present, falling back to ChangeSets to avoid
+ *   expensive re-computation.
  *
  * @example
  * ```typescript
@@ -26,13 +27,12 @@
  *   cursorRef,
  *   onPlaybackTimeChange: setPlaybackTime,
  *   onPlaybackStateChange: setIsPlaying,
+ *   isLoadingRecording,
  * });
  *
- * // Start playback
  * await player.play();
- *
- * // Pause playback
  * player.pause();
+ * player.seek(2_000); // jump to 2s mark
  * ```
  */
 
@@ -41,7 +41,7 @@ import { useCallback, useMemo, useRef, useState } from "react";
 
 import type { EditorAPI, File, GlobalEditorState, IndexRow, KeyFrame, RecordedEvent } from "~/types/coding-session";
 
-import { cloneState, lowerBoundEvents, upperBoundKF } from "~/lib/coding-session/playback";
+import { cloneState, getNextEventIndex, upperBoundKF } from "~/lib/coding-session/playback";
 
 import type { FilesManager } from "./use-files-manager";
 
@@ -112,26 +112,32 @@ export function usePlayer({
   const rate = 1;
   const eventPointer = useRef(0);
 
+  /**
+   * This memo computes keyframes, index, and events for playback.
+   * These variables are then able to be used by the other functions in this hook.
+   */
   const { keyframes, index, events } = useMemo(() => {
     const initialState = initialStateRef.current;
 
     if (!initialState && recordedEvents.length > 0) {
-      console.warn(
+      console.error(
         "Building keyframes with incomplete initial state. "
-        + "This may indicate a race condition during recording load.",
+        + "Something has gone wrong while loading the recording.",
       );
     }
 
+    // We always use main.js as the initial file.
     const activeFile = {
       fileName: "main.js",
       content: initialState ?? EditorState.create(),
     };
+
     let state: GlobalEditorState = {
       files: new Map([[activeFile.fileName, activeFile]]),
       activeFile,
       mouse: { x: 0, y: 0 },
     };
-
+    // Create keyframes array with initial state snapshot
     const keyframes: KeyFrame[] = [{
       time: recordedEvents[0]?.time ?? 0,
       state: cloneState(state),
@@ -139,13 +145,16 @@ export function usePlayer({
     }];
 
     const index: IndexRow[] = [];
-
+    // Every N events, create a keyframe snapshot
+    // We choose 10, have not tested to see if other numbers feel better
     const KF_EVERY_N = 10;
+
     let lastBucketTime = keyframes[0].time;
     for (let i = 0; i < recordedEvents.length; i++) {
       const event = recordedEvents[i];
+      // Apply event to current state and return the derived state.
       state = reduce(state, event);
-      // keyframe every N events or when enough time has passed
+      // keyframe every N events
       const nextEventIndex = i + 1;
 
       if ((i + 1) % KF_EVERY_N === 0) {
@@ -158,7 +167,10 @@ export function usePlayer({
       // time bucket index for fast seeks
       const eventTime = event.time ?? lastBucketTime;
       while (lastBucketTime + BUCKET_MS <= eventTime) {
+        // increment lastBucketTime by bucket size
+        // Now that it's incremented, we use it to determine the active keyframe
         lastBucketTime += BUCKET_MS;
+        // Get the keyframe active at this time
         const activeKeyframeIndex = Math.max(0, upperBoundKF(keyframes, lastBucketTime) - 1);
         index.push({
           time: lastBucketTime,
@@ -170,49 +182,56 @@ export function usePlayer({
     return { keyframes, index, events: recordedEvents };
   }, [recordedEvents, initialStateRef]);
 
+  /**
+   * Produces the editor state at the playback timestamp.
+   *
+   * @param targetTime - Playback time in milliseconds of the desired state.
+   * @returns Global editor state that mirrors the recording at the given time.
+   */
   const seek = useCallback((targetTime: number): GlobalEditorState => {
-    // Handle empty keyframes or events
-    if (keyframes.length === 0) {
-      const initialState = initialStateRef.current;
-      const defaultState: GlobalEditorState = {
-        files: new Map(),
-        activeFile: {
-          fileName: "main.js",
-          content: initialState ?? EditorState.create(),
-        },
-        mouse: { x: 0, y: 0 },
-      };
-      return defaultState;
-    }
-
-    let bucket: IndexRow | undefined;
+    // Use the time bucket index to get close to the target time without scanning every event
+    let matchingBucket: IndexRow | undefined;
     if (index.length > 0 && targetTime >= index[0].time) {
-      const rel = Math.floor((targetTime - index[0].time) / BUCKET_MS);
-      const bucketIndex = Math.min(rel, index.length - 1);
-      const cand = index[Math.max(0, bucketIndex)];
-      if (cand && cand.time <= targetTime) {
-        bucket = cand;
+      // Determine how many buckets away the target time is from the first indexed bucket
+      const relativeBucketOffset = Math.floor((targetTime - index[0].time) / BUCKET_MS);
+      const clampedBucketIndex = Math.min(relativeBucketOffset, index.length - 1);
+      const candidateBucket = index[Math.max(0, clampedBucketIndex)];
+      // Only use the bucket if its timestamp does not overshoot the requested time
+      if (candidateBucket && candidateBucket.time <= targetTime) {
+        matchingBucket = candidateBucket;
       }
     }
 
-    let kfIndex = bucket?.kfIndex ?? upperBoundKF(keyframes, targetTime) - 1;
+    // If a bucket was found, use its keyframe, otherwise use binary search to get one.
+    let kfIndex = matchingBucket?.kfIndex ?? upperBoundKF(keyframes, targetTime) - 1;
     kfIndex = Math.max(0, Math.min(kfIndex, keyframes.length - 1));
     const baseKeyframe = keyframes[kfIndex];
     let state = cloneState(baseKeyframe.state);
 
-    // find event start around eventIndex, then scan forward
+    // Check if bucket event pointer or keyframe event pointer is later, start from there.
     const startingIndexFromKF = baseKeyframe.eventIndex ?? 0;
-    const startingIndexFromBucket = bucket?.eventIndex ?? startingIndexFromKF;
+    const startingIndexFromBucket = matchingBucket?.eventIndex ?? startingIndexFromKF;
     let i = Math.max(startingIndexFromKF, startingIndexFromBucket);
+    // Apply events until targetTime
     for (; i < events.length && (events[i].time ?? Number.POSITIVE_INFINITY) <= targetTime; i++) {
       state = reduce(state, events[i]);
     }
     return state;
-  }, [index, keyframes, events, initialStateRef]);
+  }, [index, keyframes, events]);
 
-  // This function only updates internal state, no UI changes
-  // Only used for seeking
+  /**
+   * Applies a recorded event to an in-memory snapshot without updating the UI.
+   *
+   * @param state - The baseline state to mutate.
+   * @param event - Event to apply to the snapshot.
+   * @returns Updated snapshot with the event incorporated.
+   *
+   * Notes:
+   * - This function only updates internal state, no UI changes.
+   * - Only used for seeking.
+   */
   function reduce(state: GlobalEditorState, event: RecordedEvent): GlobalEditorState {
+    // Rehydrate document state by applying the recorded transaction
     if (event.kind === "transaction" && event.transaction && event.transaction.changes) {
       // Determine which file this transaction applies to
       const targetFileName = event.fileName ?? state.activeFile.fileName;
@@ -307,11 +326,15 @@ export function usePlayer({
     throw new Error(`Unknown event kind: ${event.kind}`);
   }
 
+  /**
+   * Synchronises the live FilesManager and cursor overlay with a reconstructed snapshot.
+   *
+   * @param state - Snapshot to project into the UI.
+   */
   const UpdateUIFromState = useCallback((state: GlobalEditorState) => {
     if (!editorApiRef.current) {
       return;
     }
-
     // Replace filesManager state with the computed playback snapshot to avoid stale content
     const snapshot = new Map<string, File>();
     state.files.forEach((file, name) => {
@@ -331,24 +354,26 @@ export function usePlayer({
     }
   }, [cursorRef, editorApiRef, filesManager]);
 
-  const getNextEventIndex = useCallback((time: number) => {
-    let pointer = lowerBoundEvents(events, time);
-    while (pointer < events.length && (events[pointer].time ?? 0) <= time) {
-      pointer++;
-    }
-    return pointer;
-  }, [events]);
-
+  /**
+   * Restores playback back to the first frame and refreshes shared state accordingly.
+   */
   const resetToBeginning = useCallback(() => {
+    // Reset state so the next playback starts from the first frame
     const baselineState = seek(0);
-    eventPointer.current = getNextEventIndex(0);
+    eventPointer.current = getNextEventIndex(0, events);
     pausedAt.current = 0;
     setPlaybackTime(0);
     onPlaybackTimeChange(0);
     UpdateUIFromState(baselineState);
-  }, [UpdateUIFromState, getNextEventIndex, onPlaybackTimeChange, seek]);
+  }, [UpdateUIFromState, onPlaybackTimeChange, seek, events]);
 
-  // for use in normal playback
+  /**
+   * Applies a single recorded event to the live editor and FilesManager instances.
+   *
+   * @param event - Event to replay.
+   *
+   * Notes:
+   */
   const applyEvent = useCallback((event: RecordedEvent) => {
     // Process current event
     if (event.kind === "transaction" && event.transaction && event.transaction.changes && editorApiRef.current) {
@@ -416,10 +441,14 @@ export function usePlayer({
     }
   }, [cursorRef, editorApiRef, filesManager]);
 
+  /**
+   * Runs the frame-by-frame playback loop, applying events whose timestamps are in range.
+   */
   const animationLoop = useCallback(() => {
     if (!playingRef.current) {
       return;
     }
+    // Convert wall-clock time to playback time, taking pauses into account
     const currentWallTime = performance.now();
     const currentPlaybackTime = (currentWallTime - startingWallTime.current) * rate + pausedAt.current;
 
@@ -457,10 +486,9 @@ export function usePlayer({
   }, [applyEvent, onPlaybackStateChange, onPlaybackTimeChange, recordedEvents, rate, cursorRef]);
 
   /**
-   * Starts playback of recorded events
+   * Starts playback of recorded events and starts the animation loop.
    *
-   * Sets up playback state and begins event loop.
-   * Safe to call multiple times - will be no-op if already playing.
+   * @returns Promise that resolves once playback scheduling finishes.
    */
   const play = useCallback(async () => {
     if (isLoadingRecording || isPlaying) {
@@ -501,10 +529,7 @@ export function usePlayer({
   }, [animationLoop, cursorRef, editorApiRef, initialStateRef, isLoadingRecording, isPlaying, onPlaybackStateChange, playbackTime, recordedEvents, resetToBeginning, startingWallTime]);
 
   /**
-   * Pauses current playback
-   *
-   * Stops event processing and cleans up timers.
-   * Can resume later by calling play() again.
+   * Pauses the playback loop and saves the current media clock.
    */
   const pause = useCallback(() => {
     playingRef.current = false;
@@ -515,17 +540,15 @@ export function usePlayer({
   }, [onPlaybackStateChange]);
 
   /**
-   * Seeks to a specific time in the recording
+   * Seeks to a specific time in the recording and updates the UI with that state.
    *
-   * Pauses playback if currently playing, then computes the state at the target time
-   * and updates the UI accordingly. Also updates the event pointer so playback
-   * can continue from the seeked position.
+   * @param targetTime - Desired playback time in milliseconds.
    */
   const handleSeek = useCallback((targetTime: number) => {
-    // Clamp target time to valid range
     if (recordedEvents.length === 0) {
       return;
     }
+    // Clamp target time to valid range
     const minTime = recordedEvents[0]?.time ?? 0;
     const maxTime = Math.max(...recordedEvents.map(event => event.time ?? 0));
     const clampedTime = Math.max(minTime, Math.min(targetTime, maxTime));
@@ -539,7 +562,7 @@ export function usePlayer({
     const state = seek(clampedTime);
 
     // Update event pointer to the first event after the seek time
-    eventPointer.current = getNextEventIndex(clampedTime);
+    eventPointer.current = getNextEventIndex(clampedTime, events);
 
     // Update pausedAt to the seek time so playback can continue from here
     pausedAt.current = clampedTime;
@@ -550,7 +573,7 @@ export function usePlayer({
     // Update playback time
     setPlaybackTime(clampedTime);
     onPlaybackTimeChange(clampedTime);
-  }, [recordedEvents, onPlaybackTimeChange, UpdateUIFromState, seek, pause, getNextEventIndex]);
+  }, [recordedEvents, onPlaybackTimeChange, UpdateUIFromState, seek, pause, events]);
 
   return {
     play,

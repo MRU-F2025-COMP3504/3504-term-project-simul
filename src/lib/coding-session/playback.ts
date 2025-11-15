@@ -4,7 +4,7 @@
 
 import { EditorState } from "@codemirror/state";
 
-import type { File, GlobalEditorState } from "~/types/coding-session";
+import type { File, GlobalEditorState, RecordedEvent } from "~/types/coding-session";
 
 export function lowerBoundEvents(events: { time: number }[], time: number): number {
   let low = 0;
@@ -28,6 +28,22 @@ export function upperBoundKF(keyframes: { time: number }[], target: number): num
     else high = mid;
   }
   return low; // index of first keyframe with time > target
+}
+
+/**
+ * Gets the index of the first event strictly after the supplied timestamp.
+ *
+ * @param time - Playback time in milliseconds.
+ * @param events - Array of RecordedEvents
+ * @returns Index pointing at the next event that should be applied.
+ */
+export function getNextEventIndex(time: number, events: RecordedEvent[]): number {
+  // Binary search forward to locate the first event after time
+  let pointer = lowerBoundEvents(events, time);
+  while (pointer < events.length && (events[pointer].time ?? 0) <= time) {
+    pointer++;
+  }
+  return pointer;
 }
 
 /**
