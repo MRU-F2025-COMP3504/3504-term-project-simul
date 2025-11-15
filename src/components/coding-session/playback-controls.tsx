@@ -44,23 +44,23 @@ export function PlaybackControls({
 
   return (
     <>
-      <div className="bg-muted flex items-center gap-3 border-t px-4 py-3">
+      <div className="bg-muted flex items-center gap-3 border-t px-4 py-1">
         <button
           type="button"
           onClick={handleTogglePlayback}
           disabled={isLoadingRecording}
           className={`
-            text-primary flex size-8 cursor-pointer items-center justify-center
+            text-primary-foreground flex size-8 cursor-pointer items-center justify-center
             rounded border-none text-base transition-colors
             ${isLoadingRecording ? "cursor-not-allowed opacity-50" : ""}
             ${isPlaying
       ? `
-        bg-red-500
-        hover:bg-red-600
+        bg-destructive
+        hover:bg-destructive/90
       `
       : `
-        bg-blue-600
-        hover:bg-blue-700
+        bg-primary
+        hover:bg-primary/90
       `}
           `}
           title={isLoadingRecording ? "Loading..." : (isPlaying ? "Pause" : "Play")}
