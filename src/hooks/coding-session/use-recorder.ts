@@ -40,13 +40,10 @@ export function useRecorder(
    * Only records if recording is active.
    *
    * @param tr - CodeMirror Transaction object
-   * @param selection - Current editor selection {anchor, head}
    */
   const recordTransaction = useCallback(
     (
       tr: any,
-      selection?: { anchor: number; head: number },
-      docSnapshot?: string,
     ) => {
       if (!recording)
         return;
@@ -60,8 +57,6 @@ export function useRecorder(
         kind: "transaction",
         fileName: activeFile,
         transaction: tr,
-        selection,
-        docSnapshot,
       });
     },
     [recording, onEvent, getActiveFile],

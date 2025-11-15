@@ -6,11 +6,9 @@
  * formats for storage and playback.
  */
 
-import type { ChangeSpec, EditorState, Text, Transaction } from "@codemirror/state";
+import type { ChangeSpec, Text, Transaction } from "@codemirror/state";
 
-import {
-  ChangeSet,
-} from "@codemirror/state";
+import { ChangeSet, EditorSelection } from "@codemirror/state";
 
 import type { RecordedEvent } from "~/types/coding-session";
 
@@ -43,10 +41,11 @@ export type SerializedRecordedEvent = {
   kind: "transaction" | "mouse" | "file-switch" | "file-create";
   fileName?: string;
   eventData: {
-    // For transaction events
-    changes?: ChangeSet;
-    selection?: { anchor: number; head: number };
-    docSnapshot?: string;
+    Transaction?: {
+      changes?: ChangeSet;
+      selection?: EditorSelection;
+    };
+
     // For mouse events
     mouse?: { x: number; y: number; type?: string; button?: number };
     // For file-create events
@@ -124,22 +123,6 @@ export function transactionToChangeSetJSON(tr: Transaction): ChangeSetJSON {
 }
 
 /**
- * Get the selection from a CodeMirror EditorState
- *
- * @param state - The editor state
- * @returns Selection range with anchor and head positions
- */
-export function getSelectionJSON(
-  state: EditorState,
-): { anchor: number; head: number } {
-  const selection = state.selection.main;
-  return {
-    anchor: selection.anchor,
-    head: selection.head,
-  };
-}
-
-/**
  * Time utilities for playback calculations
  */
 
@@ -190,11 +173,10 @@ export function serializeEvent(event: RecordedEvent): SerializedRecordedEvent {
   switch (event.kind) {
     case "transaction":
       if (event.transaction) {
-        baseEvent.eventData.changes = event.transaction.changes.toJSON();
-        baseEvent.eventData.selection = event.selection;
-        if (event.docSnapshot !== undefined) {
-          baseEvent.eventData.docSnapshot = event.docSnapshot;
-        }
+        baseEvent.eventData.Transaction = {
+          changes: event.transaction.changes.toJSON(),
+          selection: event.transaction.selection?.toJSON(),
+        };
       }
       break;
 
@@ -233,19 +215,20 @@ export function deserializeEvent(serializedEvent: SerializedRecordedEvent): Reco
 
   switch (serializedEvent.kind) {
     case "transaction":
-      baseEvent.selection = serializedEvent.eventData.selection;
       // Preserve changes data in a structure compatible with playback
-      if (serializedEvent.eventData.changes) {
+      if (serializedEvent.eventData.Transaction) {
         // a full transaction cannot be reconstructed from serialized data, so instead
         // we create a minimal transaction-like object that holds
-        // the serialized changes during playback.
-        const changes = ChangeSet.fromJSON(serializedEvent.eventData.changes);
+        // the serialized changes and selection during playback.
+        const changes = ChangeSet.fromJSON(serializedEvent.eventData.Transaction.changes);
+        const selection = serializedEvent.eventData.Transaction.selection
+          ? EditorSelection.fromJSON(serializedEvent.eventData.Transaction.selection)
+          : undefined;
+
         baseEvent.transaction = {
           changes,
+          ...(selection && { selection }),
         } as unknown as Transaction;
-      }
-      if (serializedEvent.eventData.docSnapshot !== undefined) {
-        baseEvent.docSnapshot = serializedEvent.eventData.docSnapshot;
       }
       break;
 

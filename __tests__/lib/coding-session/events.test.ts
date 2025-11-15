@@ -6,7 +6,7 @@ import type { RecordedEvent } from "~/types/coding-session";
 import { deserializeEvent, serializeEvent } from "~/lib/coding-session/events";
 
 describe("coding-session events serialization", () => {
-  it("preserves document snapshots for transaction events", () => {
+  it("serializes transaction changes", () => {
     const baseState = EditorState.create({ doc: "console.log('hi');" });
     const transaction = baseState.update({
       changes: {
@@ -16,22 +16,22 @@ describe("coding-session events serialization", () => {
       },
     });
 
-    const docSnapshot = transaction.newDoc.toString();
-
     const event: RecordedEvent = {
       time: 42,
       kind: "transaction",
       fileName: "main.js",
       transaction,
-      selection: { anchor: 0, head: 0 },
-      docSnapshot,
     };
 
     const serialized = serializeEvent(event);
-    expect(serialized.eventData.docSnapshot).toBe(docSnapshot);
+    const eventData = serialized.eventData as Record<string, unknown>;
+
+    expect(serialized.eventData.Transaction?.changes).toEqual(transaction.changes.toJSON());
+    expect(serialized.eventData.Transaction?.selection).toEqual(transaction.selection?.toJSON());
+    expect(eventData.docSnapshot).toBeUndefined();
 
     const roundTripped = deserializeEvent(serialized);
-    expect(roundTripped.docSnapshot).toBe(docSnapshot);
-    expect(roundTripped.transaction?.changes.iterChanges).toBeDefined();
+    expect(roundTripped.transaction?.changes.toJSON()).toEqual(transaction.changes.toJSON());
+    expect(roundTripped.transaction?.selection?.toJSON()).toEqual(transaction.selection?.toJSON());
   });
 });

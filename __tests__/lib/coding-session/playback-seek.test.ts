@@ -13,7 +13,6 @@ import { usePlayer } from "~/hooks/coding-session/use-player";
 function createAppendEvents(
   count: number,
   options: {
-    includeSnapshots: boolean;
     transactionShape: "full" | "minimal";
     startTime?: number;
     step?: number;
@@ -21,7 +20,6 @@ function createAppendEvents(
   },
 ): RecordedEvent[] {
   const {
-    includeSnapshots,
     transactionShape,
     startTime = 0,
     step = 120,
@@ -36,8 +34,8 @@ function createAppendEvents(
     const tr = state.update({
       changes: { from: doc.length, to: doc.length, insert },
     });
-    const snapshot = tr.newDoc.toString();
-    doc = snapshot;
+
+    doc = tr.newDoc.toString();
 
     const transaction: Transaction = transactionShape === "full"
       ? tr
@@ -48,7 +46,6 @@ function createAppendEvents(
       kind: "transaction",
       fileName: "main.js",
       transaction,
-      docSnapshot: includeSnapshots ? snapshot : undefined,
     });
   }
 
@@ -88,7 +85,6 @@ function createStubFilesManager(initialEditor: EditorState): FilesManager {
 function createEditorApiRef(initialEditor: EditorState): RefObject<EditorAPI | null> {
   return {
     current: {
-      setSelection: vi.fn(),
       getState: vi.fn(() => initialEditor),
       dispatch: vi.fn(),
       setState: vi.fn(),
@@ -100,7 +96,6 @@ function createEditorApiRef(initialEditor: EditorState): RefObject<EditorAPI | n
 function resolveDocAtTime(events: RecordedEvent[], initialDoc: string) {
   const cumulativeDocs: string[] = [];
   let currentDoc = initialDoc;
-  let currentState = EditorState.create({ doc: currentDoc });
 
   for (let i = 0; i < events.length; i++) {
     const event = events[i];
@@ -109,14 +104,10 @@ function resolveDocAtTime(events: RecordedEvent[], initialDoc: string) {
       continue;
     }
 
-    if (event.docSnapshot !== undefined) {
-      currentDoc = event.docSnapshot;
-      currentState = EditorState.create({ doc: currentDoc });
-    }
-    else if (event.transaction?.changes) {
-      const text = event.transaction.changes.apply(currentState.doc);
-      currentDoc = text.toString();
-      currentState = EditorState.create({ doc: currentDoc });
+    if (event.transaction?.changes) {
+      const state = EditorState.create({ doc: currentDoc });
+      const nextDoc = event.transaction.changes.apply(state.doc);
+      currentDoc = nextDoc.toString();
     }
 
     cumulativeDocs[i] = currentDoc;
@@ -142,8 +133,8 @@ function readActiveDoc(filesManager: FilesManager): string {
 }
 
 describe("usePlayer seek()", () => {
-  it("reconstructs the document accurately across the timeline when snapshots are available", () => {
-    const recordedEvents = createAppendEvents(30, { includeSnapshots: true, transactionShape: "minimal" });
+  it("reconstructs the document accurately when using full transaction objects", () => {
+    const recordedEvents = createAppendEvents(30, { transactionShape: "full" });
     const initialEditor = EditorState.create({ doc: "" });
     const filesManager = createStubFilesManager(initialEditor);
 
@@ -180,7 +171,6 @@ describe("usePlayer seek()", () => {
   it("reconstructs the document accurately when relying solely on ChangeSets", () => {
     const initialDoc = "seed";
     const recordedEvents = createAppendEvents(25, {
-      includeSnapshots: false,
       transactionShape: "minimal",
       initialDoc,
     });

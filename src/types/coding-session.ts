@@ -33,7 +33,6 @@ export type GlobalEditorState = {
  * to interact with the editor directly
  */
 export type EditorAPI = {
-  setSelection: (selection: { anchor: number; head: number }) => void;
   getState: () => EditorState | null;
   dispatch: (tr: Transaction) => void;
   setState: (state: EditorState) => void;
@@ -49,10 +48,8 @@ export type RecordedEvent = {
   kind: "transaction" | "mouse" | "file-switch" | "file-create";
   fileName?: string; // which file (for transactions and file ops)
   transaction?: Transaction;
-  selection?: { anchor: number; head: number }; // Selection range from transaction
   mouse?: MouseState;
   fileContent?: string; // for file-create events
-  docSnapshot?: string; // Snapshot of file contents immediately after the event
 };
 
 /**

@@ -2,7 +2,7 @@
 import type { MouseEvent as ReactMouseEvent, ReactNode, RefObject } from "react";
 
 import { javascript } from "@codemirror/lang-javascript";
-import { EditorSelection, EditorState, Transaction } from "@codemirror/state";
+import { EditorState, Transaction } from "@codemirror/state";
 import { useCodeMirror } from "@uiw/react-codemirror";
 import { useTheme } from "next-themes";
 import { useEffect, useImperativeHandle, useRef } from "react";
@@ -65,15 +65,6 @@ export function CodeMirrorEditor({
   useImperativeHandle(
     setExternalApiRef,
     () => ({
-      setSelection: (selection: { anchor: number; head: number }) => {
-        if (!view)
-          return;
-
-        const selectionTr = view.state.update({
-          selection: EditorSelection.single(selection.anchor, selection.head),
-        });
-        view.dispatch(selectionTr);
-      },
       setState: (state: EditorState) => {
         if (!view)
           return;

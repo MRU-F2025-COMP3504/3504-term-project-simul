@@ -6,6 +6,8 @@ import { useCallback, useEffect, useState } from "react";
 
 import type { EditorAPI, File } from "~/types/coding-session";
 
+import { useEditorController } from "./use-update-code-editor";
+
 export type FilesManager = {
   files: Map<string, File>;
   activeFile: string;
@@ -40,10 +42,12 @@ export function useFilesManager(
   initialStarter: EditorState,
   editorApiRef: React.RefObject<EditorAPI | null>,
 ) {
+  const editorController = useEditorController(editorApiRef);
   // Initialize with a single "main.js" file containing starter code
   const [files, setFiles] = useState<Map<string, File>>(() =>
     new Map([["main.js", { fileName: "main.js", content: initialStarter }]]),
   );
+
   const [pendingSelectFile, setPendingSelectFile]
     = useState<{ fileName: string; options?: { skipEditorUpdate?: boolean } } | null>(null);
   const [activeFile, setActiveFile] = useState("main.js");
@@ -100,10 +104,10 @@ export function useFilesManager(
 
     // Update editor with new file content
     const fileEntry = files.get(fileName);
-    if (fileEntry && editorApiRef.current) {
-      editorApiRef.current.setState(fileEntry.content);
+    if (fileEntry) {
+      editorController.setEditorState(fileEntry.content);
     }
-  }, [files, editorApiRef, activeFile]);
+  }, [files, activeFile, editorController]);
 
   // We want to switch to the file after we create it
   // If we dont do this we get a race condition because react
@@ -175,20 +179,7 @@ export function useFilesManager(
       return newMap;
     });
 
-    // Update editor
-    if (editorApiRef.current) {
-      const state = editorApiRef.current.getState();
-      if (state) {
-        const update = state.update({
-          changes: {
-            from: 0,
-            to: state.doc.length,
-            insert: starterCode.doc,
-          },
-        });
-        editorApiRef.current.dispatch(update);
-      }
-    }
+    editorController.setEditorState(starterCode);
   };
 
   /**
@@ -197,11 +188,7 @@ export function useFilesManager(
    * - Updates the files map with current editor state
    */
   const saveCurrentFile = () => {
-    if (!editorApiRef.current) {
-      return;
-    }
-
-    const state = editorApiRef.current.getState();
+    const state = editorController.getEditorState();
     if (state) {
       updateFileContent(activeFile, state);
     }
@@ -223,8 +210,8 @@ export function useFilesManager(
     if (activeFileName && filesMap.has(activeFileName)) {
       setActiveFile(activeFileName);
       const fileEntry = clonedMap.get(activeFileName);
-      if (fileEntry && editorApiRef.current) {
-        editorApiRef.current.setState(fileEntry.content);
+      if (fileEntry) {
+        editorController.setEditorState(fileEntry.content);
       }
     }
   };

@@ -4,6 +4,8 @@ import type { FilesManager } from "~/hooks/coding-session/use-files-manager";
 
 import { useInstructorSession } from "~/app/dashboard/instructor/instructor-session-context";
 
+import { useEditorController } from "./use-update-code-editor";
+
 /**
  * Hook for managing recording start/stop controls
  *
@@ -25,32 +27,33 @@ export function useRecordingControls(
     setPlaybackTime,
     initialStateRef,
   } = useInstructorSession();
+  const editorController = useEditorController(editorApiRef); ;
 
   const toggleRecording = useCallback(() => {
     if (!recorder.recording) {
       // Starting recording - capture initial state and reset events
-      initialStateRef.current = editorApiRef.current?.getState() ?? null;
+      initialStateRef.current = editorController.getEditorState();
       setRecordedEvents([]);
       setPlaybackTime(0);
       recorder.startRecording();
     }
     else {
       // Stopping recording - save current editor state to files
-      if (editorApiRef.current) {
-        const state = editorApiRef.current.getState();
-        if (state) {
-          filesManager.updateFileContent(filesManager.activeFile, state);
-        }
+
+      const state = editorController.getEditorState();
+      if (state) {
+        filesManager.updateFileContent(filesManager.activeFile, state);
       }
+
       recorder.stopRecording();
     }
   }, [
     recorder,
     filesManager,
-    editorApiRef,
     setRecordedEvents,
     setPlaybackTime,
     initialStateRef,
+    editorController,
   ]);
 
   return { toggleRecording };

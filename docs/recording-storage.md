@@ -40,8 +40,6 @@ Eventually, we should consider breaking out some of these into separate tables, 
 
 CodeMirror transactions can't be directly stored in a database, so we **serialize** them: converting complex objects into simple JSON that can be stored and later **deserialized** back into the original format for playback.
 
-Each serialized transaction now includes a `docSnapshot` (the document content immediately after the change). This snapshot gives the playback engine a safe fallback when a change set cannot be applied cleanly—for example, when loading older recordings or when the editor state has diverged. Keeping the snapshot ensures the document never collapses to an empty string during seeks or resume operations.
-
 ## Database Schema
 
 The `recording` table structure:
@@ -277,7 +275,6 @@ const recordedEvent: RecordedEvent = {
   kind: "transaction",
   fileName: "solution.js",
   transaction: codeTransaction,
-  selection: { anchor: 10, head: 15 },
 };
 
 // Serialize for storage (happens automatically in useSaveRecording)
@@ -302,7 +299,7 @@ const events = recording.data.recording.events.map(deserializeEvent);
 
 Recordings capture five types of events:
 
-1. **Transaction Events** - Code changes (insertions, deletions, replacements)
+1. **Transaction Events** - Code changes (insertions, deletions, replacements, selections)
 2. **Mouse Events** - Cursor position and movements with optional click data
 3. **File Switch Events** - When the user changes the active file
 4. **File Create Events** - When a new file is created during recording

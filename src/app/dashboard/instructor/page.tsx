@@ -127,9 +127,7 @@ export default function CodeEditor() {
               filesManager.selectFile(name);
             }}
             onUserTransaction={(tr) => {
-              const selection = tr.selection ? { anchor: tr.selection.main.anchor, head: tr.selection.main.head } : undefined;
-              const docSnapshot = typeof tr.newDoc?.toString === "function" ? tr.newDoc.toString() : undefined;
-              recorder.recordTransaction(tr, selection, docSnapshot);
+              recorder.recordTransaction(tr);
             }}
             onEditorMouseMove={recorder.recordMouseEvent}
             containerRef={editorContainerRef}
