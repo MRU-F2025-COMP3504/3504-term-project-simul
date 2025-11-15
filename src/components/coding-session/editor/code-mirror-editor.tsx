@@ -46,16 +46,6 @@ export function CodeMirrorEditor({
     theme: theme === "dark" ? "dark" : "light",
     extensions: [
       javascript(),
-      // This has not been used before, just leaving it here for now.
-      // TODO: Investigate if this is needed.
-      // EditorView.updateListener.of((update: ViewUpdate) => {
-      // for each transaction, call onUserTransaction
-      //   update.transactions.forEach((tr) => {
-      //     if (tr.annotation(Transaction.userEvent) && onUserTransaction) {
-      //       onUserTransaction(tr);
-      //     }
-      //   });
-      // }),
       EditorState.transactionFilter.of((tr: Transaction) => {
         // Only record user-driven transactions
         if (tr.annotation(Transaction.userEvent) && onUserTransaction) {

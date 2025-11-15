@@ -12,7 +12,7 @@ export type FileSidebarProps = {
 };
 
 export function FileSidebar({ files, activeFile, onCreateFile, onSelectFile }: FileSidebarProps) {
-  const handleCreateNewFile = async () => {
+  const handleCreateNewFile = () => {
     const newFileName = `file${files.size + 1}.js`;
     onCreateFile(newFileName);
   };

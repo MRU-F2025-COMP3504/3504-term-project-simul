@@ -55,7 +55,7 @@ export function useLoadRecording(filesManager: FilesManager) {
         const filesMap = new Map<string, File>();
 
         Object.entries(recording.files).forEach(([fileName, fileData]) => {
-          const content = (fileData as any).content;
+          const content = (fileData as { name: string; content: string }).content;
           const newFile: File = { fileName, content: CMEditorState.create({ doc: content }) };
           filesMap.set(fileName, newFile);
         });

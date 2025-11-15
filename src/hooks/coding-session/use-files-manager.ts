@@ -23,8 +23,6 @@ export type FilesManager = {
   saveCurrentFile: () => void;
 };
 
-// TODO: This assumes that we only start with code in a single file.
-// Needs to take an array of files for multi-file starters.
 /**
  * Hook for managing multi-file editor state
  *
@@ -66,7 +64,6 @@ export function useFilesManager(
   ) => {
     if (files.has(fileName)) {
       throw new Error(`File "${fileName}" already exists.`);
-      return;
     }
     const newFile: File = { fileName, content };
     setFiles(prev => new Map(prev).set(fileName, newFile));

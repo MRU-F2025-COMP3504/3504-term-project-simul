@@ -170,7 +170,6 @@ export function usePlayer({
     return { keyframes, index, events: recordedEvents };
   }, [recordedEvents, initialStateRef]);
 
-  // TODO: This is dogshit and needs to be cleaned up
   const seek = useCallback((targetTime: number): GlobalEditorState => {
     // Handle empty keyframes or events
     if (keyframes.length === 0) {
@@ -305,7 +304,6 @@ export function usePlayer({
       };
     }
     // Every event type should be handled above.
-    // We throw this here so typescript shuts up.
     throw new Error(`Unknown event kind: ${event.kind}`);
   }
 
