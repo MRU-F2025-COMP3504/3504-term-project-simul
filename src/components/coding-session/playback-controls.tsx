@@ -50,8 +50,8 @@ export function PlaybackControls({
           onClick={handleTogglePlayback}
           disabled={isLoadingRecording}
           className={`
-            text-primary-foreground flex size-8 cursor-pointer items-center justify-center
-            rounded border-none text-base transition-colors
+            text-primary-foreground flex size-6 cursor-pointer items-center justify-center
+            rounded border-none text-sm transition-colors
             ${isLoadingRecording ? "cursor-not-allowed opacity-50" : ""}
             ${isPlaying
       ? `
@@ -66,9 +66,9 @@ export function PlaybackControls({
           title={isLoadingRecording ? "Loading..." : (isPlaying ? "Pause" : "Play")}
         >
           {isPlaying
-            ? <Pause className="fill-white text-white" />
+            ? <Pause className="size-4 fill-white text-white" />
             : (
-                <Play className="fill-white text-white" />
+                <Play className="size-4 fill-white text-white" />
               )}
         </button>
 
