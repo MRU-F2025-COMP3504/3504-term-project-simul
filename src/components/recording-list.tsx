@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 
 import { Button } from "~/components/ui/button";
-import { listRecordingsAction } from "~/lib/actions/recordings";
+import { deleteRecordingAction, listRecordingsAction } from "~/lib/actions/recordings";
 
 type RecordingListProps = {
   onSelectRecording: (recordingId: string) => void;
@@ -19,6 +19,8 @@ export function RecordingList({ onSelectRecording }: RecordingListProps) {
   const [recordings, setRecordings] = useState<RecordingInfo[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [actionError, setActionError] = useState<string | null>(null);
+  const [deletingId, setDeletingId] = useState<string | null>(null);
 
   const loadRecordings = async () => {
     try {
@@ -27,6 +29,7 @@ export function RecordingList({ onSelectRecording }: RecordingListProps) {
 
       if (result.data && Array.isArray(result.data.recordings)) {
         setRecordings(result.data.recordings);
+        setActionError(null);
       }
       else {
         setError("Invalid data format received");
@@ -45,6 +48,22 @@ export function RecordingList({ onSelectRecording }: RecordingListProps) {
   useEffect(() => {
     loadRecordings();
   }, []);
+
+  const handleDelete = async (recordingId: string) => {
+    setActionError(null);
+    setDeletingId(recordingId);
+
+    try {
+      await deleteRecordingAction({ id: recordingId });
+      setRecordings(prev => prev.filter(recording => recording.id !== recordingId));
+    }
+    catch (err) {
+      setActionError(err instanceof Error ? err.message : "Failed to delete recording");
+    }
+    finally {
+      setDeletingId(null);
+    }
+  };
 
   const formatDuration = (ms: number) => {
     const seconds = Math.floor(ms / 1000);
@@ -87,6 +106,11 @@ export function RecordingList({ onSelectRecording }: RecordingListProps) {
   return (
     <div className="p-4">
       <h3 className="mb-4 text-lg font-semibold">Available Recordings</h3>
+      {actionError && (
+        <div className="text-destructive mb-3 text-sm">
+          {actionError}
+        </div>
+      )}
       <div className="space-y-2">
         {recordings.map(recording => (
           <div
@@ -107,16 +131,29 @@ export function RecordingList({ onSelectRecording }: RecordingListProps) {
                   <span>{formatDuration(recording.duration)}</span>
                 </div>
               </div>
-              <Button
-                size="sm"
-                variant="outline"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  onSelectRecording(recording.id);
-                }}
-              >
-                Load
-              </Button>
+              <div className="flex gap-2">
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onSelectRecording(recording.id);
+                  }}
+                >
+                  Load
+                </Button>
+                <Button
+                  size="sm"
+                  variant="destructive"
+                  disabled={deletingId === recording.id}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    handleDelete(recording.id);
+                  }}
+                >
+                  {deletingId === recording.id ? "Deleting..." : "Delete"}
+                </Button>
+              </div>
             </div>
           </div>
         ))}

@@ -84,7 +84,7 @@ export const loadRecordingAction = actionClient
         title: result.title,
         problem: result.problem as any,
         initialCode: result.initialCode,
-        files: result.files as Record<string, string>,
+        files: result.files as Record<string, { name: string; content: string }>,
         activeFile: result.activeFile,
         events: result.events as any[],
         metadata: {

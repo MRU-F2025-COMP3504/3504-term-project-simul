@@ -5,7 +5,7 @@ import type { ReactNode } from "react";
 
 import { createContext, use, useMemo, useRef, useState } from "react";
 
-import type { RecordedEvent } from "~/types/coding-session";
+import type { EditorAPI, RecordedEvent } from "~/types/coding-session";
 
 /**
  * Shared state for the instructor coding session.
@@ -18,11 +18,7 @@ import type { RecordedEvent } from "~/types/coding-session";
  */
 type InstructorSessionContextValue = {
   // Editor refs - shared between recorder, player, files manager
-  editorApiRef: React.RefObject<{
-    setDoc: (content: string) => void;
-    setSelection: (selection: { anchor: number; head: number }) => void;
-    getState: () => CMEditorState | null;
-  } | null>;
+  editorApiRef: React.RefObject<EditorAPI | null>;
   cursorRef: React.RefObject<HTMLDivElement | null>;
   editorContainerRef: React.RefObject<HTMLDivElement | null>;
 
@@ -38,16 +34,16 @@ type InstructorSessionContextValue = {
 
   // Initial state ref - used by player for playback reset
   initialStateRef: React.RefObject<CMEditorState | null>;
+
+  // Loading state
+  isLoadingRecording: boolean;
+  setIsLoadingRecording: React.Dispatch<React.SetStateAction<boolean>>;
 };
 
 const InstructorSessionContext = createContext<InstructorSessionContextValue | null>(null);
 
 export function InstructorSessionProvider({ children }: { children: ReactNode }) {
-  const editorApiRef = useRef<{
-    setDoc: (content: string) => void;
-    setSelection: (selection: { anchor: number; head: number }) => void;
-    getState: () => CMEditorState | null;
-  } | null>(null);
+  const editorApiRef = useRef<EditorAPI | null>(null);
 
   const cursorRef = useRef<HTMLDivElement | null>(null);
   const editorContainerRef = useRef<HTMLDivElement | null>(null);
@@ -56,6 +52,7 @@ export function InstructorSessionProvider({ children }: { children: ReactNode })
   const [recordedEvents, setRecordedEvents] = useState<RecordedEvent[]>([]);
   const [playbackTime, setPlaybackTime] = useState(0);
   const [isPlaying, setIsPlaying] = useState(false);
+  const [isLoadingRecording, setIsLoadingRecording] = useState(false);
 
   const value = useMemo(
     () => ({
@@ -69,8 +66,10 @@ export function InstructorSessionProvider({ children }: { children: ReactNode })
       isPlaying,
       setIsPlaying,
       initialStateRef,
+      isLoadingRecording,
+      setIsLoadingRecording,
     }),
-    [recordedEvents, playbackTime, isPlaying],
+    [recordedEvents, playbackTime, isPlaying, isLoadingRecording],
   );
 
   return <InstructorSessionContext value={value}>{children}</InstructorSessionContext>;

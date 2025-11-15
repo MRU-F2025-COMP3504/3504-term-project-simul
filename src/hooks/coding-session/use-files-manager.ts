@@ -1,17 +1,26 @@
 "use client";
 
-import { useState } from "react";
+import type { EditorState } from "@codemirror/state";
 
-import type { FileEntry } from "~/types/coding-session";
+import { useCallback, useEffect, useState } from "react";
 
-/**
- * API reference object for external components (like playback engine)
- * to interact with the editor directly
- */
-type EditorAPI = {
-  setDoc: (content: string) => void;
-  setSelection: (selection: { anchor: number; head: number }) => void;
-  getState: () => { doc: { toString: () => string } } | null;
+import type { EditorAPI, File } from "~/types/coding-session";
+
+export type FilesManager = {
+  files: Map<string, File>;
+  activeFile: string;
+  createFile: (
+    fileName: string,
+    content: EditorState,
+    autoSelect?: boolean,
+    selectOptions?: { skipEditorUpdate?: boolean },
+  ) => void;
+  selectFile: (fileName: string, options?: { skipEditorUpdate?: boolean }) => void;
+  updateFileContent: (fileName: string, content: EditorState) => void;
+  deleteFile: (fileName: string) => void;
+  resetToStarter: (starterCode: EditorState) => void;
+  loadFiles: (filesMap: Map<string, File>, activeFileName?: string) => void;
+  saveCurrentFile: () => void;
 };
 
 /**
@@ -28,28 +37,39 @@ type EditorAPI = {
  * @returns Object with files map, activeFile, and file management operations
  */
 export function useFilesManager(
-  initialStarter: string,
+  initialStarter: EditorState,
   editorApiRef: React.RefObject<EditorAPI | null>,
 ) {
   // Initialize with a single "main.js" file containing starter code
-  const [files, setFiles] = useState<Map<string, FileEntry>>(() =>
-    new Map([["main.js", { name: "main.js", content: initialStarter }]]),
+  const [files, setFiles] = useState<Map<string, File>>(() =>
+    new Map([["main.js", { fileName: "main.js", content: initialStarter }]]),
   );
-
+  const [pendingSelectFile, setPendingSelectFile]
+    = useState<{ fileName: string; options?: { skipEditorUpdate?: boolean } } | null>(null);
   const [activeFile, setActiveFile] = useState("main.js");
 
   /**
    * Create a new file in the editor
    * - Checks for duplicates (no-op if file exists)
-   * - Initializes with empty content
+   * - Initializes with provided content
+   * @param fileName - Name of the file to create
+   * @param content - Initial content (EditorState) for the file
+   * @param autoSelect - If true, automatically selects the file after creation (default: true)
    */
-  const createFile = (fileName: string, content: string = "") => {
+  const createFile = (
+    fileName: string,
+    content: EditorState,
+    autoSelect = true,
+    selectOptions?: { skipEditorUpdate?: boolean },
+  ) => {
     if (files.has(fileName)) {
-      return;
+      throw new Error(`File "${fileName}" already exists.`);
     }
-
-    const newFile: FileEntry = { name: fileName, content };
+    const newFile: File = { fileName, content };
     setFiles(prev => new Map(prev).set(fileName, newFile));
+    if (autoSelect) {
+      setPendingSelectFile({ fileName, options: selectOptions });
+    }
   };
 
   /**
@@ -61,41 +81,47 @@ export function useFilesManager(
    * Note: Recording of file-switch events is handled by the caller
    * (useRecorder hook) to keep separation of concerns
    */
-  const selectFile = (fileName: string) => {
+  const selectFile = useCallback((fileName: string, options?: { skipEditorUpdate?: boolean }) => {
     // No-op if file doesn't exist or already active
-    if (!files.has(fileName) || activeFile === fileName) {
+    if (!files.has(fileName)) {
+      throw new Error(`File "${fileName}" does not exist.`);
+    }
+    if (activeFile === fileName) {
       return;
     }
 
-    // Save current file content before switching
-    if (editorApiRef.current) {
-      const state = editorApiRef.current.getState();
-      if (state) {
-        const currentContent = state.doc.toString();
-        setFiles((prev) => {
-          const newMap = new Map(prev);
-          newMap.set(activeFile, { name: activeFile, content: currentContent });
-          return newMap;
-        });
-      }
-    }
-
     // Switch to new file
+    // eslint-disable-next-line react-hooks-extra/no-direct-set-state-in-use-effect
     setActiveFile(fileName);
+
+    if (options?.skipEditorUpdate) {
+      return;
+    }
 
     // Update editor with new file content
     const fileEntry = files.get(fileName);
     if (fileEntry && editorApiRef.current) {
-      editorApiRef.current.setDoc(fileEntry.content);
+      editorApiRef.current.setState(fileEntry.content);
     }
-  };
+  }, [files, editorApiRef, activeFile]);
+
+  // We want to switch to the file after we create it
+  // If we dont do this we get a race condition because react
+  // batches state updates.
+  useEffect(() => {
+    if (pendingSelectFile) {
+      selectFile(pendingSelectFile.fileName, pendingSelectFile.options);
+      // eslint-disable-next-line react-hooks-extra/no-direct-set-state-in-use-effect
+      setPendingSelectFile(null);
+    }
+  }, [files, pendingSelectFile, selectFile]);
 
   /**
    * Update the content of a specific file
    * - Updates the files map
    * - If it's the active file, the caller is responsible for updating the editor
    */
-  const updateFileContent = (fileName: string, content: string) => {
+  const updateFileContent = (fileName: string, content: EditorState) => {
     if (!files.has(fileName)) {
       return;
     }
@@ -141,17 +167,27 @@ export function useFilesManager(
    * - Updates the files map with new starter code
    * - Updates the editor to show the new content
    */
-  const resetToStarter = (starterCode: string) => {
+  const resetToStarter = (starterCode: EditorState) => {
     // Update files map
     setFiles((prev) => {
       const newMap = new Map(prev);
-      newMap.set(activeFile, { name: activeFile, content: starterCode });
+      newMap.set(activeFile, { fileName: activeFile, content: starterCode });
       return newMap;
     });
 
     // Update editor
     if (editorApiRef.current) {
-      editorApiRef.current.setDoc(starterCode);
+      const state = editorApiRef.current.getState();
+      if (state) {
+        const update = state.update({
+          changes: {
+            from: 0,
+            to: state.doc.length,
+            insert: starterCode.doc,
+          },
+        });
+        editorApiRef.current.dispatch(update);
+      }
     }
   };
 
@@ -167,8 +203,7 @@ export function useFilesManager(
 
     const state = editorApiRef.current.getState();
     if (state) {
-      const currentContent = state.doc.toString();
-      updateFileContent(activeFile, currentContent);
+      updateFileContent(activeFile, state);
     }
   };
 
@@ -178,13 +213,18 @@ export function useFilesManager(
    * - Sets the active file if specified
    * - Updates the editor to show the active file content
    */
-  const loadFiles = (filesMap: Map<string, FileEntry>, activeFileName?: string) => {
-    setFiles(filesMap);
+  const loadFiles = (filesMap: Map<string, File>, activeFileName?: string) => {
+    const clonedMap = new Map<string, File>();
+    filesMap.forEach((file, name) => {
+      clonedMap.set(name, { fileName: file.fileName, content: file.content });
+    });
+
+    setFiles(clonedMap);
     if (activeFileName && filesMap.has(activeFileName)) {
       setActiveFile(activeFileName);
-      const fileEntry = filesMap.get(activeFileName);
+      const fileEntry = clonedMap.get(activeFileName);
       if (fileEntry && editorApiRef.current) {
-        editorApiRef.current.setDoc(fileEntry.content);
+        editorApiRef.current.setState(fileEntry.content);
       }
     }
   };
