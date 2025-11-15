@@ -105,7 +105,6 @@ export function RecordingList({ onSelectRecording }: RecordingListProps) {
 
   return (
     <div className="p-4">
-      <h3 className="mb-4 text-lg font-semibold">Available Recordings</h3>
       {actionError && (
         <div className="text-destructive mb-3 text-sm">
           {actionError}
@@ -120,7 +119,7 @@ export function RecordingList({ onSelectRecording }: RecordingListProps) {
               cursor-pointer rounded-lg border p-3
             `}
           >
-            <div className="flex items-start justify-between">
+            <div className="flex flex-col items-start justify-between">
               <div className="flex-1">
                 <h4 className="font-medium">{recording.title}</h4>
                 <p className="text-muted-foreground text-sm">
@@ -131,7 +130,7 @@ export function RecordingList({ onSelectRecording }: RecordingListProps) {
                   <span>{formatDuration(recording.duration)}</span>
                 </div>
               </div>
-              <div className="flex gap-2">
+              <div className="mt-1 flex gap-2">
                 <Button
                   size="sm"
                   variant="outline"

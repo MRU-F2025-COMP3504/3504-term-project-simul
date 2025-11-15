@@ -9,7 +9,6 @@ import { useEffect, useImperativeHandle, useRef } from "react";
 
 import type { EditorAPI, File } from "~/types/coding-session";
 
-import { FileSidebar } from "./file-sidebar";
 import { FileTabs } from "./file-tabs";
 
 export type CodeMirrorEditorProps = {
@@ -18,6 +17,7 @@ export type CodeMirrorEditorProps = {
   activeFile: string;
   onCreateFile: (fileName: string) => void;
   onSelectFile: (fileName: string) => void;
+  onDeleteFile?: (fileName: string) => void;
   onUserTransaction?: (tr: Transaction) => void;
   onEditorMouseMove?: (event: ReactMouseEvent<HTMLDivElement>) => void;
   containerRef?: RefObject<HTMLDivElement | null>;
@@ -31,6 +31,7 @@ export function CodeMirrorEditor({
   activeFile,
   onCreateFile,
   onSelectFile,
+  onDeleteFile,
   onUserTransaction,
   onEditorMouseMove,
   containerRef,
@@ -107,34 +108,28 @@ export function CodeMirrorEditor({
   }, [view, value]);
 
   return (
-    <div className="flex flex-1 overflow-hidden">
-      <FileSidebar
+    <div className="flex flex-1 flex-col overflow-hidden">
+      <FileTabs
         files={files}
         activeFile={activeFile}
-        onCreateFile={onCreateFile}
         onSelectFile={onSelectFile}
+        onCreateFile={onCreateFile}
+        onDeleteFile={onDeleteFile}
       />
-      <div className="flex flex-1 flex-col overflow-hidden">
-        <FileTabs
-          files={files}
-          activeFile={activeFile}
-          onSelectFile={onSelectFile}
-        />
+      <div
+        className="relative flex-1 overflow-hidden"
+        onMouseMove={onEditorMouseMove}
+      >
         <div
-          className="relative flex-1 overflow-hidden"
-          onMouseMove={onEditorMouseMove}
-        >
-          <div
-            ref={(node) => {
-              editorContainerRef.current = node;
-              if (containerRef) {
-                containerRef.current = node;
-              }
-            }}
-            className="h-full w-full"
-          />
-          {children}
-        </div>
+          ref={(node) => {
+            editorContainerRef.current = node;
+            if (containerRef) {
+              containerRef.current = node;
+            }
+          }}
+          className="h-full w-full"
+        />
+        {children}
       </div>
     </div>
   );

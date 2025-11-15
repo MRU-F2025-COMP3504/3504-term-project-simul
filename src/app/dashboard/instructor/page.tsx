@@ -6,7 +6,7 @@ import { useMemo } from "react";
 import { CodeMirrorEditor, CursorOverlay } from "~/components/coding-session/editor";
 import { PlaybackControls } from "~/components/coding-session/playback-controls";
 import { ProblemPanel } from "~/components/coding-session/problem/problem-panel";
-import { RecordingList } from "~/components/recording-list";
+import { ResizableHandle, ResizablePanel, ResizablePanelGroup } from "~/components/ui/resizable";
 import { useFilesManager, useLoadRecording, usePlayer, useRecorder, useRecordingControls, useTestRunner } from "~/hooks/coding-session";
 import { useSaveRecording } from "~/hooks/coding-session/use-save-recording";
 import { TWO_SUM_PROBLEM } from "~/lib/coding-session/tests/two-sum";
@@ -92,7 +92,6 @@ export default function CodeEditor() {
 
   return (
     <div className="flex h-screen flex-col">
-
       <InstructorToolbar
         isRecording={recorder.recording}
         onToggleRecordingAction={toggleRecording}
@@ -105,15 +104,25 @@ export default function CodeEditor() {
         setSaveTitleInputAction={setSaveTitleInput}
         performSaveRecordingAction={performSaveRecording}
         saveStatus={saveStatus}
+        onSelectRecording={loadRecording}
       />
 
-      <div className="flex flex-1 overflow-hidden">
-        {!recorder.recording && (
-          <div className="bg-background w-80 border-r">
-            <RecordingList onSelectRecording={loadRecording} />
-          </div>
-        )}
-        <div className="flex flex-1 flex-col overflow-hidden">
+      <ResizablePanelGroup
+        direction="horizontal"
+        className="flex-1 overflow-hidden"
+      >
+        <ResizablePanel defaultSize={30}>
+          <ProblemPanel
+            problem={problem}
+            testResults={tester.testResults}
+            testStatusMap={tester.testStatusMap}
+            isSubmitting={tester.isSubmitting}
+            onSubmit={tester.submit}
+            onReset={resetToStarter}
+          />
+        </ResizablePanel>
+        <ResizableHandle withHandle />
+        <ResizablePanel defaultSize={70} minSize={50}>
           <CodeMirrorEditor
             value={startingState.doc.toString()}
             files={filesManager.files}
@@ -126,6 +135,9 @@ export default function CodeEditor() {
               recorder.recordFileSwitch(name);
               filesManager.selectFile(name);
             }}
+            onDeleteFile={(name) => {
+              filesManager.deleteFile(name);
+            }}
             onUserTransaction={(tr) => {
               recorder.recordTransaction(tr);
             }}
@@ -135,17 +147,8 @@ export default function CodeEditor() {
           >
             <CursorOverlay cursorRef={cursorRef} />
           </CodeMirrorEditor>
-        </div>
-
-        <ProblemPanel
-          problem={problem}
-          testResults={tester.testResults}
-          testStatusMap={tester.testStatusMap}
-          isSubmitting={tester.isSubmitting}
-          onSubmit={tester.submit}
-          onReset={resetToStarter}
-        />
-      </div>
+        </ResizablePanel>
+      </ResizablePanelGroup>
 
       <PlaybackControls
         onSeek={player.seek}
