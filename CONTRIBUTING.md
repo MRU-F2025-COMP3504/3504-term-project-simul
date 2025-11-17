@@ -5,7 +5,7 @@ The goal here isn’t to teach you _everything_, but to give you a clear and com
 ## Before You Start
 
 1. **Make sure you can run the project locally.**
-   - Read the steps in `README.md`, and the files in`docs/`.
+   - Read the steps in `README.md`, and the files in `docs/`.
    - Install the project with `pnpm install`.
    - Run the app with `pnpm dev` for development and `pnpm build` for production.
 
