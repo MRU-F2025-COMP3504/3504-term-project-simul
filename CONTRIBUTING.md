@@ -102,7 +102,7 @@ To run unit tests using Vitest, run:
 ```bash
 pnpm test
 ```
-For more information on testing, such as information on test structure, configuration, and continuous integrations, please refer to the [testing docs](docs/testing.md)
+For more information on testing, such as information on test structure, configuration, and continuous integrations, please refer to the [testing docs](docs/testing.md).
 
 
 ## Creating and Working With Issues
