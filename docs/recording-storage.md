@@ -40,6 +40,8 @@ Eventually, we should consider breaking out some of these into separate tables, 
 
 CodeMirror transactions can't be directly stored in a database, so we **serialize** them: converting complex objects into simple JSON that can be stored and later **deserialized** back into the original format for playback.
 
+Each serialized transaction now includes a `docSnapshot` (the document content immediately after the change). This snapshot gives the playback engine a safe fallback when a change set cannot be applied cleanly—for example, when loading older recordings or when the editor state has diverged. Keeping the snapshot ensures the document never collapses to an empty string during seeks or resume operations.
+
 ## Database Schema
 
 The `recording` table structure:

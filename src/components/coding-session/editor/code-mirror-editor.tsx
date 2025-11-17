@@ -1,5 +1,4 @@
 "use client";
-import type { EditorState as CMEditorState } from "@codemirror/state";
 import type { MouseEvent as ReactMouseEvent, ReactNode, RefObject } from "react";
 
 import { javascript } from "@codemirror/lang-javascript";
@@ -8,25 +7,21 @@ import { useCodeMirror } from "@uiw/react-codemirror";
 import { useTheme } from "next-themes";
 import { useEffect, useImperativeHandle, useRef } from "react";
 
-import type { FileEntry } from "~/types/coding-session";
+import type { EditorAPI, File } from "~/types/coding-session";
 
 import { FileSidebar } from "./file-sidebar";
 import { FileTabs } from "./file-tabs";
 
 export type CodeMirrorEditorProps = {
   value: string;
-  files: Map<string, FileEntry>;
+  files: Map<string, File>;
   activeFile: string;
   onCreateFile: (fileName: string) => void;
   onSelectFile: (fileName: string) => void;
   onUserTransaction?: (tr: Transaction) => void;
   onEditorMouseMove?: (event: ReactMouseEvent<HTMLDivElement>) => void;
   containerRef?: RefObject<HTMLDivElement | null>;
-  setExternalApiRef?: RefObject<{
-    setDoc: (content: string) => void;
-    setSelection: (selection: { anchor: number; head: number }) => void;
-    getState: () => CMEditorState | null;
-  } | null>;
+  setExternalApiRef?: RefObject<EditorAPI | null>;
   children?: ReactNode;
 };
 
@@ -70,19 +65,6 @@ export function CodeMirrorEditor({
   useImperativeHandle(
     setExternalApiRef,
     () => ({
-      setDoc: (content: string) => {
-        if (!view)
-          return;
-
-        const docLength = view.state.doc.length;
-        view.dispatch({
-          changes: {
-            from: 0,
-            to: docLength,
-            insert: content,
-          },
-        });
-      },
       setSelection: (selection: { anchor: number; head: number }) => {
         if (!view)
           return;
@@ -92,7 +74,18 @@ export function CodeMirrorEditor({
         });
         view.dispatch(selectionTr);
       },
+      setState: (state: EditorState) => {
+        if (!view)
+          return;
+        view.setState(state);
+      },
+      getView: () => view ?? null,
       getState: () => view?.state ?? null,
+      dispatch: (tr: Transaction) => {
+        if (!view)
+          return;
+        view.dispatch(tr);
+      },
     }),
     [view],
   );
@@ -109,15 +102,14 @@ export function CodeMirrorEditor({
     if (!view || !value)
       return;
 
-    const currentDoc = view.state.doc.toString();
-
-    if (currentDoc.length > 0)
+    const currentDoc = view.state;
+    if (!currentDoc)
       return;
 
     view.dispatch({
       changes: {
         from: 0,
-        to: currentDoc.length,
+        to: currentDoc.doc.length,
         insert: value,
       },
     });

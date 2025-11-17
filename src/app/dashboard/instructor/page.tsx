@@ -1,5 +1,8 @@
 "use client";
 
+import { EditorState } from "@codemirror/state";
+import { useMemo } from "react";
+
 import { CodeMirrorEditor, CursorOverlay } from "~/components/coding-session/editor";
 import { PlaybackControls } from "~/components/coding-session/playback-controls";
 import { ProblemPanel } from "~/components/coding-session/problem/problem-panel";
@@ -21,11 +24,18 @@ export default function CodeEditor() {
     setPlaybackTime,
     setIsPlaying,
     initialStateRef,
+    isLoadingRecording,
   } = useInstructorSession();
 
   const problem = TWO_SUM_PROBLEM;
 
-  const filesManager = useFilesManager(problem.starterCode, editorApiRef);
+  const startingState = useMemo(() => {
+    const state = EditorState.create({ doc: problem.starterCode });
+    initialStateRef.current = state;
+    return state;
+  }, [problem.starterCode, initialStateRef]);
+
+  const filesManager = useFilesManager(startingState, editorApiRef);
 
   const recorder = useRecorder(
     event => setRecordedEvents(prev => [...prev, event]),
@@ -44,6 +54,7 @@ export default function CodeEditor() {
     cursorRef,
     onPlaybackTimeChange: setPlaybackTime,
     onPlaybackStateChange: setIsPlaying,
+    isLoadingRecording,
   });
 
   // Initialize test runner hook
@@ -65,7 +76,7 @@ export default function CodeEditor() {
   };
 
   const resetToStarter = () => {
-    filesManager.resetToStarter(problem.starterCode);
+    filesManager.resetToStarter(startingState);
     tester.reset();
   };
 
@@ -104,12 +115,12 @@ export default function CodeEditor() {
         )}
         <div className="flex flex-1 flex-col overflow-hidden">
           <CodeMirrorEditor
-            value={filesManager.files.get(filesManager.activeFile)?.content ?? ""}
+            value={startingState.doc.toString()}
             files={filesManager.files}
             activeFile={filesManager.activeFile}
             onCreateFile={(name) => {
+              filesManager.createFile(name, EditorState.create({ doc: "" }));
               recorder.recordFileCreate(name);
-              filesManager.createFile(name);
             }}
             onSelectFile={(name) => {
               recorder.recordFileSwitch(name);
@@ -117,7 +128,8 @@ export default function CodeEditor() {
             }}
             onUserTransaction={(tr) => {
               const selection = tr.selection ? { anchor: tr.selection.main.anchor, head: tr.selection.main.head } : undefined;
-              recorder.recordTransaction(tr, selection);
+              const docSnapshot = typeof tr.newDoc?.toString === "function" ? tr.newDoc.toString() : undefined;
+              recorder.recordTransaction(tr, selection, docSnapshot);
             }}
             onEditorMouseMove={recorder.recordMouseEvent}
             containerRef={editorContainerRef}
@@ -138,10 +150,11 @@ export default function CodeEditor() {
       </div>
 
       <PlaybackControls
-        onSeek={time => setPlaybackTime(time)}
+        onSeek={player.seek}
         onPlay={togglePlayback}
         onPause={togglePlayback}
         recording={recorder.recording}
+        isLoadingRecording={isLoadingRecording}
       />
     </div>
   );
