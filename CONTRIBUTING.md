@@ -158,7 +158,7 @@ Your machine must have access to the Linux kernel. Most up to date Linux machine
 
 If you are using Windows make sure you have WSL 2 (preferabbly with Ubuntu 22.04 LTS as the distro of choice). Then place the `.wslconfig` file in `C:\Users\<yourUserName>`. Make sure to restart WSL after this to update it with the config file. 
 
-After that just run the `pnpm dev` command and you should be able to see all the runtimes available to download at `http://localhost:2000/api/v2/packages`in JSON format. 
+After that just run the `pnpm dev` command and you should be able to see all the runtimes available to download at `http://localhost:2000/api/v2/packages` in JSON format. 
 
 Install the necessary runtimes (just Node 20.11.1 for now) with a POST request to `http://localhost:2000/api/v2/packages`. Use Postman if you have experience with it, if not just run the following `curl` command: 
 
