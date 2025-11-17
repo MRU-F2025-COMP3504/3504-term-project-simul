@@ -1,20 +1,21 @@
 /**
  * usePlayer Hook - Playback Engine for Recorded Coding Sessions
  *
- * Manages the playback of recorded coding events (edits, file operations, mouse movements).
+ * Manages the playback of recorded events (edits, file operations, mouse movements).
  * Handles timeline progression, editor state restoration, and cursor position updates.
  *
- * Key Features:
- * - Replays editor transactions at correct timestamps
- * - Restores file state from recording start
- * - Displays cursor position during playback
- * - Maintains playback timeline and state
- * - Graceful pause/resume support
+ * Responsibilities:
+ * - Replays CodeMirror transactions, file switches, file creations, and cursor updates in order.
+ * - Maintains keyframe snapshots and time buckets so seeks resolve quickly without replaying
+ *   the entire history.
+ * - Keeps UI state in sync with the reconstructed snapshot via the shared FilesManager and
+ *   cursor overlay refs.
  *
  * Performance Notes:
- * - Uses refs for high-frequency updates (playback time, cursor position)
- * - Timer runs at 50ms intervals for smooth progress bar updates
- * - Does NOT store cursor position in component state (would cause excessive rerenders)
+ * - Uses refs for high-frequency updates (playback clock, cursor position, event pointer).
+ * - Uses `requestAnimationFrame` for the playback loop so updates happen when the browser rerenders.
+ * - Prefers recorded document snapshots when present, falling back to ChangeSets to avoid
+ *   expensive re-computation.
  *
  * @example
  * ```typescript
@@ -26,24 +27,26 @@
  *   cursorRef,
  *   onPlaybackTimeChange: setPlaybackTime,
  *   onPlaybackStateChange: setIsPlaying,
+ *   isLoadingRecording,
  * });
  *
- * // Start playback
  * await player.play();
- *
- * // Pause playback
  * player.pause();
+ * player.seek(2_000); // jump to 2s mark
  * ```
  */
 
-import type { ChangeSet, EditorState } from "@codemirror/state";
+import { EditorState } from "@codemirror/state";
+import { useCallback, useMemo, useRef, useState } from "react";
 
-import { useCallback, useRef, useState } from "react";
+import type { EditorAPI, File, GlobalEditorState, IndexRow, KeyFrame, RecordedEvent } from "~/types/coding-session";
 
-import type { ChangeSetJSON } from "~/lib/coding-session/events";
-import type { RecordedEvent } from "~/types/coding-session";
+import { cloneState, getNextEventIndex, upperBoundKF } from "~/lib/coding-session/playback";
 
-import { applyChangeSetJSON } from "~/lib/coding-session";
+import type { FilesManager } from "./use-files-manager";
+
+// Time bucket size for seek indexing and lookup
+const BUCKET_MS = 250;
 
 /**
  * API returned by usePlayer hook
@@ -53,6 +56,8 @@ export type PlayerHandle = {
   play: () => Promise<void>;
   /** Pause current playback */
   pause: () => void;
+  /** Seek to a specific time in the recording */
+  seek: (time: number) => void;
   /** Whether playback is currently active */
   isPlaying: boolean;
   /** Current playback time in milliseconds */
@@ -66,20 +71,9 @@ type UsePlayerProps = {
   /** Array of recorded events to replay (created by useRecorder) */
   recordedEvents: RecordedEvent[];
   /** Files manager instance for switching files during playback */
-  filesManager: {
-    files: Map<string, { name: string; content: string }>;
-    activeFile: string;
-    createFile: (fileName: string, content?: string) => void;
-    selectFile: (name: string) => void;
-    updateFileContent: (name: string, content: string) => void;
-    deleteFile: (name: string) => void;
-  };
+  filesManager: FilesManager;
   /** Reference to CodeMirror editor API for setting document and selection */
-  editorApiRef: React.RefObject<{
-    setDoc: (content: string) => void;
-    setSelection: (selection: { anchor: number; head: number }) => void;
-    getState: () => EditorState | null;
-  } | null>;
+  editorApiRef: React.RefObject<EditorAPI | null>;
   /** Reference to initial editor state (captured at recording start) */
   initialStateRef: React.RefObject<EditorState | null>;
   /** Reference to cursor overlay element for position updates */
@@ -88,6 +82,8 @@ type UsePlayerProps = {
   onPlaybackTimeChange: (time: number) => void;
   /** Callback when playback state changes (playing/paused) */
   onPlaybackStateChange: (isPlaying: boolean) => void;
+  /** Whether a recording is currently being loaded */
+  isLoadingRecording: boolean;
 };
 
 /**
@@ -106,97 +102,320 @@ export function usePlayer({
   cursorRef,
   onPlaybackTimeChange,
   onPlaybackStateChange,
+  isLoadingRecording,
 }: UsePlayerProps): PlayerHandle {
   const [isPlaying, setIsPlaying] = useState(false);
   const [playbackTime, setPlaybackTime] = useState(0);
   const playingRef = useRef(false);
-  const timerIntervalRef = useRef<NodeJS.Timeout | null>(null);
+  const startingWallTime = useRef(0);
+  const pausedAt = useRef(0);
+  const rate = 1;
+  const eventPointer = useRef(0);
 
   /**
-   * Main playback loop
-   *
-   * Processes recorded events in chronological order:
-   * 1. Restores initial editor state
-   * 2. Shows cursor overlay
-   * 3. Iterates through events, applying delays between them
-   * 4. For each event:
-   *    - Transaction: applies code changes to editor
-   *    - File-switch: switches active file
-   *    - File-create: creates new file (for completeness during replay)
-   *    - Mouse: updates cursor position on screen
-   * 5. Hides cursor when playback ends
+   * This memo computes keyframes, index, and events for playback.
+   * These variables are then able to be used by the other functions in this hook.
    */
-  const handlePlayback = useCallback(async () => {
-    if (!editorApiRef.current)
-      return;
-    if (!recordedEvents || recordedEvents.length === 0)
-      return;
+  const { keyframes, index, events } = useMemo(() => {
+    const initialState = initialStateRef.current;
 
-    // Reset editor to initial state
-    if (initialStateRef.current) {
-      const initialContent = initialStateRef.current.doc.toString();
-      editorApiRef.current.setDoc(initialContent);
+    if (!initialState && recordedEvents.length > 0) {
+      console.error(
+        "Building keyframes with incomplete initial state. "
+        + "Something has gone wrong while loading the recording.",
+      );
     }
 
-    // Show cursor overlay
-    if (cursorRef.current) {
+    // We always use main.js as the initial file.
+    const activeFile = {
+      fileName: "main.js",
+      content: initialState ?? EditorState.create(),
+    };
+
+    let state: GlobalEditorState = {
+      files: new Map([[activeFile.fileName, activeFile]]),
+      activeFile,
+      mouse: { x: 0, y: 0 },
+    };
+    // Create keyframes array with initial state snapshot
+    const keyframes: KeyFrame[] = [{
+      time: recordedEvents[0]?.time ?? 0,
+      state: cloneState(state),
+      eventIndex: 0,
+    }];
+
+    const index: IndexRow[] = [];
+    // Every N events, create a keyframe snapshot
+    // We choose 10, have not tested to see if other numbers feel better
+    const KF_EVERY_N = 10;
+
+    let lastBucketTime = keyframes[0].time;
+    for (let i = 0; i < recordedEvents.length; i++) {
+      const event = recordedEvents[i];
+      // Apply event to current state and return the derived state.
+      state = reduce(state, event);
+      // keyframe every N events
+      const nextEventIndex = i + 1;
+
+      if ((i + 1) % KF_EVERY_N === 0) {
+        keyframes.push({
+          time: event.time ?? keyframes[keyframes.length - 1].time,
+          state: cloneState(state),
+          eventIndex: nextEventIndex,
+        });
+      }
+      // time bucket index for fast seeks
+      const eventTime = event.time ?? lastBucketTime;
+      while (lastBucketTime + BUCKET_MS <= eventTime) {
+        // increment lastBucketTime by bucket size
+        // Now that it's incremented, we use it to determine the active keyframe
+        lastBucketTime += BUCKET_MS;
+        // Get the keyframe active at this time
+        const activeKeyframeIndex = Math.max(0, upperBoundKF(keyframes, lastBucketTime) - 1);
+        index.push({
+          time: lastBucketTime,
+          kfIndex: activeKeyframeIndex,
+          eventIndex: keyframes[activeKeyframeIndex]?.eventIndex ?? 0,
+        });
+      }
+    }
+    return { keyframes, index, events: recordedEvents };
+  }, [recordedEvents, initialStateRef]);
+
+  /**
+   * Produces the editor state at the playback timestamp.
+   *
+   * @param targetTime - Playback time in milliseconds of the desired state.
+   * @returns Global editor state that mirrors the recording at the given time.
+   */
+  const seek = useCallback((targetTime: number): GlobalEditorState => {
+    // Use the time bucket index to get close to the target time without scanning every event
+    let matchingBucket: IndexRow | undefined;
+    if (index.length > 0 && targetTime >= index[0].time) {
+      // Determine how many buckets away the target time is from the first indexed bucket
+      const relativeBucketOffset = Math.floor((targetTime - index[0].time) / BUCKET_MS);
+      const clampedBucketIndex = Math.min(relativeBucketOffset, index.length - 1);
+      const candidateBucket = index[Math.max(0, clampedBucketIndex)];
+      // Only use the bucket if its timestamp does not overshoot the requested time
+      if (candidateBucket && candidateBucket.time <= targetTime) {
+        matchingBucket = candidateBucket;
+      }
+    }
+
+    // If a bucket was found, use its keyframe, otherwise use binary search to get one.
+    let kfIndex = matchingBucket?.kfIndex ?? upperBoundKF(keyframes, targetTime) - 1;
+    kfIndex = Math.max(0, Math.min(kfIndex, keyframes.length - 1));
+    const baseKeyframe = keyframes[kfIndex];
+    let state = cloneState(baseKeyframe.state);
+
+    // Check if bucket event pointer or keyframe event pointer is later, start from there.
+    const startingIndexFromKF = baseKeyframe.eventIndex ?? 0;
+    const startingIndexFromBucket = matchingBucket?.eventIndex ?? startingIndexFromKF;
+    let i = Math.max(startingIndexFromKF, startingIndexFromBucket);
+    // Apply events until targetTime
+    for (; i < events.length && (events[i].time ?? Number.POSITIVE_INFINITY) <= targetTime; i++) {
+      state = reduce(state, events[i]);
+    }
+    return state;
+  }, [index, keyframes, events]);
+
+  /**
+   * Applies a recorded event to an in-memory snapshot without updating the UI.
+   *
+   * @param state - The baseline state to mutate.
+   * @param event - Event to apply to the snapshot.
+   * @returns Updated snapshot with the event incorporated.
+   *
+   * Notes:
+   * - This function only updates internal state, no UI changes.
+   * - Only used for seeking.
+   */
+  function reduce(state: GlobalEditorState, event: RecordedEvent): GlobalEditorState {
+    // Rehydrate document state by applying the recorded transaction
+    if (event.kind === "transaction" && event.transaction && event.transaction.changes) {
+      // Determine which file this transaction applies to
+      const targetFileName = event.fileName ?? state.activeFile.fileName;
+
+      // Get current file state
+      const fallbackFile = state.files.get(targetFileName);
+      const currentFile: File = fallbackFile ?? {
+        fileName: targetFileName,
+        content: state.activeFile.fileName === targetFileName ? state.activeFile.content : EditorState.create(),
+      };
+      const currentEditorState = currentFile.content ?? EditorState.create();
+
+      const snapshotText = event.docSnapshot;
+      let updatedEditorState: EditorState;
+      if (snapshotText !== undefined) {
+        const replaceAll = { from: 0, to: currentEditorState.doc.length, insert: snapshotText } as const;
+        updatedEditorState = currentEditorState.update({ changes: replaceAll }).state;
+      }
+      else {
+        const changes = event.transaction.changes;
+        try {
+          updatedEditorState = currentEditorState.update({ changes }).state;
+        }
+        catch {
+          const fallbackText
+            = event.transaction.state?.doc?.toString?.()
+              ?? currentEditorState.doc.toString();
+          const replaceAll = { from: 0, to: currentEditorState.doc.length, insert: fallbackText } as const;
+          updatedEditorState = currentEditorState.update({ changes: replaceAll }).state;
+        }
+      }
+
+      const updatedFile: File = {
+        fileName: targetFileName,
+        content: updatedEditorState,
+      };
+      const newFiles = new Map<string, File>(state.files);
+      newFiles.set(targetFileName, updatedFile);
+
+      // Update activeFile if this was the active file
+      const newActiveFile = targetFileName === state.activeFile.fileName
+        ? updatedFile
+        : state.activeFile;
+
+      return {
+        ...state,
+        activeFile: newActiveFile,
+        files: newFiles,
+      };
+    }
+    if (event.kind === "file-switch" && event.fileName) {
+      const existing = state.files.get(event.fileName) ?? {
+        fileName: event.fileName,
+        content: EditorState.create({ doc: "" }),
+      };
+      const newFiles = new Map<string, File>(state.files);
+      newFiles.set(existing.fileName, existing);
+
+      return {
+        ...state,
+        files: newFiles,
+        activeFile: existing,
+      };
+    }
+
+    if (event.kind === "file-create") {
+      // File was created during recording (for informational purposes during playback)
+      if (!event.fileName) {
+        throw new Error("File name is missing for file-create event");
+      }
+      const newFileContent = EditorState.create({ doc: event.fileContent ?? "" });
+      const newFileName = event.fileName;
+      const newFile: File = {
+        fileName: newFileName,
+        content: newFileContent,
+      };
+      const newFilesMap = new Map<string, File>(state.files);
+      newFilesMap.set(newFileName, newFile);
+      return {
+        ...state,
+        files: newFilesMap,
+      };
+    }
+
+    if (event.kind === "mouse" && event.mouse) {
+      return {
+        ...state,
+        mouse: event.mouse,
+      };
+    }
+    // Every event type should be handled above.
+    throw new Error(`Unknown event kind: ${event.kind}`);
+  }
+
+  /**
+   * Synchronises the live FilesManager and cursor overlay with a reconstructed snapshot.
+   *
+   * @param state - Snapshot to project into the UI.
+   */
+  const UpdateUIFromState = useCallback((state: GlobalEditorState) => {
+    if (!editorApiRef.current) {
+      return;
+    }
+    // Replace filesManager state with the computed playback snapshot to avoid stale content
+    const snapshot = new Map<string, File>();
+    state.files.forEach((file, name) => {
+      snapshot.set(name, {
+        fileName: file.fileName,
+        content: file.content,
+      });
+    });
+
+    filesManager.loadFiles(snapshot, state.activeFile.fileName);
+
+    // loadFiles already sets the editor content; ensure cursor overlay matches
+    if (state.mouse && cursorRef.current) {
+      cursorRef.current.style.left = `${state.mouse.x}px`;
+      cursorRef.current.style.top = `${state.mouse.y}px`;
       cursorRef.current.style.display = "block";
     }
+  }, [cursorRef, editorApiRef, filesManager]);
 
-    const playbackStartTime = Date.now();
-    const recordingStartTime = recordedEvents[0]?.time ?? 0;
+  /**
+   * Restores playback back to the first frame and refreshes shared state accordingly.
+   */
+  const resetToBeginning = useCallback(() => {
+    // Reset state so the next playback starts from the first frame
+    const baselineState = seek(0);
+    eventPointer.current = getNextEventIndex(0, events);
+    pausedAt.current = 0;
+    setPlaybackTime(0);
+    onPlaybackTimeChange(0);
+    UpdateUIFromState(baselineState);
+  }, [UpdateUIFromState, onPlaybackTimeChange, seek, events]);
 
-    // Start a timer to continuously update playback time
-    timerIntervalRef.current = setInterval(() => {
-      if (!playingRef.current) {
-        if (timerIntervalRef.current) {
-          clearInterval(timerIntervalRef.current);
-          timerIntervalRef.current = null;
+  /**
+   * Applies a single recorded event to the live editor and FilesManager instances.
+   *
+   * @param event - Event to replay.
+   *
+   * Notes:
+   */
+  const applyEvent = useCallback((event: RecordedEvent) => {
+    // Process current event
+    if (event.kind === "transaction" && event.transaction && event.transaction.changes && editorApiRef.current) {
+      const state = editorApiRef.current.getState();
+      if (state) {
+        const snapshotText = event.docSnapshot;
+        if (snapshotText !== undefined) {
+          const replaceAll = { from: 0, to: state.doc.length, insert: snapshotText } as const;
+          const update = state.update({ changes: replaceAll });
+          editorApiRef.current.dispatch(update);
         }
-        return;
-      }
-      const elapsedTime = Date.now() - playbackStartTime;
-      const newPlaybackTime = recordingStartTime + elapsedTime;
-      setPlaybackTime(newPlaybackTime);
-      onPlaybackTimeChange(newPlaybackTime);
-    }, 50); // Update every 50ms for smooth progress
-
-    let eventIndex = 0;
-
-    while (eventIndex < recordedEvents.length && playingRef.current) {
-      const event = recordedEvents[eventIndex];
-      const nextEvent = eventIndex < recordedEvents.length - 1 ? recordedEvents[eventIndex + 1] : null;
-      const delayToNextEvent = nextEvent ? Math.max(0, (nextEvent.time ?? 0) - (event.time ?? 0)) : 0;
-
-      // Wait for the delay to the next event
-      if (delayToNextEvent > 0) {
-        await new Promise(resolve => setTimeout(resolve, delayToNextEvent));
-      }
-
-      // Check if playback was stopped
-      if (!playingRef.current) {
-        break;
-      }
-
-      // Process current event
-      if (event.kind === "transaction" && event.transaction && event.transaction.changes && editorApiRef.current) {
-        const state = editorApiRef.current.getState();
-        if (state) {
-          const changes = event.transaction.changes as ChangeSet | ChangeSetJSON;
-
-          // check if changes is already a ChangeSet (from live recording) or ChangeSetJSON (from loaded recording)
-          let newDoc: string;
-          if (Array.isArray(changes)) {
-            // loaded recording
-            const updatedDoc = applyChangeSetJSON(state.doc, changes);
-            newDoc = updatedDoc.toString();
+        else {
+          const changes = event.transaction.changes;
+          try {
+            const update = state.update({ changes });
+            editorApiRef.current.dispatch(update);
           }
-          else {
-            // live recording
-            newDoc = changes.apply(state.doc).toString();
+          catch {
+            const fallbackText
+              = event.transaction.state?.doc?.toString?.()
+                ?? state.doc.toString();
+            const replaceAll = { from: 0, to: state.doc.length, insert: fallbackText } as const;
+            const update = state.update({ changes: replaceAll });
+            editorApiRef.current.dispatch(update);
           }
+        }
 
-          editorApiRef.current.setDoc(newDoc);
+        // Apply selection range if recorded
+        if (event.selection) {
+          editorApiRef.current.setSelection(event.selection);
+        }
+      }
+    }
+
+    if (event.kind === "file-switch" && event.fileName && editorApiRef.current) {
+      // Switch to the file during playback
+      const targetFile = filesManager.files.get(event.fileName);
+      if (targetFile) {
+        const oldState = editorApiRef.current.getState();
+        if (oldState) {
+          filesManager.selectFile(event.fileName, { skipEditorUpdate: true });
+          editorApiRef.current.setState(targetFile.content);
 
           // Apply selection range if recorded
           if (event.selection) {
@@ -204,84 +423,162 @@ export function usePlayer({
           }
         }
       }
-
-      if (event.kind === "file-switch" && event.fileName && editorApiRef.current) {
-        // Switch to the file during playback
-        const fileEntry = filesManager.files.get(event.fileName);
-        if (fileEntry) {
-          editorApiRef.current.setDoc(fileEntry.content);
-        }
-      }
-
-      if (event.kind === "file-create") {
-        // File was created during recording (for informational purposes during playback)
-        const fileName = event.fileName ?? "";
-        if (fileName) {
-          filesManager.createFile(fileName, event.fileContent ?? "");
-        }
-      }
-
-      if (event.kind === "mouse" && event.mouse && cursorRef.current) {
-        // Position cursor according to recorded coordinates (we store coords relative to editor rect)
-        // Use left/top and keep the translate(-50%,-50%) so the dot centers on the point.
-        cursorRef.current.style.left = `${event.mouse.x}px`;
-        cursorRef.current.style.top = `${event.mouse.y}px`;
-      }
-
-      eventIndex++;
     }
 
-    // Clear the timer when playback ends
-    if (timerIntervalRef.current) {
-      clearInterval(timerIntervalRef.current);
-      timerIntervalRef.current = null;
+    if (event.kind === "file-create") {
+      // File was created during recording (for informational purposes during playback)
+      const fileName = event.fileName ?? "";
+      if (fileName) {
+        filesManager.createFile(fileName, EditorState.create({ doc: event.fileContent ?? "" }), false);
+      }
     }
 
-    // Hide cursor overlay when playback ends
-    if (cursorRef.current) {
-      cursorRef.current.style.display = "none";
+    if (event.kind === "mouse" && event.mouse && cursorRef.current) {
+      // Position cursor according to recorded coordinates (we store coords relative to editor rect)
+      // Use left/top and keep the translate(-50%,-50%) so the dot centers on the point.
+      cursorRef.current.style.left = `${event.mouse.x}px`;
+      cursorRef.current.style.top = `${event.mouse.y}px`;
     }
-
-    // Stop playing flag
-    playingRef.current = false;
-    setIsPlaying(false);
-    onPlaybackStateChange(false);
-  }, [recordedEvents, filesManager, editorApiRef, initialStateRef, cursorRef, onPlaybackTimeChange, onPlaybackStateChange]);
+  }, [cursorRef, editorApiRef, filesManager]);
 
   /**
-   * Starts playback of recorded events
+   * Runs the frame-by-frame playback loop, applying events whose timestamps are in range.
+   */
+  const animationLoop = useCallback(() => {
+    if (!playingRef.current) {
+      return;
+    }
+    // Convert wall-clock time to playback time, taking pauses into account
+    const currentWallTime = performance.now();
+    const currentPlaybackTime = (currentWallTime - startingWallTime.current) * rate + pausedAt.current;
+
+    // Apply all the events up to the current playback time.
+    // since eventPointer is stored outside the function
+    // we only apply events that havent been done yet.
+    while (eventPointer.current < recordedEvents.length && recordedEvents[eventPointer.current].time! <= currentPlaybackTime) {
+      const event = recordedEvents[eventPointer.current];
+      eventPointer.current++;
+      applyEvent(event);
+    }
+
+    if (eventPointer.current >= recordedEvents.length) {
+      // Reached the end of the recording
+      // Hide cursor overlay when playback ends
+      if (cursorRef.current) {
+        cursorRef.current.style.display = "none";
+      }
+      if (recordedEvents.length > 0) {
+        const endTime = recordedEvents[recordedEvents.length - 1]?.time ?? pausedAt.current;
+        pausedAt.current = endTime;
+        setPlaybackTime(endTime);
+        onPlaybackTimeChange(endTime);
+      }
+      playingRef.current = false;
+      setIsPlaying(false);
+      onPlaybackStateChange(false);
+      return;
+    }
+
+    // Update playback time and schedule next frame
+    setPlaybackTime(currentPlaybackTime);
+    onPlaybackTimeChange(currentPlaybackTime);
+    requestAnimationFrame(animationLoop);
+  }, [applyEvent, onPlaybackStateChange, onPlaybackTimeChange, recordedEvents, rate, cursorRef]);
+
+  /**
+   * Starts playback of recorded events and starts the animation loop.
    *
-   * Sets up playback state and begins event loop.
-   * Safe to call multiple times - will be no-op if already playing.
+   * @returns Promise that resolves once playback scheduling finishes.
    */
   const play = useCallback(async () => {
-    if (!isPlaying) {
-      playingRef.current = true;
-      setIsPlaying(true);
-      onPlaybackStateChange(true);
-      await handlePlayback();
+    if (isLoadingRecording || isPlaying) {
+      return;
     }
-  }, [isPlaying, handlePlayback, onPlaybackStateChange]);
+
+    if (!editorApiRef.current) {
+      return;
+    }
+
+    if (!recordedEvents || recordedEvents.length === 0) {
+      return;
+    }
+
+    if (eventPointer.current >= recordedEvents.length) {
+      resetToBeginning();
+    }
+
+    playingRef.current = true;
+    setIsPlaying(true);
+    onPlaybackStateChange(true);
+
+    // Reset editor to initial state
+    if (initialStateRef.current && playbackTime === 0) {
+      const state = editorApiRef.current.getState();
+
+      if (state) {
+        editorApiRef.current.setState(initialStateRef.current);
+      }
+    }
+
+    // Show cursor overlay
+    if (cursorRef.current) {
+      cursorRef.current.style.display = "block";
+    }
+    startingWallTime.current = performance.now();
+    requestAnimationFrame(animationLoop);
+  }, [animationLoop, cursorRef, editorApiRef, initialStateRef, isLoadingRecording, isPlaying, onPlaybackStateChange, playbackTime, recordedEvents, resetToBeginning, startingWallTime]);
 
   /**
-   * Pauses current playback
-   *
-   * Stops event processing and cleans up timers.
-   * Can resume later by calling play() again.
+   * Pauses the playback loop and saves the current media clock.
    */
   const pause = useCallback(() => {
     playingRef.current = false;
     setIsPlaying(false);
     onPlaybackStateChange(false);
-    if (timerIntervalRef.current) {
-      clearInterval(timerIntervalRef.current);
-      timerIntervalRef.current = null;
-    }
+    const mediaNow = (performance.now() - startingWallTime.current) * rate + pausedAt.current;
+    pausedAt.current = mediaNow;
   }, [onPlaybackStateChange]);
+
+  /**
+   * Seeks to a specific time in the recording and updates the UI with that state.
+   *
+   * @param targetTime - Desired playback time in milliseconds.
+   */
+  const handleSeek = useCallback((targetTime: number) => {
+    if (recordedEvents.length === 0) {
+      return;
+    }
+    // Clamp target time to valid range
+    const minTime = recordedEvents[0]?.time ?? 0;
+    const maxTime = Math.max(...recordedEvents.map(event => event.time ?? 0));
+    const clampedTime = Math.max(minTime, Math.min(targetTime, maxTime));
+
+    // Pause playback if currently playing
+    if (playingRef.current) {
+      pause();
+    }
+
+    // Compute state at target time
+    const state = seek(clampedTime);
+
+    // Update event pointer to the first event after the seek time
+    eventPointer.current = getNextEventIndex(clampedTime, events);
+
+    // Update pausedAt to the seek time so playback can continue from here
+    pausedAt.current = clampedTime;
+
+    // Update UI from computed state (this handles all editor state updates)
+    UpdateUIFromState(state);
+
+    // Update playback time
+    setPlaybackTime(clampedTime);
+    onPlaybackTimeChange(clampedTime);
+  }, [recordedEvents, onPlaybackTimeChange, UpdateUIFromState, seek, pause, events]);
 
   return {
     play,
     pause,
+    seek: handleSeek,
     isPlaying,
     playbackTime,
   };

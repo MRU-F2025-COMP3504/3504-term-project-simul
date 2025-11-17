@@ -31,7 +31,7 @@ export function useSaveRecording({ recordedEvents, filesManager, initialStateRef
       // convert the Map to a serializable object
       const filesObject: Record<string, { name: string; content: string }> = {};
       for (const [fileName, fileData] of filesManager.files) {
-        filesObject[fileName] = fileData;
+        filesObject[fileName] = { name: fileData.fileName, content: fileData.content.doc.toString() };
       }
 
       // serialize the events client side before sending to server

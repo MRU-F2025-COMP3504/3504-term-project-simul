@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { delay, formatDisplayTime } from "~/lib/coding-session/time";
+import { formatDisplayTime } from "~/lib/coding-session/time";
 
 describe("formatDisplayTime", () => {
   // Test seconds, no hours
@@ -49,39 +49,5 @@ describe("formatDisplayTime", () => {
   it("should not show hours for times under one hour", () => {
     const result = formatDisplayTime(3599000); // 3599000ms = 3599s = 59m 59s
     expect(result).toBe("59:59");
-  });
-});
-
-describe("delay", () => {
-  // Test that delay actually waits the specified time
-  it("should delay execution for specified milliseconds", async () => {
-    const startTime = Date.now();
-    await delay(100);
-    const endTime = Date.now();
-
-    const elapsed = endTime - startTime;
-    // Allow small timing variance due to JS event loop
-    expect(elapsed).toBeGreaterThanOrEqual(95);
-    expect(elapsed).toBeLessThan(200);
-  });
-
-  // Test that delay returns a promise (for async/await usage)
-  it("should return a promise", () => {
-    const result = delay(10);
-    expect(result).toBeInstanceOf(Promise);
-  });
-
-  // Test that the promise resolves after the delay completes
-  it("should resolve after delay completes", async () => {
-    let resolved = false;
-    const promise = delay(50).then(() => {
-      resolved = true;
-    });
-
-    // Should not be resolved immediately
-    expect(resolved).toBe(false);
-    await promise;
-    // Should be resolved after awaiting
-    expect(resolved).toBe(true);
   });
 });

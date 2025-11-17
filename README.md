@@ -16,14 +16,15 @@ This bug reporting guide is based off of Mozilla's [Bug Writing Guidelines](http
 4. Describe the expected vs. actual result of your actions
 
 Current known bugs are already listed and updated in the GitHub Issues page. 
+
 ## Communication Platform
 
-Our communication will take place over Discord.
+Our communication will take place over [Discord](https://discord.gg/v4JCjR7dKk).
 
 ## Google Drive
 
 Our documentation is found on
-[Google Drive](https://drive.google.com/drive/u/0/folders/1hB-eFmx1e0aI7ZiNub_wzKqkfgIw4sTE)
+[Google Drive](https://drive.google.com/drive/u/0/folders/1hB-eFmx1e0aI7ZiNub_wzKqkfgIw4sTE).
 
 ## Getting Started
 
@@ -31,7 +32,7 @@ Our documentation is found on
 
 Before getting started, make sure you have the following installed on your system:
 
-- **Node.js** (v18 or higher)
+- **Node.js** (v20 or higher)
 - **pnpm** (v8 or higher) - install via `npm install -g pnpm`
 - **Docker** - needed to run PostgreSQL (install from [docker.com](https://www.docker.com/))
 
@@ -77,20 +78,6 @@ Create a `.env` file in the root directory with the following variables. You can
 
 3. **Access the application:**
    Open [http://localhost:3000](http://localhost:3000) in your browser to see the application.
-
-### Running Tests Locally
-
-To run end-to-end tests locally using Playwright, you'll need to install the browser dependencies:
-
-```bash
-pnpm exec playwright install
-```
-
-Then run the tests with:
-
-```bash
-pnpm test:e2e
-```
 
 ### Using Nix (Optional)
 
