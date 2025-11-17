@@ -5,9 +5,9 @@ The goal here isn’t to teach you _everything_, but to give you a clear and com
 ## Before You Start
 
 1. **Make sure you can run the project locally.**
-   - Read the steps in `README.md`.
+   - Read the steps in `README.md`, and the files in`docs/`.
    - Install the project with `pnpm install`.
-   - Run the app with `pnpm dev`.
+   - Run the app with `pnpm dev` for development and `pnpm build` for production.
 
 2. **Get your environment configured.**
    - Copy `.env.example` to `.env.local` and fill in as much as you can.
@@ -84,6 +84,27 @@ Once you’re ready for review:
 
 If you’re not finished but want feedback, create a **Draft PR**.
 
+## Running Tests Locally
+
+To run end-to-end tests locally using Playwright, you'll need to install the browser dependencies:
+
+```bash
+pnpm exec playwright install
+```
+
+Then run the tests with:
+
+```bash
+pnpm test:e2e
+```
+To run unit tests using Vitest, run:
+
+```bash
+pnpm test
+```
+For more information on testing, such as information on test structure, configuration, and continuous integrations, please refer to the [testing docs](docs/testing.md)
+
+
 ## Creating and Working With Issues
 
 - If you see something wrong, confusing, or missing: **open an issue**.
@@ -126,3 +147,10 @@ When you submit a PR:
 ## Documentation
 
 For more detailed information on specific parts of the project, check out the `docs/` folder.
+
+## Sandboxed Code Execution (WIP)
+
+> Note: This part of the markdown is isolated to only relate to the `feat/piston` branch.
+
+After running `git fetch`, if needed, and then `git checkout feat/piston` the `docker-compose.yml` file should be updated to run a containerized Piston server which deals with code execution. The tests are a bit different so the starting code will reflect this change. 
+
