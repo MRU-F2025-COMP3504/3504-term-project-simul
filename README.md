@@ -1,4 +1,5 @@
 # Simul
+Currently a beta release: [**v1.0.0**](https://github.com/MRU-F2025-COMP3504/3504-term-project-simul/releases/tag/v1.0.0).
 
 ## Communication Platform
 
