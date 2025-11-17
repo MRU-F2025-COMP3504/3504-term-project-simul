@@ -156,7 +156,7 @@ After running `git fetch`, if needed, and then `git checkout feat/piston` the `d
 
 Your machine must have access to the Linux kernel. Most up to date Linux machines should be using `cgroup v2`. Check this by running the command `stat -fc %T /sys/fs/cgroup/` which should give you something like `cgroup2fs`. If not ask in the Discord since you will most likely update the kernel and/or need to edit the GRUB config file located in `/etc/default/grub` by adding a command that forces the kernel to use `cgroup v2`. 
 
-If you are using Windows make sure you have WSL 2 (preferabbly with Ubuntu 22.04 LTS as the distro of choice). Then place the `.wslconfig` file in `C:\Users\<yourUserName>`. Make sure to restart WSL after this to update it with the config file. 
+If you are using Windows make sure you have WSL 2 (preferably with Ubuntu 22.04 LTS as the distro of choice). Then place the `.wslconfig` file in `C:\Users\<yourUserName>`. Make sure to restart WSL after this to update it with the config file. 
 
 After that just run the `pnpm dev` command and you should be able to see all the runtimes available to download at `http://localhost:2000/api/v2/packages` in JSON format. 
 
