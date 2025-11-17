@@ -5,9 +5,9 @@ The goal here isn’t to teach you _everything_, but to give you a clear and com
 ## Before You Start
 
 1. **Make sure you can run the project locally.**
-   - Read the steps in `README.md`.
+   - Read the steps in `README.md`, and the files in `docs/`.
    - Install the project with `pnpm install`.
-   - Run the app with `pnpm dev`.
+   - Run the app with `pnpm dev` for development and `pnpm build` for production.
 
 2. **Get your environment configured.**
    - Copy `.env.example` to `.env.local` and fill in as much as you can.
@@ -84,6 +84,27 @@ Once you’re ready for review:
 
 If you’re not finished but want feedback, create a **Draft PR**.
 
+## Running Tests Locally
+
+To run end-to-end tests locally using Playwright, you'll need to install the browser dependencies:
+
+```bash
+pnpm exec playwright install
+```
+
+Then run the tests with:
+
+```bash
+pnpm test:e2e
+```
+To run unit tests using Vitest, run:
+
+```bash
+pnpm test
+```
+For more information on testing, such as information on test structure, configuration, and continuous integrations, please refer to the [testing docs](docs/testing.md).
+
+
 ## Creating and Working With Issues
 
 - If you see something wrong, confusing, or missing: **open an issue**.
@@ -126,3 +147,43 @@ When you submit a PR:
 ## Documentation
 
 For more detailed information on specific parts of the project, check out the `docs/` folder.
+
+## Sandboxed Code Execution (WIP)
+
+> Note: This part of the markdown is isolated to only relate to the `feat/piston` branch.
+
+After running `git fetch`, if needed, and then `git checkout feat/piston` the `docker-compose.yml` file should be updated to run a containerized Piston server which deals with code execution. The tests are a bit different so the starting code will reflect this change. 
+
+Your machine must have access to the Linux kernel. Most up to date Linux machines should be using `cgroup v2`. Check this by running the command `stat -fc %T /sys/fs/cgroup/` which should give you something like `cgroup2fs`. If not ask in the Discord since you will most likely update the kernel and/or need to edit the GRUB config file located in `/etc/default/grub` by adding a command that forces the kernel to use `cgroup v2`. 
+
+If you are using Windows make sure you have WSL 2 (preferably with Ubuntu 22.04 LTS as the distro of choice). Then place the `.wslconfig` file in `C:\Users\<yourUserName>`. Make sure to restart WSL after this to update it with the config file. 
+
+After that just run the `pnpm dev` command and you should be able to see all the runtimes available to download at `http://localhost:2000/api/v2/packages` in JSON format. 
+
+Install the necessary runtimes (just Node 20.11.1 for now) with a POST request to `http://localhost:2000/api/v2/packages`. Use Postman if you have experience with it, if not just run the following `curl` command: 
+
+### Linux
+```bash
+curl -X POST 'http://localhost:2000/api/v2/packages' -H 'Content-Type: application/json' -d '{"language":"node","version":"20.11.1"}'
+```
+### Windows (PowerShell)
+```bash
+Invoke-RestMethod -Uri "http://localhost:2000/api/v2/packages" -Method POST -ContentType "application/json" -Body '{"language":"node","version":"20.11.1"}'
+```
+
+Check the installed runtimes at `http://localhost:2000/api/v2/runtimes`. Test out the Two Sum problem with this code in the editor: 
+
+```JS
+function twoSum(nums, target) {
+  const seen = {};
+  for (let i = 0; i < nums.length; i++) {
+    const complement = target - nums[i];
+    if (seen.hasOwnProperty(complement)) {
+      return [seen[complement], i];
+    }
+    seen[nums[i]] = i;
+  }
+  return [];
+}
+```
+Be aware that some known bugs exist (such as overrunning on the time limit during playback and not being able to scrub through the playthrough) but this is due to this being branched off before `feat/scrub` was merged in. 
