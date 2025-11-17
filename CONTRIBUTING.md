@@ -186,4 +186,4 @@ function twoSum(nums, target) {
   return [];
 }
 ```
-Be aware that some known bugs exist (such as overunning on the time limit during playback and not being able to  scrub through the playthrough) but this is due to this being branched off before `feat/scrub` was merged in. 
+Be aware that some known bugs exist (such as overrunning on the time limit during playback and not being able to scrub through the playthrough) but this is due to this being branched off before `feat/scrub` was merged in. 
