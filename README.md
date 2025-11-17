@@ -1,6 +1,21 @@
 # Simul
-Currently a beta release: [**v1.0.0**](https://github.com/MRU-F2025-COMP3504/3504-term-project-simul/releases/tag/v1.0.0).
 
+Currently a beta release (**v1.0.0**). Find it under our [GitHub Releases](https://github.com/MRU-F2025-COMP3504/3504-term-project-simul/releases).
+
+Simul aims to make learning programming more interactive. Instructors can upload their coding problme walkthroughs and students can access these walkthroughs and jump in whenever they want to play around with the code. To setup the project locally jump to [Getting Started](#getting-started). If you are a developer looking to be a potential contributor checkout our [contributor guidelines](CONTRIBUTING.md). 
+
+## How to Use Simul
+Login with your GitHub account and select your role; student (incomplete) and instructor. Since the student role is a work in process we recommend sticking just to using the instructor role. Start a recording as you work through a problem and then save it. Reload the page to see the new recording. "Play" the recording or scrub through the timeline, pause when needed, and edit the code. At any point you can submit the code to see if it passes the tests (sandboxed code is a WIP; check out our [Sandboxed Code Execution (WIP)](CONTRIBUTING.md#sandboxed-code-execution-wip) section in [CONTRIBUTING.MD](CONTRIBUTING.md)).
+
+## Report a Bug
+This bug reporting guide is based off of Mozilla's [Bug Writing Guidelines](https://bugzilla.mozilla.org/page.cgi?id=bug-writing.html): 
+
+1. Open up a new GitHub Issue with the `Bug` tag
+2. Indicate reproducability of the bug (consistently, ocassionally, not at all)
+3. If reproducible list the steps taken alongside the intent of the step
+4. Describe the expected vs. actual result of your actions
+
+Current known bugs are already listed and updated in the GitHub Issues page. 
 ## Communication Platform
 
 Our communication will take place over Discord.
