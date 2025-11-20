@@ -25,11 +25,6 @@ export type CreateRecordingDataParams = {
 export function createRecordingData(params: CreateRecordingDataParams): RecordingData {
   const { title, problem, recordedEvents, initialCode, files, activeFile, instructorId } = params;
 
-  const filesObject: Record<string, string> = {};
-  for (const [fileName, fileData] of Object.entries(files)) {
-    filesObject[fileName] = fileData.content;
-  }
-
   const duration = totalDuration(recordedEvents);
 
   return {
@@ -37,7 +32,7 @@ export function createRecordingData(params: CreateRecordingDataParams): Recordin
     title,
     problem,
     initialCode,
-    files: filesObject,
+    files, // files are already in the correct format: Record<string, { name: string; content: string }>
     activeFile,
     events: recordedEvents,
     metadata: {

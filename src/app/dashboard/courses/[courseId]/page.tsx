@@ -10,97 +10,8 @@ import {
   CardHeader,
   CardTitle,
 } from "~/components/ui/card";
+import { getMockCourseById } from "~/lib/mock-data/courses";
 import { formatDate } from "~/lib/utils";
-
-// Mock data
-// Courses: course_id, title, description, thumbnail_url, created_by, created_at, updated_at
-// Lessons: lesson_id, course_id, title, order_index, created_at
-const MOCK_COURSES = {
-  "intro-javascript": {
-    course_id: "intro-javascript",
-    title: "Introduction to JavaScript",
-    description: "Learn the fundamentals of JavaScript programming. This course covers everything from basic syntax to advanced concepts like closures and async programming. Perfect for beginners who want to start their web development journey.",
-    thumbnail_url: null,
-    created_by: "user-1",
-    instructor_name: "Dr. Sarah Johnson",
-    estimated_hours: 8,
-    tags: ["JavaScript", "Programming", "Web Development", "Beginner"],
-    created_at: new Date("2025-01-01"),
-    updated_at: new Date("2025-10-15"),
-    lessons: [
-      {
-        lesson_id: "lesson-1",
-        course_id: "intro-javascript",
-        title: "Your First Program",
-        order_index: 1,
-        created_at: new Date("2025-01-01"),
-      },
-      {
-        lesson_id: "lesson-2",
-        course_id: "intro-javascript",
-        title: "Variables and Data Types",
-        order_index: 2,
-        created_at: new Date("2025-01-05"),
-      },
-      {
-        lesson_id: "lesson-3",
-        course_id: "intro-javascript",
-        title: "If Statements",
-        order_index: 3,
-        created_at: new Date("2025-01-10"),
-      },
-      {
-        lesson_id: "lesson-4",
-        course_id: "intro-javascript",
-        title: "Loops",
-        order_index: 4,
-        created_at: new Date("2025-01-15"),
-      },
-      {
-        lesson_id: "lesson-5",
-        course_id: "intro-javascript",
-        title: "Functions",
-        order_index: 5,
-        created_at: new Date("2025-01-20"),
-      },
-    ],
-  },
-  "web-development": {
-    course_id: "web-development",
-    title: "Web Development Basics",
-    description: "Build your first website with HTML, CSS, and JavaScript. This comprehensive course teaches you the three core technologies that power the modern web.",
-    thumbnail_url: null,
-    created_by: "user-1",
-    instructor_name: "Prof. Michael Chen",
-    estimated_hours: 6,
-    tags: ["HTML", "CSS", "JavaScript", "Web Development"],
-    created_at: new Date("2025-01-01"),
-    updated_at: new Date("2025-09-20"),
-    lessons: [
-      {
-        lesson_id: "lesson-6",
-        course_id: "web-development",
-        title: "HTML Basics",
-        order_index: 1,
-        created_at: new Date("2025-01-01"),
-      },
-      {
-        lesson_id: "lesson-7",
-        course_id: "web-development",
-        title: "CSS Styling",
-        order_index: 2,
-        created_at: new Date("2025-01-08"),
-      },
-      {
-        lesson_id: "lesson-8",
-        course_id: "web-development",
-        title: "JavaScript and the DOM",
-        order_index: 3,
-        created_at: new Date("2025-01-15"),
-      },
-    ],
-  },
-};
 
 type CourseViewPageProps = {
   params: Promise<{
@@ -132,7 +43,7 @@ function CourseDetailRow({
 
 export default async function CourseViewPage({ params }: CourseViewPageProps) {
   const { courseId } = await params;
-  const course = MOCK_COURSES[courseId as keyof typeof MOCK_COURSES];
+  const course = getMockCourseById(courseId);
 
   if (!course) {
     notFound();
@@ -195,7 +106,7 @@ export default async function CourseViewPage({ params }: CourseViewPageProps) {
                 <CourseDetailRow
                   icon={BookOpen}
                   label="Lessons"
-                  value={`${course.lessons.length} lessons`}
+                  value={`${course.lessons?.length ?? 0} lessons`}
                 />
                 <CourseDetailRow
                   icon={Clock}
@@ -235,7 +146,7 @@ export default async function CourseViewPage({ params }: CourseViewPageProps) {
         {/* Right: Lessons List */}
         <div className="space-y-4">
           <div className="space-y-3">
-            {course.lessons.map(lesson => (
+            {course.lessons?.map(lesson => (
               <Card
                 key={lesson.lesson_id}
                 className={`

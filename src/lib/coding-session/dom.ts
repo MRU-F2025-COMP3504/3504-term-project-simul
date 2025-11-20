@@ -30,38 +30,3 @@ export function positionWithin(
     y: clientY - rect.top,
   };
 }
-
-/**
- * Check if a point is within an element's bounds
- *
- * @param element - The container element
- * @param clientX - Absolute X coordinate
- * @param clientY - Absolute Y coordinate
- * @returns true if the point is within the element, false otherwise
- */
-export function isPointWithin(
-  element: HTMLElement,
-  clientX: number,
-  clientY: number,
-): boolean {
-  const rect = element.getBoundingClientRect();
-  return (
-    clientX >= rect.left
-    && clientX <= rect.right
-    && clientY >= rect.top
-    && clientY <= rect.bottom
-  );
-}
-
-/**
- * Get the distance between two points
- *
- * @param x1 - First point X coordinate
- * @param y1 - First point Y coordinate
- * @param x2 - Second point X coordinate
- * @param y2 - Second point Y coordinate
- * @returns Euclidean distance between the two points
- */
-export function distance(x1: number, y1: number, x2: number, y2: number): number {
-  return Math.sqrt((x2 - x1) ** 2 + (y2 - y1) ** 2);
-}

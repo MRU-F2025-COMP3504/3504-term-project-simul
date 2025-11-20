@@ -1,11 +1,11 @@
 import { Plus } from "lucide-react";
 
-import type { FileEntry } from "~/types/coding-session";
+import type { File } from "~/types/coding-session";
 
 import { Button } from "~/components/ui/button";
 
 export type FileSidebarProps = {
-  files: Map<string, FileEntry>;
+  files: Map<string, File>;
   activeFile: string;
   onCreateFile: (fileName: string) => void;
   onSelectFile: (fileName: string) => void;
@@ -15,7 +15,6 @@ export function FileSidebar({ files, activeFile, onCreateFile, onSelectFile }: F
   const handleCreateNewFile = () => {
     const newFileName = `file${files.size + 1}.js`;
     onCreateFile(newFileName);
-    onSelectFile(newFileName);
   };
 
   return (

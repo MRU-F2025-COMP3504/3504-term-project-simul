@@ -1,5 +1,7 @@
 import { useCallback } from "react";
 
+import type { FilesManager } from "~/hooks/coding-session/use-files-manager";
+
 import { useInstructorSession } from "~/app/dashboard/instructor/instructor-session-context";
 
 /**
@@ -15,10 +17,7 @@ export function useRecordingControls(
     startRecording: () => void;
     stopRecording: () => void;
   },
-  filesManager: {
-    activeFile: string;
-    updateFileContent: (name: string, content: string) => void;
-  },
+  filesManager: FilesManager,
 ) {
   const {
     editorApiRef,
@@ -40,8 +39,7 @@ export function useRecordingControls(
       if (editorApiRef.current) {
         const state = editorApiRef.current.getState();
         if (state) {
-          const currentContent = state.doc.toString();
-          filesManager.updateFileContent(filesManager.activeFile, currentContent);
+          filesManager.updateFileContent(filesManager.activeFile, state);
         }
       }
       recorder.stopRecording();

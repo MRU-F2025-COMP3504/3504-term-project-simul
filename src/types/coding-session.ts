@@ -1,11 +1,43 @@
-import type { Transaction } from "@codemirror/state";
+import type { EditorState, Transaction } from "@codemirror/state";
+import type { EditorView } from "@codemirror/view";
+
+export type KeyFrame = {
+  time: number; // epoch ms
+  state: GlobalEditorState;
+  eventIndex: number; // first event not yet applied in this keyframe
+};
+
+export type IndexRow = {
+  time: number; // epoch ms
+  kfIndex: number; // index into keyframes array
+  eventIndex: number; // first event that still needs to be applied after this keyframe
+};
+export type MouseState = {
+  x: number;
+  y: number;
+  type?: string;
+  button?: number;
+};
+export type File = {
+  fileName: string;
+  content: EditorState;
+};
+export type GlobalEditorState = {
+  files: Map<string, File>;
+  activeFile: File;
+  mouse: MouseState;
+};
 
 /**
- * A file entry with its name and content
+ * API reference object for external components (like playback engine)
+ * to interact with the editor directly
  */
-export type FileEntry = {
-  name: string;
-  content: string;
+export type EditorAPI = {
+  setSelection: (selection: { anchor: number; head: number }) => void;
+  getState: () => EditorState | null;
+  dispatch: (tr: Transaction) => void;
+  setState: (state: EditorState) => void;
+  getView: () => EditorView | null;
 };
 
 /**
@@ -18,8 +50,9 @@ export type RecordedEvent = {
   fileName?: string; // which file (for transactions and file ops)
   transaction?: Transaction;
   selection?: { anchor: number; head: number }; // Selection range from transaction
-  mouse?: { x: number; y: number; type?: string; button?: number };
+  mouse?: MouseState;
   fileContent?: string; // for file-create events
+  docSnapshot?: string; // Snapshot of file contents immediately after the event
 };
 
 /**
