@@ -1,7 +1,7 @@
 import { loadEnv } from "@matthew-hre/env";
 import { z } from "zod";
 
-const envSchema = {
+export const envSchema = {
   server: z.object({
     DATABASE_URL: z.url({
       protocol: /^postgres(ql)?/,

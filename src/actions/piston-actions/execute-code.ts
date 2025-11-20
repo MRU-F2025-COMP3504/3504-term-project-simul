@@ -1,98 +1,116 @@
 "use server";
 
-import { z } from "zod";
-
-import type { PistonExecuteResponse } from "~/types/piston";
-
 import { serverEnv } from "~/lib/env";
+import {
+  sanitizeErrorMessage,
+  sanitizePistonResult,
+} from "~/lib/piston-sanitization";
+import {
+  pistonInputSchema,
+  validatePistonInput,
+} from "~/lib/piston-validation";
 import { actionClient } from "~/lib/safe-action";
 
 /**
- * Execute code using Piston
+ * Calls the Piston API
+ */
+async function executePistonAPI(input: {
+  language: string;
+  version: string;
+  files: Array<{ name: string; content: string }>;
+  stdin?: string;
+  args?: string[];
+}) {
+  const response = await fetch(`${serverEnv.PISTON_URL}/api/v2/execute`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(input),
+  });
+
+  if (!response.ok) {
+    throw new Error(`Piston API error: ${response.statusText}`);
+  }
+
+  return response.json();
+}
+
+/**
+ * Execute code using Piston in a sandboxed environment
  *
- * Sends code to Piston API for execution in a sandboxed environment.
- * Supports multiple languages (JavaScript/Node.js, Python, etc.) as long as runtime is installed.
- * Can handle multiple files for complex projects.
+ * Validates input, executes code via Piston API, and sanitizes output.
+ * Supports multiple languages and files.
  *
- * @example
- * Single file:
+ * Security: All inputs are validated against allowed languages/versions.
+ * All outputs are sanitized to remove sensitive information.
+ *
+ * @see docs/actions.md for security constraints and usage examples
+ *
+ * @example Single file execution
  * ```typescript
- * const result = await executeCode({
+ * const result = await executePistonCode({
  *   language: "javascript",
  *   version: "20.11.1",
- *   files: [{ name: "main.js", content: "console.log('Hello');" }],
+ *   files: [{ name: "main.js", content: "console.log('Hello, world!');" }],
  * });
+ *
+ * if (result.serverError) {
+ *   console.error("Execution failed:", result.serverError);
+ * } else {
+ *   console.log("Output:", result.data?.output);
+ * }
  * ```
  *
- * Multiple files:
+ * @example Multi-file execution
  * ```typescript
- * const result = await executeCode({
+ * const result = await executePistonCode({
  *   language: "javascript",
  *   version: "20.11.1",
  *   files: [
  *     { name: "index.js", content: "import { greet } from './utils.js'; greet();" },
- *     { name: "utils.js", content: "export const greet = () => console.log('Hi');" }
+ *     { name: "utils.js", content: "export const greet = () => console.log('Hi');" },
  *   ],
  * });
  * ```
  */
-export const executeCode = actionClient
-  .inputSchema(
-    z.object({
-      language: z.string(),
-      version: z.string(),
-      files: z.array(
-        z.object({
-          name: z.string(),
-          content: z.string(),
-        }),
-      ).min(1, "At least one file is required"),
-    }),
-  )
+export const executePistonCode = actionClient
+  .inputSchema(pistonInputSchema)
   .action(async ({ parsedInput }) => {
-    const { language, version, files } = parsedInput;
-
     try {
-      const response = await fetch(`${serverEnv.PISTON_URL}/api/v2/execute`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          language,
-          version,
-          files,
-        }),
-      });
-
-      if (!response.ok) {
-        let errorBody: string | undefined;
-        try {
-          errorBody = await response.text();
-        }
-        catch {
-          errorBody = undefined;
-        }
+      // Validate input and check version support
+      const validation = validatePistonInput(parsedInput);
+      if (!validation.success) {
         throw new Error(
-          `Piston API error: ${response.status} ${response.statusText}${
-            errorBody ? `\nResponse body: ${errorBody}` : ""}`,
+          validation.errors?.issues[0]?.message ?? "Validation failed",
         );
       }
 
-      const data = (await response.json()) as PistonExecuteResponse;
+      // Execute via Piston API
+      const result = await executePistonAPI({
+        language: parsedInput.language,
+        version: parsedInput.version,
+        files: parsedInput.files,
+        stdin: parsedInput.stdin,
+        args: parsedInput.args,
+      });
+
+      // Sanitize the result before returning to client
+      const sanitized = sanitizePistonResult(result.run);
 
       return {
         success: true,
-        output: data.run.output,
-        stdout: data.run.stdout,
-        stderr: data.run.stderr,
-        exitCode: data.run.code,
+        output: sanitized.output,
+        stdout: sanitized.stdout,
+        stderr: sanitized.stderr,
+        exitCode: sanitized.code,
       };
     }
     catch (error) {
-      return {
-        success: false,
-        error: error instanceof Error ? error.message : "Unknown error",
-      };
+      // Sanitize error messages to prevent info leakage
+      const message
+        = error instanceof Error
+          ? sanitizeErrorMessage(error.message)
+          : "Code execution failed";
+
+      throw new Error(message);
     }
   });

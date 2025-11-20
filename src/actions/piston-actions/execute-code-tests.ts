@@ -5,56 +5,87 @@ import { z } from "zod";
 import type { PistonExecuteResponse, TestResult } from "~/types/piston";
 
 import { serverEnv } from "~/lib/env";
+import { sanitizeErrorMessage, sanitizePistonResult } from "~/lib/piston-sanitization";
+import { SUPPORTED_LANGUAGES, validatePistonInput } from "~/lib/piston-validation";
 import { actionClient } from "~/lib/safe-action";
 
 /**
  * Execute code with test cases using Piston
  *
- * Wraps user code with test case execution logic and runs it in Piston.
- * Returns structured results for each test case.
- * Supports multiple files for complex solutions.
+ * Runs user code against provided test cases and returns pass/fail results.
+ * Supports multiple files for modular code organization.
  *
- * **Note**: Currently, test results use JSON.stringify for comparison, which requires
- * exact order matching for arrays. If your problem allows results in any order,
- * ensure test cases account for this or implement custom equality logic.
+ * Security: All inputs validated, outputs sanitized, execution sandboxed.
  *
+ * @see docs/actions.md for full documentation and security constraints
  *
- * @example
+ * @example Single file with tests
  * ```typescript
  * const result = await executeWithTests({
  *   language: "javascript",
  *   version: "20.11.1",
- *   files: [{ name: "main.js", content: "function twoSum(nums, target) { ... }" }],
+ *   files: [{ name: "solution.js", content: "function twoSum(nums, target) {...}" }],
  *   functionName: "twoSum",
  *   testCases: [
- *     { name: "Test 1", input: { nums: [2,7], target: 9 }, expected: [0,1] }
+ *     { name: "Example 1", input: [[2,7,11,15], 9], expected: [0,1] },
  *   ],
+ * });
+ * ```
+ *
+ * @example Multiple files (imports/modules)
+ * ```typescript
+ * const result = await executeWithTests({
+ *   language: "javascript",
+ *   version: "20.11.1",
+ *   files: [
+ *     { name: "solution.js", content: "import { helper } from './utils.js'; ..." },
+ *     { name: "utils.js", content: "export const helper = () => {...};" },
+ *   ],
+ *   functionName: "solve",
+ *   testCases: [...],
  * });
  * ```
  */
 export const executeWithTests = actionClient
   .inputSchema(
     z.object({
-      language: z.string(),
-      version: z.string(),
-      files: z.array(
-        z.object({
-          name: z.string(),
-          content: z.string(),
-        }),
-      ).min(1, "At least one file is required"),
-      functionName: z.string().describe("Name of the function to test (e.g., 'twoSum')"),
-      testCases: z.array(
-        z.object({
-          name: z.string(),
-          input: z.array(z.any()).describe("Array of input parameters for the function"),
-          expected: z.any().describe("Expected output"),
-        }),
-      ),
+      language: z.enum(SUPPORTED_LANGUAGES),
+      version: z.string().regex(/^\d+\.\d+\.\d+$/, {
+        message: "Version must be in semver format (e.g., 20.11.1)",
+      }),
+      files: z
+        .array(
+          z.object({
+            name: z.string(),
+            content: z.string().max(100 * 1024, "File content must be less than 100KB"),
+          }),
+        )
+        .min(1, "At least one file is required"),
+      functionName: z.string().min(1, "Function name is required"),
+      testCases: z
+        .array(
+          z.object({
+            name: z.string(),
+            input: z.array(z.any()),
+            expected: z.any(),
+          }),
+        )
+        .min(1, "At least one test case is required"),
     }),
   )
   .action(async ({ parsedInput }) => {
     const { language, version, files, functionName, testCases } = parsedInput;
+
+    // Validate language and version are supported
+    const validation = validatePistonInput({
+      language,
+      version,
+      files,
+    });
+
+    if (!validation.success) {
+      throw new Error(validation.errors?.issues[0]?.message ?? "Validation failed");
+    }
 
     // Make JSON markers/delimiters unique to avoid collisions with user output
     const START_MARKER = `__SIMUL_TEST_RESULTS_START_${Date.now()}_${Math.random().toString(36)}__`;
@@ -63,7 +94,7 @@ export const executeWithTests = actionClient
     // Generate test wrapper based on language
     let testWrapper = "";
 
-    if (language === "javascript" || language === "typescript") {
+    if (language === "javascript") {
       testWrapper = `
 ${files.map(f => f.content).join("\n\n")}
 
@@ -111,7 +142,7 @@ console.log(JSON.stringify(testResults));
 console.log("${END_MARKER}");
 `;
     }
-    else if (language === "python" || language.startsWith("python")) {
+    else if (language === "python") {
       testWrapper = `
 ${files.map(f => f.content).join("\n\n")}
 
@@ -162,7 +193,7 @@ print("${END_MARKER}")
 `;
     }
     else {
-      throw new Error(`Unsupported language: ${language}. Only JavaScript, TypeScript, and Python are supported.`);
+      throw new Error(`Unsupported language: ${language}. Only JavaScript and Python are supported.`);
     }
 
     try {
@@ -176,12 +207,7 @@ print("${END_MARKER}")
           version,
           files: [
             {
-              name:
-                language === "javascript" || language === "typescript"
-                  ? "test.js"
-                  : language === "python" || language.startsWith("python")
-                    ? "main.py"
-                    : files[0].name,
+              name: language === "javascript" ? "test.js" : "main.py",
               content: testWrapper,
             },
           ],
@@ -203,6 +229,9 @@ print("${END_MARKER}")
 
       const data = (await response.json()) as PistonExecuteResponse;
 
+      // Sanitize the output before parsing
+      const sanitized = sanitizePistonResult(data.run);
+
       // Parse test results from stdout
       let testResults: TestResult[];
       try {
@@ -222,9 +251,14 @@ print("${END_MARKER}")
         testResults = JSON.parse(jsonStr) as TestResult[];
       }
       catch (error) {
+        // Sanitize error messages
+        const errorMsg
+          = sanitized.stderr
+            || sanitized.output
+            || `Failed to parse test results: ${error instanceof Error ? error.message : String(error)}`;
         return {
           success: false,
-          error: data.run.stderr || data.run.output || `Failed to parse test results: ${error instanceof Error ? error.message : String(error)}`,
+          error: sanitizeErrorMessage(errorMsg),
         };
       }
 
@@ -240,9 +274,13 @@ print("${END_MARKER}")
       };
     }
     catch (error) {
+      // Sanitize error messages before returning
+      const message
+        = error instanceof Error ? sanitizeErrorMessage(error.message) : "Unknown error";
+
       return {
         success: false,
-        error: error instanceof Error ? error.message : "Unknown error",
+        error: message,
       };
     }
   });
