@@ -12,7 +12,7 @@ Steps to Use Simul:
 1. Login with GitHub
 2. Select Role (WIP; Only instructor role works)
 3. Go to Courses > Select a course > Enroll in course > Start a lesson (WIP; Lessons page is incomplete)
-4. Go to Studio > Start a recording > Edit code > Stop a recording > Play and edit previous recordings
+4. Go to Studio > Start a recording > Edit code > Save a recording > Play and edit previous recordings
 
 ## Report a Bug
 This bug reporting guide is based off of Mozilla's [Bug Writing Guidelines](https://bugzilla.mozilla.org/page.cgi?id=bug-writing.html): 
