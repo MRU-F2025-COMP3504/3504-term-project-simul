@@ -7,6 +7,13 @@ Simul aims to make learning programming more interactive. Instructors can upload
 ## How to Use Simul
 Login with your GitHub account and select your role; student (incomplete) and instructor. Since the student role is a work in process we recommend sticking just to using the instructor role. Start a recording as you work through a problem and then save it. Reload the page to see the new recording. "Play" the recording or scrub through the timeline, pause when needed, and edit the code. At any point you can submit the code to see if it passes the tests (sandboxed code is a WIP; check out our [Sandboxed Code Execution (WIP)](CONTRIBUTING.md#sandboxed-code-execution-wip) section in [CONTRIBUTING.MD](CONTRIBUTING.md)).
 
+Steps to Use Simul: 
+
+1. Login with GitHub
+2. Select Role (WIP; Only instructor role works)
+3. Go to Courses > Select a course > Enroll in course > Start a lesson (WIP; Lessons page is incomplete)
+4. Go to Studio > Start a recording > Edit code > Stop a recording > Play and edit previous recordings
+
 ## Report a Bug
 This bug reporting guide is based off of Mozilla's [Bug Writing Guidelines](https://bugzilla.mozilla.org/page.cgi?id=bug-writing.html): 
 
