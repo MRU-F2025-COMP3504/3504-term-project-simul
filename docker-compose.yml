@@ -18,10 +18,10 @@ services:
     container_name: simul-piston-api
     restart: always
     privileged: true
-    environment:
-      - MAX_CPU=2
-      - MAX_MEMORY=512m
-      - MAX_TIMEOUT=10
+    # environment:
+    #   - MAX_CPU=2
+    #   - MAX_MEMORY=512m
+    #   - MAX_TIMEOUT=10
     ports:
       - "${PISTON_PORT}:2000"
     volumes:

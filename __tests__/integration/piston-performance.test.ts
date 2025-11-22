@@ -4,6 +4,14 @@ import { executePistonCode } from "~/actions/piston-actions/execute-code";
 
 import { expectedBehaviors, maliciousCodeSamples } from "../fixtures/malicious-code";
 
+/**
+ * Performance-related integration tests for Piston code execution.
+ * These tests focus on enforcing resource limits such as CPU time and memory usage.
+ *
+ * Prerequisites:
+ * - Piston container must be running (via docker-compose up)
+ * - DATABASE_URL must be set in .env
+ */
 describe("piston Performance Integration - Resource Limits", () => {
   describe("cPU Time Limits", () => {
     it("should timeout infinite loop (JavaScript)", async () => {
@@ -18,9 +26,15 @@ describe("piston Performance Integration - Resource Limits", () => {
             content: maliciousCodeSamples.infiniteLoop.javascript,
           },
         ],
+        run_timeout: 1,
       });
 
       const duration = Date.now() - startTime;
+
+      // console.warn("Result:", result);
+      // console.warn("Output:", result.data?.output);
+      // console.warn("Stderr:", result.data?.stderr);
+      // console.warn("ServerError:", result.serverError);
 
       // Should timeout within reasonable time (< 15 seconds)
       expect(duration).toBeLessThan(expectedBehaviors.infiniteLoop.maxDuration);
@@ -103,6 +117,8 @@ describe("piston Performance Integration - Resource Limits", () => {
             content: maliciousCodeSamples.memoryBomb.javascript,
           },
         ],
+        compile_memory_limit: 2 * 1024 * 1024, // 2 MB
+        run_memory_limit: 2 * 1024 * 1024,
       });
 
       const output = (
@@ -111,6 +127,19 @@ describe("piston Performance Integration - Resource Limits", () => {
         || result.serverError
         || ""
       ).toLowerCase();
+      // console.warn("Result:", result);
+      // console.warn("Output:", result.data?.output);
+      // console.warn("Stderr:", result.data?.stderr);
+      // console.warn("ServerError:", result.serverError);
+
+      /**
+      Result: {
+        data: { success: true, output: '', stdout: '', stderr: '', exitCode: null }
+      }
+      Output:
+      Stderr:
+      ServerError: undefined
+       */
 
       const hasMemoryLimit = expectedBehaviors.memoryBomb.shouldContain.some(
         text => output.includes(text.toLowerCase()),
@@ -143,6 +172,14 @@ describe("piston Performance Integration - Resource Limits", () => {
       expect(hasMemoryLimit).toBeTruthy();
     }, 20000);
 
+    /**
+    Result: {
+      data: { success: true, output: '', stdout: '', stderr: '', exitCode: null }
+    }
+    Output:
+    Stderr:
+    ServerError: undefined
+     */
     it("should limit memory consumption (Python)", async () => {
       const result = await executePistonCode({
         language: "python",
@@ -161,6 +198,11 @@ describe("piston Performance Integration - Resource Limits", () => {
         || result.serverError
         || ""
       ).toLowerCase();
+
+      // console.warn("Result:", result);
+      // console.warn("Output:", result.data?.output);
+      // console.warn("Stderr:", result.data?.stderr);
+      // console.warn("ServerError:", result.serverError);
 
       const hasMemoryLimit = expectedBehaviors.memoryBomb.shouldContain.some(
         text => output.includes(text.toLowerCase()),

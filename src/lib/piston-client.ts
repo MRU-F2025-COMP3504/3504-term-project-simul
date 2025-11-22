@@ -8,6 +8,8 @@ export type PistonExecuteInput = {
   args?: string[];
   compile_timeout?: number;
   run_timeout?: number;
+  compile_memory_limit?: number;
+  run_memory_limit?: number;
 };
 
 export type PistonExecuteResult = {

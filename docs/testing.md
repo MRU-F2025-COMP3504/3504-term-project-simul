@@ -14,6 +14,12 @@ pnpm test
 pnpm test:ui
 ```
 
+### Integration Tests (Vitest)
+
+```bash
+pnpm test:integration
+```
+
 ### E2E Tests (Playwright)
 
 ```bash
@@ -32,6 +38,7 @@ pnpm test:e2e:headed
 - `__tests__/` - All test files
   - `__tests__/e2e/` - Playwright end-to-end tests (`.spec.ts`)
   - `__tests__/lib/`, `__tests__/components/`, etc. - Unit and component tests mirroring the `src/` directory structure
+  - `__tests__/integration/` tests Piston integration (using Vitest)
   - Tests should have `.test.ts` or `.spec.ts` extension
   - Import source files using the `~/` path alias
 

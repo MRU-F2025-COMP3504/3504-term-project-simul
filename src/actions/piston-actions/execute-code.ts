@@ -20,6 +20,10 @@ async function executePistonAPI(input: {
   files: Array<{ name: string; content: string }>;
   stdin?: string;
   args?: string[];
+  compile_timeout?: number;
+  run_timeout?: number;
+  compile_memory_limit?: number;
+  run_memory_limit?: number;
 }) {
   const response = await fetch(`${serverEnv.PISTON_URL}/api/v2/execute`, {
     method: "POST",
@@ -91,6 +95,10 @@ export const executePistonCode = actionClient
         files: parsedInput.files,
         stdin: parsedInput.stdin,
         args: parsedInput.args,
+        compile_timeout: parsedInput.compile_timeout,
+        run_timeout: parsedInput.run_timeout,
+        compile_memory_limit: parsedInput.compile_memory_limit,
+        run_memory_limit: parsedInput.run_memory_limit,
       });
 
       // Sanitize the result before returning to client

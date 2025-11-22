@@ -53,6 +53,10 @@ export const pistonInputSchema = z.object({
     .min(1, "At least one file is required"),
   stdin: z.string().optional().default(""),
   args: z.array(z.string()).optional().default([]),
+  compile_timeout: z.number().optional(),
+  run_timeout: z.number().optional(),
+  compile_memory_limit: z.number().optional(),
+  run_memory_limit: z.number().optional(),
 });
 
 export type PistonInput = z.infer<typeof pistonInputSchema>;
