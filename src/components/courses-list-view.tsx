@@ -60,11 +60,11 @@ export default function CoursesListView({ courses }: CoursesListViewProps) {
         <div className="space-y-3">
           {courses.map(course => (
             <Card
-              key={course.course_id}
+              key={course.id}
               className={`
                 group cursor-pointer gap-2 transition-all
                 hover:shadow-md
-                ${selectedCourse?.course_id === course.course_id
+                ${selectedCourse?.id === course.id
               ? `border-primary ring-primary/20 ring-2`
               : ""}
               `}
@@ -82,10 +82,10 @@ export default function CoursesListView({ courses }: CoursesListViewProps) {
                     </CardTitle>
                     <CardDescription className="flex items-center gap-2 text-sm">
                       <User className="h-3 w-3" />
-                      {course.instructor_name}
+                      {course.instructorName}
                     </CardDescription>
                   </div>
-                  {selectedCourse?.course_id === course.course_id && (
+                  {selectedCourse?.id === course.id && (
                     <div className={`
                       bg-primary/10 text-primary flex h-6 w-6 shrink-0
                       items-center justify-center rounded-full text-xs
@@ -105,9 +105,9 @@ export default function CoursesListView({ courses }: CoursesListViewProps) {
                   >
                     <BookOpen className="h-3 w-3" />
                     <span>
-                      {course.lessons?.length}
+                      0
                       {" "}
-                      {course.lessons?.length === 1 ? "lesson" : "lessons"}
+                      lessons
                     </span>
                   </div>
                   <div className={`
@@ -116,7 +116,7 @@ export default function CoursesListView({ courses }: CoursesListViewProps) {
                   >
                     <Clock className="h-3 w-3" />
                     <span>
-                      {course.estimated_hours}
+                      {course.estimatedHours}
                       {" "}
                       hours
                     </span>
@@ -174,7 +174,7 @@ export default function CoursesListView({ courses }: CoursesListViewProps) {
                   </CardTitle>
                   <CardDescription className="flex items-center gap-2">
                     <User className="h-4 w-4" />
-                    {selectedCourse.instructor_name}
+                    {selectedCourse.instructorName}
                   </CardDescription>
                 </div>
                 <Button
@@ -215,22 +215,22 @@ export default function CoursesListView({ courses }: CoursesListViewProps) {
                 <CourseDetailRow
                   icon={User}
                   label="Instructor"
-                  value={selectedCourse.instructor_name}
+                  value={selectedCourse.instructorName}
                 />
                 <CourseDetailRow
                   icon={BookOpen}
                   label="Lessons"
-                  value={`${selectedCourse.lessons?.length} lessons`}
+                  value="0 lessons"
                 />
                 <CourseDetailRow
                   icon={Clock}
                   label="Duration"
-                  value={`${selectedCourse.estimated_hours} hours`}
+                  value={`${selectedCourse.estimatedHours} hours`}
                 />
                 <CourseDetailRow
                   icon={Calendar}
                   label="Last Updated"
-                  value={formatDate(selectedCourse.updated_at)}
+                  value={formatDate(selectedCourse.updatedAt)}
                 />
               </div>
 
@@ -255,7 +255,7 @@ export default function CoursesListView({ courses }: CoursesListViewProps) {
 
               <div className="pt-4">
                 <Button asChild className="w-full" size="lg">
-                  <Link href={`/dashboard/courses/${selectedCourse.course_id}`}>
+                  <Link href={`/dashboard/courses/${selectedCourse.id}`}>
                     Enroll in Course
                   </Link>
                 </Button>
@@ -282,7 +282,7 @@ export default function CoursesListView({ courses }: CoursesListViewProps) {
                     </CardTitle>
                     <CardDescription className="flex items-center gap-2">
                       <User className="h-4 w-4" />
-                      {selectedCourse.instructor_name}
+                      {selectedCourse.instructorName}
                     </CardDescription>
                   </div>
                   <Button
@@ -323,22 +323,22 @@ export default function CoursesListView({ courses }: CoursesListViewProps) {
                   <CourseDetailRow
                     icon={User}
                     label="Instructor"
-                    value={selectedCourse.instructor_name}
+                    value={selectedCourse.instructorName}
                   />
                   <CourseDetailRow
                     icon={BookOpen}
                     label="Lessons"
-                    value={`${selectedCourse.lessons?.length} lessons`}
+                    value="0 lessons"
                   />
                   <CourseDetailRow
                     icon={Clock}
                     label="Duration"
-                    value={`${selectedCourse.estimated_hours} hours`}
+                    value={`${selectedCourse.estimatedHours} hours`}
                   />
                   <CourseDetailRow
                     icon={Calendar}
                     label="Last Updated"
-                    value={formatDate(selectedCourse.updated_at)}
+                    value={formatDate(selectedCourse.updatedAt)}
                   />
                 </div>
 
@@ -364,7 +364,7 @@ export default function CoursesListView({ courses }: CoursesListViewProps) {
                 {/* Enroll Button */}
                 <div className="pt-4">
                   <Button asChild className="w-full" size="lg">
-                    <Link href={`/dashboard/courses/${selectedCourse.course_id}`}>
+                    <Link href={`/dashboard/courses/${selectedCourse.id}`}>
                       Enroll in Course
                     </Link>
                   </Button>
