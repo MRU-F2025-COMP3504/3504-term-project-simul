@@ -13,6 +13,20 @@ on:
       - "__tests__/**"
       - ".github/workflows/*.yaml"
 
+env:
+  NODE_ENV: test
+  DATABASE_URL: postgresql://postgres:postgres@localhost:5432/simul_db
+  POSTGRES_USER: postgres
+  POSTGRES_PASSWORD: postgres
+  POSTGRES_PORT: 5432
+  POSTGRES_DB: simul_db
+  PISTON_PORT: 2000
+  PISTON_URL: http://localhost:2000
+  BETTER_AUTH_SECRET: ${{ secrets.BETTER_AUTH_SECRET }}
+  BETTER_AUTH_URL: ${{ secrets.BETTER_AUTH_URL }}
+  GH_CLIENT_ID: ${{ secrets.GH_CLIENT_ID }}
+  GH_SECRET: ${{ secrets.GH_SECRET }}
+
 jobs:
   vitest:
     runs-on: ubuntu-latest
@@ -42,24 +56,21 @@ jobs:
       - name: Create .env file
         run: |
           cat > .env << EOF
-          NODE_ENV=test
-          DATABASE_URL=postgresql://postgres:postgres@localhost:5432/simul_db
-          POSTGRES_USER=postgres
-          POSTGRES_PASSWORD=postgres
-          POSTGRES_PORT=5432
-          POSTGRES_DB=simul_db
-          BETTER_AUTH_SECRET=${{ secrets.BETTER_AUTH_SECRET }}
-          BETTER_AUTH_URL=${{ secrets.BETTER_AUTH_URL }}
-          GH_CLIENT_ID=${{ secrets.GH_CLIENT_ID }}
-          GH_SECRET=${{ secrets.GH_SECRET }}
-          PISTON_PORT=2000
-          PISTON_URL=http://localhost:2000
+          NODE_ENV=${{ env.NODE_ENV }}
+          DATABASE_URL=${{ env.DATABASE_URL }}
+          POSTGRES_USER=${{ env.POSTGRES_USER }}
+          POSTGRES_PASSWORD=${{ env.POSTGRES_PASSWORD }}
+          POSTGRES_PORT=${{ env.POSTGRES_PORT }}
+          POSTGRES_DB=${{ env.POSTGRES_DB }}
+          BETTER_AUTH_SECRET=${{ env.BETTER_AUTH_SECRET }}
+          BETTER_AUTH_URL=${{ env.BETTER_AUTH_URL }}
+          GH_CLIENT_ID=${{ env.GH_CLIENT_ID }}
+          GH_SECRET=${{ env.GH_SECRET }}
+          PISTON_PORT=${{ env.PISTON_PORT }}
+          PISTON_URL=${{ env.PISTON_URL }}
           EOF
 
       - name: Start Docker services
-        env:
-          POSTGRES_PORT: 5432
-          PISTON_PORT: 2000
         run: nix develop -c docker-compose up -d
 
       - name: Wait for Piston to be ready
@@ -87,45 +98,13 @@ jobs:
 
       - name: Run database migrations
         run: nix develop -c pnpm db:push
-        env:
-          DATABASE_URL: postgresql://postgres:postgres@localhost:5432/simul_db
-          NODE_ENV: test
 
       - name: Run unit tests
         run: nix develop -c pnpm test -- --run
-        env:
-          DATABASE_URL: postgresql://postgres:postgres@localhost:5432/simul_db
-          POSTGRES_USER: postgres
-          POSTGRES_PASSWORD: postgres
-          POSTGRES_PORT: 5432
-          POSTGRES_DB: simul_db
-          BETTER_AUTH_SECRET: ${{ secrets.BETTER_AUTH_SECRET }}
-          BETTER_AUTH_URL: ${{ secrets.BETTER_AUTH_URL }}
-          GH_CLIENT_ID: ${{ secrets.GH_CLIENT_ID }}
-          GH_SECRET: ${{ secrets.GH_SECRET }}
-          PISTON_PORT: 2000
-          PISTON_URL: http://localhost:2000
-          NODE_ENV: test
 
       - name: Run integration tests
         run: nix develop -c pnpm test:integration
-        env:
-          DATABASE_URL: postgresql://postgres:postgres@localhost:5432/simul_db
-          POSTGRES_USER: postgres
-          POSTGRES_PASSWORD: postgres
-          POSTGRES_PORT: 5432
-          POSTGRES_DB: simul_db
-          BETTER_AUTH_SECRET: ${{ secrets.BETTER_AUTH_SECRET }}
-          BETTER_AUTH_URL: ${{ secrets.BETTER_AUTH_URL }}
-          GH_CLIENT_ID: ${{ secrets.GH_CLIENT_ID }}
-          GH_SECRET: ${{ secrets.GH_SECRET }}
-          PISTON_PORT: 2000
-          PISTON_URL: http://localhost:2000
-          NODE_ENV: test
 
       - name: Cleanup Docker services
-        env:
-          POSTGRES_PORT: 5432
-          PISTON_PORT: 2000
         if: always()
         run: nix develop -c docker-compose down
