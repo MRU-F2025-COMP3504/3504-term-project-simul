@@ -40,7 +40,7 @@ jobs:
         run: nix develop -c pnpm install
 
       - name: Start Docker services
-        run: docker-compose up -d
+        run: nix develop -c docker-compose up -d
 
       - name: Wait for Piston to be ready
         run: |
@@ -105,4 +105,4 @@ jobs:
 
       - name: Cleanup Docker services
         if: always()
-        run: docker-compose down
+        run: nix develop -c docker-compose down
