@@ -39,11 +39,11 @@ export function CodeMirrorEditor({
 }: CodeMirrorEditorProps) {
   const editorContainerRef = useRef<HTMLDivElement | null>(null);
 
-  const { theme } = useTheme();
+  const { theme, resolvedTheme } = useTheme();
 
   const { view, setContainer } = useCodeMirror({
     container: editorContainerRef.current,
-    theme: theme === "dark" ? "dark" : "light",
+    theme: (resolvedTheme === "dark" || theme === "dark") ? "dark" : "light",
     extensions: [
       javascript(),
       EditorState.transactionFilter.of((tr: Transaction) => {
