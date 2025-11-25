@@ -8,7 +8,7 @@
 
 - A `useMemo` walks the event list and creates two outputs:
   - **Keyframes**: snapshots created every `KF_EVERY_N` events plus the initial state. Each keyframe stores a deep-cloned `GlobalEditorState` and the index of the first event after that snapshot. Because `cloneState` rebuilds CodeMirror `EditorState` instances from plain text, these snapshots can be mutated safely.
-  - **Time buckets**: checkpoints created whenever the timeline advances by `BUCKET_MS`. Each bucket points at the most recent keyframe and records the index of the next event at that time slice. **Currently buckets just copy the event index from the active keyframe, The intention is to restore the functionality, but Sunny is scared to touch the functionality after it was broken for so long**
+  - **Time buckets**: checkpoints created whenever the timeline advances by `BUCKET_MS`. Each bucket points at the most recent keyframe and records the index of the next event at that time slice. **Currently buckets just copy the event index from the active keyframe, The intention is to restore the functionality, but Sunny is scared to touch seeking after it was broken for so long**
 - Buckets only appear once the recording crosses those 250 ms boundaries. Short segments (or early seeks) that never reach the next boundary leave the `index` array empty, so the keyframe data is used. 
 - This runs once per recording load, after that the cached arrays are used.
 
@@ -32,7 +32,7 @@ When the loop finishes, the returned `GlobalEditorState` matches the recording a
 
 - `play()` resets counters, shows the cursor overlay, and starts the `animationLoop` via `requestAnimationFrame`.
 - The loop calculates the virtual playback clock from wall time (wall time: the time on your computer), applies any events whose timestamp is now in range, and keeps the UI in sync:
-  - **Transactions** update the CodeMirror document, using `docSnapshot` when available and falling back to applying `ChangeSet`s.
+  - **Transactions** update the CodeMirror document, by applying `ChangeSet`s.
   - **File switches** trigger `filesManager.selectFile` and swap the editor state.
   - **File creation** replays the creation inside the manager so the file tab matches the original session.
   - **Mouse events** update the cursor overlay.

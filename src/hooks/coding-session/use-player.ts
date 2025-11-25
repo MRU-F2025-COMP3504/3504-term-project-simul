@@ -45,6 +45,8 @@ import { cloneState, getNextEventIndex, upperBoundKF } from "~/lib/coding-sessio
 
 import type { FilesManager } from "./use-files-manager";
 
+import { useEditorController } from "./use-editor-controller";
+
 // Time bucket size for seek indexing and lookup
 const BUCKET_MS = 250;
 
@@ -111,6 +113,7 @@ export function usePlayer({
   const pausedAt = useRef(0);
   const rate = 1;
   const eventPointer = useRef(0);
+  const editorController = useEditorController(editorApiRef);
 
   /**
    * This memo computes keyframes, index, and events for playback.
@@ -232,7 +235,7 @@ export function usePlayer({
    */
   function reduce(state: GlobalEditorState, event: RecordedEvent): GlobalEditorState {
     // Rehydrate document state by applying the recorded transaction
-    if (event.kind === "transaction" && event.transaction && event.transaction.changes) {
+    if (event.kind === "transaction") {
       // Determine which file this transaction applies to
       const targetFileName = event.fileName ?? state.activeFile.fileName;
 
@@ -244,24 +247,13 @@ export function usePlayer({
       };
       const currentEditorState = currentFile.content ?? EditorState.create();
 
-      const snapshotText = event.docSnapshot;
       let updatedEditorState: EditorState;
-      if (snapshotText !== undefined) {
-        const replaceAll = { from: 0, to: currentEditorState.doc.length, insert: snapshotText } as const;
-        updatedEditorState = currentEditorState.update({ changes: replaceAll }).state;
+      try {
+        updatedEditorState = currentEditorState.update(event.transaction!).state;
       }
-      else {
-        const changes = event.transaction.changes;
-        try {
-          updatedEditorState = currentEditorState.update({ changes }).state;
-        }
-        catch {
-          const fallbackText
-            = event.transaction.state?.doc?.toString?.()
-              ?? currentEditorState.doc.toString();
-          const replaceAll = { from: 0, to: currentEditorState.doc.length, insert: fallbackText } as const;
-          updatedEditorState = currentEditorState.update({ changes: replaceAll }).state;
-        }
+      catch (err) {
+        console.error("Error applying transaction during reduce:", err);
+        throw err;
       }
 
       const updatedFile: File = {
@@ -332,9 +324,6 @@ export function usePlayer({
    * @param state - Snapshot to project into the UI.
    */
   const UpdateUIFromState = useCallback((state: GlobalEditorState) => {
-    if (!editorApiRef.current) {
-      return;
-    }
     // Replace filesManager state with the computed playback snapshot to avoid stale content
     const snapshot = new Map<string, File>();
     state.files.forEach((file, name) => {
@@ -352,7 +341,7 @@ export function usePlayer({
       cursorRef.current.style.top = `${state.mouse.y}px`;
       cursorRef.current.style.display = "block";
     }
-  }, [cursorRef, editorApiRef, filesManager]);
+  }, [cursorRef, filesManager]);
 
   /**
    * Restores playback back to the first frame and refreshes shared state accordingly.
@@ -376,51 +365,17 @@ export function usePlayer({
    */
   const applyEvent = useCallback((event: RecordedEvent) => {
     // Process current event
-    if (event.kind === "transaction" && event.transaction && event.transaction.changes && editorApiRef.current) {
-      const state = editorApiRef.current.getState();
-      if (state) {
-        const snapshotText = event.docSnapshot;
-        if (snapshotText !== undefined) {
-          const replaceAll = { from: 0, to: state.doc.length, insert: snapshotText } as const;
-          const update = state.update({ changes: replaceAll });
-          editorApiRef.current.dispatch(update);
-        }
-        else {
-          const changes = event.transaction.changes;
-          try {
-            const update = state.update({ changes });
-            editorApiRef.current.dispatch(update);
-          }
-          catch {
-            const fallbackText
-              = event.transaction.state?.doc?.toString?.()
-                ?? state.doc.toString();
-            const replaceAll = { from: 0, to: state.doc.length, insert: fallbackText } as const;
-            const update = state.update({ changes: replaceAll });
-            editorApiRef.current.dispatch(update);
-          }
-        }
-
-        // Apply selection range if recorded
-        if (event.selection) {
-          editorApiRef.current.setSelection(event.selection);
-        }
-      }
+    if (event.kind === "transaction" && event.transaction) {
+      editorController.applyTransaction(event.transaction);
     }
 
-    if (event.kind === "file-switch" && event.fileName && editorApiRef.current) {
+    if (event.kind === "file-switch" && event.fileName) {
       // Switch to the file during playback
       const targetFile = filesManager.files.get(event.fileName);
       if (targetFile) {
-        const oldState = editorApiRef.current.getState();
+        const oldState = editorController.getEditorState();
         if (oldState) {
-          filesManager.selectFile(event.fileName, { skipEditorUpdate: true });
-          editorApiRef.current.setState(targetFile.content);
-
-          // Apply selection range if recorded
-          if (event.selection) {
-            editorApiRef.current.setSelection(event.selection);
-          }
+          filesManager.selectFile(event.fileName, { skipEditorUpdate: false });
         }
       }
     }
@@ -428,8 +383,8 @@ export function usePlayer({
     if (event.kind === "file-create") {
       // File was created during recording (for informational purposes during playback)
       const fileName = event.fileName ?? "";
-      if (fileName) {
-        filesManager.createFile(fileName, EditorState.create({ doc: event.fileContent ?? "" }), false);
+      if (fileName && event.fileContent !== undefined) {
+        filesManager.createFile(fileName, EditorState.create({ doc: event.fileContent }), false);
       }
     }
 
@@ -439,7 +394,7 @@ export function usePlayer({
       cursorRef.current.style.left = `${event.mouse.x}px`;
       cursorRef.current.style.top = `${event.mouse.y}px`;
     }
-  }, [cursorRef, editorApiRef, filesManager]);
+  }, [cursorRef, filesManager, editorController]);
 
   /**
    * Runs the frame-by-frame playback loop, applying events whose timestamps are in range.
@@ -495,10 +450,6 @@ export function usePlayer({
       return;
     }
 
-    if (!editorApiRef.current) {
-      return;
-    }
-
     if (!recordedEvents || recordedEvents.length === 0) {
       return;
     }
@@ -513,10 +464,10 @@ export function usePlayer({
 
     // Reset editor to initial state
     if (initialStateRef.current && playbackTime === 0) {
-      const state = editorApiRef.current.getState();
+      const state = editorController.getEditorState();
 
       if (state) {
-        editorApiRef.current.setState(initialStateRef.current);
+        editorController.setEditorState(initialStateRef.current);
       }
     }
 
@@ -526,7 +477,7 @@ export function usePlayer({
     }
     startingWallTime.current = performance.now();
     requestAnimationFrame(animationLoop);
-  }, [animationLoop, cursorRef, editorApiRef, initialStateRef, isLoadingRecording, isPlaying, onPlaybackStateChange, playbackTime, recordedEvents, resetToBeginning, startingWallTime]);
+  }, [animationLoop, cursorRef, initialStateRef, isLoadingRecording, isPlaying, onPlaybackStateChange, playbackTime, recordedEvents, resetToBeginning, startingWallTime, editorController]);
 
   /**
    * Pauses the playback loop and saves the current media clock.

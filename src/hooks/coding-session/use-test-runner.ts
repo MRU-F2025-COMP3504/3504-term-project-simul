@@ -40,7 +40,9 @@
 
 import { useCallback, useMemo, useState } from "react";
 
-import type { TestCase, TestResults } from "~/types/coding-session";
+import type { EditorAPI, TestCase, TestResults } from "~/types/coding-session";
+
+import { useEditorController } from "./use-editor-controller";
 
 /**
  * API returned by useTestRunner hook
@@ -65,9 +67,7 @@ type UseTestRunnerProps = {
   /** Array of test cases to execute against user code */
   testCases: TestCase[];
   /** Reference to CodeMirror editor API for extracting current code */
-  editorApiRef: React.RefObject<{
-    getState: () => { doc: { toString: () => string } } | null;
-  } | null>;
+  editorApiRef: React.RefObject<EditorAPI | null>;
   /** Callback fired when test results change (useful for analytics) */
   onResultsChange: (results: TestResults | null) => void;
 };
@@ -156,6 +156,7 @@ export function useTestRunner({
 }: UseTestRunnerProps): TestRunnerHandle {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [testResults, setTestResults] = useState<TestResults | null>(null);
+  const editorController = useEditorController(editorApiRef);
 
   /**
    * Builds a lookup map for quick test status access
@@ -189,12 +190,9 @@ export function useTestRunner({
    * Sets isSubmitting to manage loading state in UI.
    */
   const submit = useCallback(async () => {
-    if (!editorApiRef.current)
-      return;
-
     setIsSubmitting(true);
     try {
-      const state = editorApiRef.current.getState();
+      const state = editorController.getEditorState();
       if (!state) {
         setIsSubmitting(false);
         return;
@@ -229,7 +227,7 @@ export function useTestRunner({
     finally {
       setIsSubmitting(false);
     }
-  }, [testCases, editorApiRef, onResultsChange]);
+  }, [testCases, onResultsChange, editorController]);
 
   /**
    * Clears all test results
