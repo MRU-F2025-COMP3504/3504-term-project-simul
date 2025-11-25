@@ -80,6 +80,7 @@ export type ProblemExample = {
  */
 export type ProblemDefinition<TInput = any, TExpected = any> = {
   title: string;
+  functionName: string;
   description: string[];
   examples: ProblemExample[];
   constraints: string[];
@@ -90,6 +91,14 @@ export type ProblemDefinition<TInput = any, TExpected = any> = {
    * If not provided, will use JSON.stringify
    */
   renderTestInput?: (input: TInput) => string;
+  /**
+   * Function to convert test input to array of function arguments
+   * This ensures correct parameter ordering when calling the function
+   * @example
+   * // For twoSum(nums, target):
+   * renderTestArgs: (input) => [input.nums, input.target]
+   */
+  renderTestArgs: (input: TInput) => any[];
 };
 
 /**

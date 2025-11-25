@@ -13,6 +13,20 @@ on:
       - "__tests__/**"
       - ".github/workflows/*.yaml"
 
+env:
+  NODE_ENV: test
+  DATABASE_URL: postgresql://postgres:postgres@localhost:5432/simul_db
+  POSTGRES_USER: postgres
+  POSTGRES_PASSWORD: postgres
+  POSTGRES_PORT: 5432
+  POSTGRES_DB: simul_db
+  PISTON_PORT: 2000
+  PISTON_URL: http://localhost:2000
+  BETTER_AUTH_SECRET: ${{ secrets.BETTER_AUTH_SECRET }}
+  BETTER_AUTH_URL: ${{ secrets.BETTER_AUTH_URL }}
+  GH_CLIENT_ID: ${{ secrets.GH_CLIENT_ID }}
+  GH_SECRET: ${{ secrets.GH_SECRET }}
+
 jobs:
   vitest:
     runs-on: ubuntu-latest
@@ -38,5 +52,59 @@ jobs:
             node-modules-${{ runner.os }}-
       - name: pnpm install
         run: nix develop -c pnpm install
-      - name: run unit tests
+
+      - name: Create .env file
+        run: |
+          cat > .env << EOF
+          NODE_ENV=${{ env.NODE_ENV }}
+          DATABASE_URL=${{ env.DATABASE_URL }}
+          POSTGRES_USER=${{ env.POSTGRES_USER }}
+          POSTGRES_PASSWORD=${{ env.POSTGRES_PASSWORD }}
+          POSTGRES_PORT=${{ env.POSTGRES_PORT }}
+          POSTGRES_DB=${{ env.POSTGRES_DB }}
+          BETTER_AUTH_SECRET=${{ env.BETTER_AUTH_SECRET }}
+          BETTER_AUTH_URL=${{ env.BETTER_AUTH_URL }}
+          GH_CLIENT_ID=${{ env.GH_CLIENT_ID }}
+          GH_SECRET=${{ env.GH_SECRET }}
+          PISTON_PORT=${{ env.PISTON_PORT }}
+          PISTON_URL=${{ env.PISTON_URL }}
+          EOF
+
+      - name: Start Docker services
+        run: nix develop -c docker-compose up -d
+
+      - name: Wait for Piston to be ready
+        run: |
+          for i in {1..60}; do
+            if curl -f http://localhost:2000/api/v2/packages > /dev/null 2>&1; then
+              echo "Piston is ready"
+              exit 0
+            fi
+            echo "Waiting for Piston... ($i/60)"
+            sleep 1
+          done
+          echo "Piston failed to start"
+          exit 1
+
+      - name: Install Piston runtimes
+        run: |
+          curl -X POST 'http://localhost:2000/api/v2/packages' \
+            -H 'Content-Type: application/json' \
+            -d '{"language":"node","version":"20.11.1"}'
+
+          curl -X POST 'http://localhost:2000/api/v2/packages' \
+            -H 'Content-Type: application/json' \
+            -d '{"language":"python","version":"3.10.0"}'
+
+      - name: Run database migrations
+        run: nix develop -c pnpm db:push
+
+      - name: Run unit tests
         run: nix develop -c pnpm test -- --run
+
+      - name: Run integration tests
+        run: nix develop -c pnpm test:integration
+
+      - name: Cleanup Docker services
+        if: always()
+        run: nix develop -c docker-compose down

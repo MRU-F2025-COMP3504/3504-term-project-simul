@@ -4,8 +4,12 @@
   "private": true,
   "scripts": {
     "db:start": "docker-compose up db",
-    "db:stop": "docker-compose down",
-    "dev": "concurrently \"next dev --turbopack\" \"npm run db:start\"",
+    "db:stop": "docker-compose stop db",
+    "db:down": "docker-compose down db",
+    "piston:start": "docker-compose up piston",
+    "piston:stop": "docker-compose stop piston",
+    "piston:down": "docker-compose down piston",
+    "dev": "concurrently \"next dev --turbopack\" \"npm run db:start\" \"npm run piston:start\"",
     "build": "next build --turbopack",
     "start": "next start",
     "lint": "eslint",
@@ -17,7 +21,8 @@
     "test:ui": "vitest --ui",
     "test:e2e": "playwright test",
     "test:e2e:ui": "playwright test --ui",
-    "test:e2e:headed": "playwright test --headed"
+    "test:e2e:headed": "playwright test --headed",
+    "test:integration": "vitest __tests__/integration --run"
   },
   "dependencies": {
     "@codemirror/commands": "^6.9.0",
@@ -61,6 +66,7 @@
     "@types/react-dom": "^19",
     "@vitejs/plugin-react": "^5.0.4",
     "concurrently": "^9.2.1",
+    "dotenv": "^17.2.3",
     "drizzle-kit": "^0.31.5",
     "eslint": "^9",
     "eslint-config-next": "15.5.4",

@@ -42,6 +42,8 @@ import { useCallback, useMemo, useState } from "react";
 
 import type { TestCase, TestResults } from "~/types/coding-session";
 
+import { executeWithTests } from "~/actions/piston-actions";
+
 /**
  * API returned by useTestRunner hook
  */
@@ -64,6 +66,10 @@ export type TestRunnerHandle = {
 type UseTestRunnerProps = {
   /** Array of test cases to execute against user code */
   testCases: TestCase[];
+  /** Name of the function to test (e.g., "twoSum") */
+  functionName: string;
+  /** Function to convert test input to array of function arguments in correct order */
+  renderTestArgs: (input: any) => any[];
   /** Reference to CodeMirror editor API for extracting current code */
   editorApiRef: React.RefObject<{
     getState: () => { doc: { toString: () => string } } | null;
@@ -73,72 +79,80 @@ type UseTestRunnerProps = {
 };
 
 /**
- * Safe code evaluation using Web Worker or isolated context
+ * Safe code evaluation using Piston
  *
- * Executes user-provided code against each test case.
+ * Executes user-provided code against each test case using Piston API.
  * Safely handles both runtime errors and assertion failures.
  *
  * Execution Model:
- * 1. For each test case, creates a function from user code
- * 2. Calls function with test inputs (nums, target)
- * 3. Validates output against expected result
- * 4. Captures any errors with detailed context
+ * 1. Sends code and test cases to Piston server action
+ * 2. Piston executes code in sandboxed environment
+ * 3. Returns structured test results
  *
  * Error Handling:
- * - Runtime errors: Include line number and error message
+ * - Runtime errors: Include error message from Piston
  * - Invalid results: Include expected vs actual values
- * - Type errors: Caught and reported as runtime errors
+ * - Network errors: Caught and reported as execution errors
  *
- * @param code - User-submitted source code (must define twoSum function)
+ * @param code - User-submitted source code
  * @param testCases - Array of test cases with inputs and expected outputs
- * @returns TestResults with pass/fail status and details for each test
+ * @param functionName - Name of the function to test
+ * @param renderTestArgs - Function to convert input object to array of arguments
+ * @returns Promise<TestResults> with pass/fail status and details for each test
  */
-function evaluateCode(code: string, testCases: TestCase[]): TestResults {
-  const details: TestResults["details"] = [];
-  let passedCount = 0;
+async function evaluateCode(
+  code: string,
+  testCases: TestCase[],
+  functionName: string,
+  renderTestArgs: (input: any) => any[],
+): Promise<TestResults> {
+  try {
+    const result = await executeWithTests({
+      language: "javascript",
+      version: "20.11.1",
+      functionName,
+      files: [
+        {
+          name: "main.js",
+          content: code,
+        },
+      ],
+      testCases: testCases.map(tc => ({
+        name: tc.name,
+        // Use renderTestArgs to convert input to function arguments in correct order
+        // This avoids fragile Object.values() approach that depends on property order
+        input: renderTestArgs(tc.input),
+        expected: tc.expected,
+      })),
+    });
 
-  for (const testCase of testCases) {
-    try {
-      // Create a safe execution context
-      // eslint-disable-next-line no-new-func
-      const userFunction = new Function("nums", "target", code);
-      const result = userFunction(testCase.input.nums, testCase.input.target);
-
-      // Validate the result
-      const expected = [...testCase.expected].sort((a, b) => a - b);
-      const actual = Array.isArray(result) ? [...result].sort((a, b) => a - b) : null;
-
-      if (!actual || actual.length !== 2 || actual[0] !== expected[0] || actual[1] !== expected[1]) {
-        const failureMessage = `Input nums=${JSON.stringify(testCase.input.nums)} | target=${testCase.input.target} | Expected ${JSON.stringify(expected)}, got ${JSON.stringify(actual)}`;
-        details.push({
-          name: testCase.name,
+    if (!result?.data?.success || !result.data.results) {
+      // Execution failed
+      return {
+        passed: 0,
+        total: testCases.length,
+        details: testCases.map(tc => ({
+          name: tc.name,
           passed: false,
-          error: failureMessage,
-        });
-      }
-      else {
-        details.push({
-          name: testCase.name,
-          passed: true,
-        });
-        passedCount += 1;
-      }
+          error: result?.data?.error || "Code execution failed",
+        })),
+      };
     }
-    catch (error) {
-      const runtimeMessage = `Input nums=${JSON.stringify(testCase.input.nums)} | target=${testCase.input.target} | ${error instanceof Error ? error.message : String(error)}`;
-      details.push({
-        name: testCase.name,
-        passed: false,
-        error: runtimeMessage,
-      });
-    }
-  }
 
-  return {
-    passed: passedCount,
-    total: testCases.length,
-    details,
-  };
+    return result.data.results;
+  }
+  catch (error) {
+    // Network or other error
+    return {
+      passed: 0,
+      total: testCases.length,
+      details: testCases.map(tc => ({
+        name: tc.name,
+        passed: false,
+        error: error instanceof Error ? error.message : "Unknown error",
+      })),
+    };
+  }
 }
 
 /**
@@ -151,6 +165,8 @@ function evaluateCode(code: string, testCases: TestCase[]): TestResults {
  */
 export function useTestRunner({
   testCases,
+  functionName,
+  renderTestArgs,
   editorApiRef,
   onResultsChange,
 }: UseTestRunnerProps): TestRunnerHandle {
@@ -207,7 +223,7 @@ export function useTestRunner({
         return;
       }
 
-      const results = evaluateCode(code, testCases);
+      const results = await evaluateCode(code, testCases, functionName, renderTestArgs);
       setTestResults(results);
       onResultsChange(results);
     }
@@ -229,7 +245,7 @@ export function useTestRunner({
     finally {
       setIsSubmitting(false);
     }
-  }, [testCases, editorApiRef, onResultsChange]);
+  }, [testCases, functionName, renderTestArgs, editorApiRef, onResultsChange]);
 
   /**
    * Clears all test results
