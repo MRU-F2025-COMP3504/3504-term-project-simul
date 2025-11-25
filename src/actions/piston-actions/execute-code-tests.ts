@@ -235,7 +235,7 @@ print("${END_MARKER}")
       // Parse test results from stdout
       let testResults: TestResult[];
       try {
-        const stdout = data.run.stdout.trim();
+        const stdout = sanitized.stdout.trim();
 
         const startIdx = stdout.indexOf(START_MARKER);
         const endIdx = stdout.indexOf(END_MARKER);
