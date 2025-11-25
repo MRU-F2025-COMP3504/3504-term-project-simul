@@ -10,7 +10,7 @@ The goal here isn’t to teach you _everything_, but to give you a clear and com
    - Run the app with `pnpm dev` for development and `pnpm build` for production.
 
 2. **Get your environment configured.**
-   - Copy `.env.example` to `.env.local` and fill in as much as you can.
+   - Copy `.env.example` to `.env` and fill in as much as you can.
    - If you get stuck, ask in the group chat. That’s normal.
 
 ## Understanding the Work
