@@ -219,7 +219,9 @@ print("${END_MARKER}")
         try {
           errorBody = await response.text();
         }
-        catch {
+        catch (readError) {
+          // Log the error for debugging purposes
+          console.error("Failed to read response body from Piston API:", readError);
           errorBody = "(Failed to read response body)";
         }
         throw new Error(
