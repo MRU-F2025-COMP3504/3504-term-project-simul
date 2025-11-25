@@ -5,7 +5,7 @@
  * These samples are designed to test sandbox security and should only
  * be run in controlled Piston containers.
  *
- * @see __tests__/e2e/piston-security.spec.ts for usage examples
+ * @see __tests__/integration/piston-security.test.ts for usage examples
  */
 
 export const maliciousCodeSamples = {
