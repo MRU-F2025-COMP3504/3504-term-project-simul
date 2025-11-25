@@ -43,7 +43,7 @@ export function CodeMirrorEditor({
 
   const { view, setContainer } = useCodeMirror({
     container: editorContainerRef.current,
-    theme: (resolvedTheme ?? theme) === "dark" ? "dark" : "light",
+    theme: (resolvedTheme === "dark" || theme === "dark") ? "dark" : "light",
     extensions: [
       javascript(),
       EditorState.transactionFilter.of((tr: Transaction) => {
