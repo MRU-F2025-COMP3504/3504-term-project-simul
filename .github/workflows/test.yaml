@@ -40,6 +40,9 @@ jobs:
         run: nix develop -c pnpm install
 
       - name: Start Docker services
+        env:
+          POSTGRES_PORT: 5432
+          PISTON_PORT: 2000
         run: nix develop -c docker-compose up -d
 
       - name: Wait for Piston to be ready
@@ -104,5 +107,8 @@ jobs:
           NODE_ENV: test
 
       - name: Cleanup Docker services
+        env:
+          POSTGRES_PORT: 5432
+          PISTON_PORT: 2000
         if: always()
         run: nix develop -c docker-compose down
