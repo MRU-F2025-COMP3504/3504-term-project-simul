@@ -108,17 +108,17 @@ try {
   // Call the function with the input parameters
   const inputArgs = ${JSON.stringify(tc.input)};
   const result = ${functionName}(...inputArgs);
-  
+
   const expected = ${JSON.stringify(tc.expected)};
-  
+
   // Deep equality check
   const passed = JSON.stringify(result) === JSON.stringify(expected);
-  
+
   if (!passed) {
     testResults.push({
       name: ${JSON.stringify(tc.name)},
       passed: false,
-      error: \`Expected \${JSON.stringify(expected)}, got \${JSON.stringify(result)}\`
+      error: 'Expected ' + JSON.stringify(expected) + ', got ' + JSON.stringify(result)
     });
   } else {
     testResults.push({
@@ -130,7 +130,7 @@ try {
   testResults.push({
     name: ${JSON.stringify(tc.name)},
     passed: false,
-    error: error.message
+    error: (error && error.message) ? error.message : String(error)
   });
 }
 `,
@@ -193,7 +193,12 @@ print("${END_MARKER}")
 `;
     }
     else {
-      throw new Error(`Unsupported language: ${language}. Supported languages: ${SUPPORTED_LANGUAGES.join(', ')}`);
+      throw new Error(
+        `Unsupported language: ${
+          language
+        }. Supported languages: ${
+          SUPPORTED_LANGUAGES.join(", ")}`,
+      );
     }
 
     try {

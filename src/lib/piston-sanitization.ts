@@ -20,6 +20,9 @@ const SENSITIVE_PATTERNS = [
  * Sanitizes error messages by removing sensitive information
  */
 export function sanitizeErrorMessage(error: string): string {
+  if (!error)
+    return "";
+
   let sanitized = error;
 
   // Remove sensitive patterns
@@ -27,11 +30,9 @@ export function sanitizeErrorMessage(error: string): string {
     sanitized = sanitized.replace(pattern, "[REDACTED]");
   }
 
-  // Remove stack traces (they might contain file paths)
-  const firstLine = sanitized.split("\n")[0];
-  sanitized = firstLine.trim() !== "" ? firstLine : "[No error message provided]";
-
-  return sanitized;
+  // Return the first line (stack traces may contain paths). If it's empty, return empty string.
+  const firstLine = sanitized.split("\n")[0]?.trim() ?? "";
+  return firstLine;
 }
 
 /**
@@ -68,11 +69,15 @@ export function sanitizePistonResult(result: {
   code?: number;
   signal?: string | null;
 }) {
-  // For stdout, only truncate - don't sanitize (we need full output for test results)
+  // For stdout, sanitize sensitive info and then truncate (we still preserve multi-line structure)
   const sanitizeStdout = (field?: string) => {
     if (!field)
       return "";
-    const { content } = truncateOutput(field);
+    let sanitized = field;
+    for (const pattern of SENSITIVE_PATTERNS) {
+      sanitized = sanitized.replace(pattern, "[REDACTED]");
+    }
+    const { content } = truncateOutput(sanitized);
     return content;
   };
 
