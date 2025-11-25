@@ -139,7 +139,7 @@ export const registerUser = actionClient
 
 The Piston actions API lets you run code (JavaScript, Python, etc.) in a secure sandbox from your Next.js server actions. It powers coding challenge evaluation, security/resource limit enforcement, and multi-file support.
 
-Server actions can call the Piston API via a wrapper (see `src/actions/piston-actions/execute-code-tests.ts`). Input is validated with Zod, and code execution is performed in a sandboxed container.
+Server actions can call the Piston API via wrappers in `src/actions/piston-actions/`, including `execute-code.ts` for basic code execution and `execute-code-tests.ts` for code execution with test cases. Input is validated with Zod, and code execution is performed in a sandboxed container.
 
 Example:
 
