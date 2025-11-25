@@ -17,28 +17,6 @@ jobs:
   vitest:
     runs-on: ubuntu-latest
     timeout-minutes: 60
-    services:
-      db:
-        image: postgres:16
-        env:
-          POSTGRES_USER: postgres
-          POSTGRES_PASSWORD: postgres
-          POSTGRES_DB: simul_db
-        options: >-
-          --health-cmd pg_isready
-          --health-interval 10s
-          --health-timeout 5s
-          --health-retries 5
-        ports:
-          - 5432:5432
-
-      piston:
-        image: ghcr.io/engineer-man/piston
-        options: >-
-          --privileged
-        ports:
-          - 2000:2000
-
     steps:
       - uses: actions/checkout@v4
       - name: Setup Nix Cache
@@ -61,15 +39,18 @@ jobs:
       - name: pnpm install
         run: nix develop -c pnpm install
 
+      - name: Start Docker services
+        run: docker-compose up -d
+
       - name: Wait for Piston to be ready
         run: |
-          for i in {1..30}; do
+          for i in {1..60}; do
             if curl -f http://localhost:2000/api/v2/packages > /dev/null 2>&1; then
               echo "Piston is ready"
               exit 0
             fi
-            echo "Waiting for Piston... ($i/30)"
-            sleep 2
+            echo "Waiting for Piston... ($i/60)"
+            sleep 1
           done
           echo "Piston failed to start"
           exit 1
@@ -103,7 +84,7 @@ jobs:
           GH_CLIENT_ID: ${{ secrets.GH_CLIENT_ID }}
           GH_SECRET: ${{ secrets.GH_SECRET }}
           PISTON_PORT: 2000
-          PISTON_URL: ${{ secrets.PISTON_URL }}
+          PISTON_URL: http://localhost:2000
           NODE_ENV: test
 
       - name: Run integration tests
@@ -119,5 +100,9 @@ jobs:
           GH_CLIENT_ID: ${{ secrets.GH_CLIENT_ID }}
           GH_SECRET: ${{ secrets.GH_SECRET }}
           PISTON_PORT: 2000
-          PISTON_URL: ${{ secrets.PISTON_URL }}
+          PISTON_URL: http://localhost:2000
           NODE_ENV: test
+
+      - name: Cleanup Docker services
+        if: always()
+        run: docker-compose down
