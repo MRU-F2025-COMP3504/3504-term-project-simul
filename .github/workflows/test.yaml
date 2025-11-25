@@ -17,6 +17,28 @@ jobs:
   vitest:
     runs-on: ubuntu-latest
     timeout-minutes: 60
+    services:
+      db:
+        image: postgres:16
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: simul_db
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 5432:5432
+
+      piston:
+        image: ghcr.io/engineer-man/piston
+        options: >-
+          --privileged
+        ports:
+          - 2000:2000
+
     steps:
       - uses: actions/checkout@v4
       - name: Setup Nix Cache
@@ -38,12 +60,58 @@ jobs:
             node-modules-${{ runner.os }}-
       - name: pnpm install
         run: nix develop -c pnpm install
-      - name: run unit tests
+
+      - name: Wait for Piston to be ready
+        run: |
+          for i in {1..30}; do
+            if curl -f http://localhost:2000/api/v2/packages > /dev/null 2>&1; then
+              echo "Piston is ready"
+              exit 0
+            fi
+            echo "Waiting for Piston... ($i/30)"
+            sleep 2
+          done
+          echo "Piston failed to start"
+          exit 1
+
+      - name: Install Piston runtimes
+        run: |
+          curl -X POST 'http://localhost:2000/api/v2/packages' \
+            -H 'Content-Type: application/json' \
+            -d '{"language":"node","version":"20.11.1"}'
+
+          curl -X POST 'http://localhost:2000/api/v2/packages' \
+            -H 'Content-Type: application/json' \
+            -d '{"language":"python","version":"3.10.0"}'
+
+      - name: Run database migrations
+        run: nix develop -c pnpm db:push
+        env:
+          DATABASE_URL: postgresql://postgres:postgres@localhost:5432/simul_db
+          NODE_ENV: test
+
+      - name: Run unit tests
         run: nix develop -c pnpm test -- --run
         env:
-          DATABASE_URL: ${{ secrets.DATABASE_URL }}
-          POSTGRES_USER: ${{ secrets.POSTGRES_USER }}
-          POSTGRES_PASSWORD: ${{ secrets.POSTGRES_PASSWORD }}
+          DATABASE_URL: postgresql://postgres:postgres@localhost:5432/simul_db
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_PORT: 5432
+          POSTGRES_DB: simul_db
+          BETTER_AUTH_SECRET: ${{ secrets.BETTER_AUTH_SECRET }}
+          BETTER_AUTH_URL: ${{ secrets.BETTER_AUTH_URL }}
+          GH_CLIENT_ID: ${{ secrets.GH_CLIENT_ID }}
+          GH_SECRET: ${{ secrets.GH_SECRET }}
+          PISTON_PORT: 2000
+          PISTON_URL: ${{ secrets.PISTON_URL }}
+          NODE_ENV: test
+
+      - name: Run integration tests
+        run: nix develop -c pnpm test:integration
+        env:
+          DATABASE_URL: postgresql://postgres:postgres@localhost:5432/simul_db
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
           POSTGRES_PORT: 5432
           POSTGRES_DB: simul_db
           BETTER_AUTH_SECRET: ${{ secrets.BETTER_AUTH_SECRET }}
