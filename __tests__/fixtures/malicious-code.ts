@@ -307,11 +307,11 @@ export const expectedBehaviors = {
     shouldContain: ["Error", "denied", "not found"],
   },
   infiniteLoop: {
-    shouldContain: ["timeout", "killed", "exceeded", ""],
+    shouldContain: ["timeout", "killed", "exceeded"],
     maxDuration: 15000, // 15 seconds max (including overhead)
   },
   memoryBomb: {
-    shouldContain: ["memory", "killed", "limit", "heap", "Killed", "exit code 137", ""],
+    shouldContain: ["memory", "killed", "limit", "heap", "Killed", "memoryerror"],
   },
   outputFlood: {
     maxOutputSize: 10 * 1024 * 1024, // 10MB

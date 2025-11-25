@@ -68,15 +68,29 @@ export function sanitizePistonResult(result: {
   code?: number;
   signal?: string | null;
 }) {
+  // For stdout, only truncate - don't sanitize (we need full output for test results)
+  const sanitizeStdout = (field?: string) => {
+    if (!field)
+      return "";
+    const { content } = truncateOutput(field);
+    return content;
+  };
+
+  // For stderr/output, sanitize sensitive info and truncate
   const sanitizeField = (field?: string) => {
     if (!field)
       return "";
-    const { content } = truncateOutput(sanitizeErrorMessage(field));
+    // Remove sensitive patterns but keep multi-line output
+    let sanitized = field;
+    for (const pattern of SENSITIVE_PATTERNS) {
+      sanitized = sanitized.replace(pattern, "[REDACTED]");
+    }
+    const { content } = truncateOutput(sanitized);
     return content;
   };
 
   return {
-    stdout: sanitizeField(result.stdout),
+    stdout: sanitizeStdout(result.stdout),
     stderr: sanitizeField(result.stderr),
     output: sanitizeField(result.output),
     code: result.code,
