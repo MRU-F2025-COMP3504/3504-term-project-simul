@@ -40,3 +40,16 @@ jobs:
         run: nix develop -c pnpm install
       - name: run unit tests
         run: nix develop -c pnpm test -- --run
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+          POSTGRES_USER: ${{ secrets.POSTGRES_USER }}
+          POSTGRES_PASSWORD: ${{ secrets.POSTGRES_PASSWORD }}
+          POSTGRES_PORT: 5432
+          POSTGRES_DB: simul_db
+          BETTER_AUTH_SECRET: ${{ secrets.BETTER_AUTH_SECRET }}
+          BETTER_AUTH_URL: ${{ secrets.BETTER_AUTH_URL }}
+          GH_CLIENT_ID: ${{ secrets.GH_CLIENT_ID }}
+          GH_SECRET: ${{ secrets.GH_SECRET }}
+          PISTON_PORT: 2000
+          PISTON_URL: ${{ secrets.PISTON_URL }}
+          NODE_ENV: test
