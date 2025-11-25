@@ -23,15 +23,18 @@ export function useEditorController(editorApiRef: React.RefObject<EditorAPI | nu
       return state;
     }
     catch (error) {
-      throw new Error("Editor API is not available", error as Error);
+      throw new Error("Editor API is not available", { cause: error });
     }
   }, [editorApiRef]);
 
   const applyTransaction = useCallback((transaction: Transaction): void => {
     try {
       if (editorApiRef.current) {
-        const update = getEditorState()!.update(transaction);
+        const update = getEditorState().update(transaction);
         editorApiRef.current.dispatch(update);
+      }
+      else {
+        throw new Error("Editor API is not available");
       }
     }
     catch (error) {

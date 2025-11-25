@@ -174,7 +174,7 @@ export function serializeEvent(event: RecordedEvent): SerializedRecordedEvent {
     case "transaction":
       if (event.transaction) {
         baseEvent.eventData.Transaction = {
-          changes: event.transaction.changes.toJSON(),
+          changes: event.transaction.changes?.toJSON(),
           selection: event.transaction.selection?.toJSON(),
         };
       }

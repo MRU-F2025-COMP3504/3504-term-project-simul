@@ -27,7 +27,7 @@ export function useRecordingControls(
     setPlaybackTime,
     initialStateRef,
   } = useInstructorSession();
-  const editorController = useEditorController(editorApiRef); ;
+  const editorController = useEditorController(editorApiRef);
 
   const toggleRecording = useCallback(() => {
     if (!recorder.recording) {
