@@ -29,7 +29,7 @@ export function sanitizeErrorMessage(error: string): string {
 
   // Remove stack traces (they might contain file paths)
   const firstLine = sanitized.split("\n")[0];
-  sanitized = firstLine !== "" ? firstLine : sanitized;
+  sanitized = firstLine.trim() !== "" ? firstLine : "[No error message provided]";
 
   return sanitized;
 }
