@@ -193,7 +193,7 @@ print("${END_MARKER}")
 `;
     }
     else {
-      throw new Error(`Unsupported language: ${language}. Only JavaScript and Python are supported.`);
+      throw new Error(`Unsupported language: ${language}. Supported languages: ${SUPPORTED_LANGUAGES.join(', ')}`);
     }
 
     try {
