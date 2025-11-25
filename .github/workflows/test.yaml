@@ -39,6 +39,23 @@ jobs:
       - name: pnpm install
         run: nix develop -c pnpm install
 
+      - name: Create .env file
+        run: |
+          cat > .env << EOF
+          NODE_ENV=test
+          DATABASE_URL=postgresql://postgres:postgres@localhost:5432/simul_db
+          POSTGRES_USER=postgres
+          POSTGRES_PASSWORD=postgres
+          POSTGRES_PORT=5432
+          POSTGRES_DB=simul_db
+          BETTER_AUTH_SECRET=${{ secrets.BETTER_AUTH_SECRET }}
+          BETTER_AUTH_URL=${{ secrets.BETTER_AUTH_URL }}
+          GH_CLIENT_ID=${{ secrets.GH_CLIENT_ID }}
+          GH_SECRET=${{ secrets.GH_SECRET }}
+          PISTON_PORT=2000
+          PISTON_URL=http://localhost:2000
+          EOF
+
       - name: Start Docker services
         env:
           POSTGRES_PORT: 5432
