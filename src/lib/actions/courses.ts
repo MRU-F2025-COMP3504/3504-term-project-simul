@@ -1,6 +1,7 @@
 "use server";
 
 import { eq } from "drizzle-orm";
+import { revalidatePath } from "next/cache";
 import { headers } from "next/headers";
 import { z } from "zod";
 
@@ -88,6 +89,8 @@ export const createCourseAction = actionClient
         createdAt: newCourse.createdAt,
         updatedAt: newCourse.updatedAt,
       };
+
+      revalidatePath("/dashboard/instructor/courses");
 
       return { course: result };
     }
@@ -288,6 +291,8 @@ export const updateCourseAction = actionClient
         updatedAt: updatedCourse.updatedAt,
       };
 
+      revalidatePath("/dashboard/instructor/courses");
+
       return { course: result };
     }
     catch (error) {
@@ -328,6 +333,8 @@ export const deleteCourseAction = actionClient
       }
 
       await db.delete(course).where(eq(course.id, parsedInput.id));
+
+      revalidatePath("/dashboard/instructor/courses");
 
       return { success: true };
     }

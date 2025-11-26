@@ -39,9 +39,14 @@ export default async function Banner() {
                 <Link href="/dashboard/courses">Courses</Link>
               </Button>
               {session.user.role === "instructor" && (
-                <Button asChild variant="ghost" size="sm">
-                  <Link href="/dashboard/instructor">Studio</Link>
-                </Button>
+                <>
+                  <Button asChild variant="ghost" size="sm">
+                    <Link href="/dashboard/instructor/courses">My Courses</Link>
+                  </Button>
+                  <Button asChild variant="ghost" size="sm">
+                    <Link href="/dashboard/instructor">Studio</Link>
+                  </Button>
+                </>
               )}
             </nav>
           )}
