@@ -28,7 +28,7 @@ const courseFormSchema = z.object({
   description: z.string().min(1, "Description is required").max(MAX_DESCRIPTION, `Description must be at most ${MAX_DESCRIPTION} characters`),
   estimatedHours: z.coerce.number().positive("Estimated hours must be greater than 0"),
   tags: z.array(z.string()).max(MAX_TAGS, `Maximum ${MAX_TAGS} tags allowed`),
-  thumbnailUrl: z.string().url("Invalid URL format").optional().nullable(),
+  thumbnailUrl: z.url("Invalid URL format").or(z.literal("")).optional().nullable(),
 });
 
 export function CourseForm({
@@ -59,7 +59,7 @@ export function CourseForm({
     const result = courseFormSchema.safeParse({
       title: title.trim(),
       description: description.trim(),
-      estimatedHours,
+      estimatedHours: estimatedHours.trim(),
       tags,
       thumbnailUrl: thumbnailUrl.trim(),
     });

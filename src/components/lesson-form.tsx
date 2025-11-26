@@ -55,7 +55,7 @@ export function LessonForm({
   const isFormValid = useMemo(() => {
     const result = lessonFormSchema.safeParse({
       title: title.trim(),
-      recordingId: recordingId.trim(),
+      recordingId: recordingId || undefined,
     });
     return result.success;
   }, [title, recordingId]);
@@ -65,7 +65,7 @@ export function LessonForm({
 
     const formData = {
       title: title.trim(),
-      recordingId: recordingId.trim(),
+      recordingId: recordingId || undefined,
     };
 
     const validation = lessonFormSchema.safeParse(formData);
