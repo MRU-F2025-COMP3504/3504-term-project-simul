@@ -3,8 +3,12 @@
 import { ArrowLeft } from "lucide-react";
 import { useAction } from "next-safe-action/hooks";
 import Link from "next/link";
+import { redirect } from "next/navigation";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
+
+import type { CourseWithLessons } from "~/types/course";
+import type { Recording } from "~/types/recording";
 
 import { CourseDialog } from "~/components/course-dialog";
 import { LessonDialog } from "~/components/lesson-dialog";
@@ -36,8 +40,8 @@ type PageProps = {
 
 export default function CourseDetailPage({ params }: PageProps) {
   const [courseId, setCourseId] = useState<string>("");
-  const [course, setCourse] = useState<any>(null);
-  const [recordings, setRecordings] = useState<any[]>([]);
+  const [course, setCourse] = useState<CourseWithLessons | null>(null);
+  const [recordings, setRecordings] = useState<Recording[]>([]);
   const [loading, setLoading] = useState(true);
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
 
@@ -71,7 +75,12 @@ export default function CourseDetailPage({ params }: PageProps) {
         }
 
         if (recordingsResult?.data?.recordings) {
-          setRecordings(recordingsResult.data.recordings);
+          // convert createdAt strings to Date instances to match the Recording type
+          const normalizedRecordings = recordingsResult.data.recordings.map((r: any) => ({
+            ...r,
+            createdAt: r.createdAt ? new Date(r.createdAt) : r.createdAt,
+          }));
+          setRecordings(normalizedRecordings);
         }
       }
       catch (error) {
@@ -94,7 +103,7 @@ export default function CourseDetailPage({ params }: PageProps) {
     if (result?.data?.success) {
       toast.success("Course deleted successfully");
       setDeleteConfirmOpen(false);
-      window.location.href = "/dashboard/instructor/courses";
+      redirect("/dashboard/instructor/courses");
     }
     else if (result?.serverError) {
       toast.error(result.serverError);

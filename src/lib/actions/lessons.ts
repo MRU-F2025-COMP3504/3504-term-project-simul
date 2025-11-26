@@ -98,11 +98,15 @@ export const createLessonAction = actionClient
             ),
           );
 
-        for (const lessonToShift of lessonsToShift) {
-          await db
-            .update(lesson)
-            .set({ orderIndex: lessonToShift.orderIndex + 1 })
-            .where(eq(lesson.id, lessonToShift.id));
+        if (lessonsToShift.length > 0) {
+          await db.transaction(async (tx) => {
+            for (const lessonToShift of lessonsToShift) {
+              await tx
+                .update(lesson)
+                .set({ orderIndex: lessonToShift.orderIndex + 1 })
+                .where(eq(lesson.id, lessonToShift.id));
+            }
+          });
         }
       }
 
@@ -317,26 +321,26 @@ export const reorderLessonsAction = actionClient
         throw new Error("Unauthorized: You do not own this course");
       }
 
-      for (const lessonUpdate of parsedInput.lessons) {
-        const [existingLesson] = await db
-          .select()
-          .from(lesson)
-          .where(
-            and(
-              eq(lesson.id, lessonUpdate.id),
-              eq(lesson.courseId, parsedInput.courseId),
-            ),
-          );
+      const lessonsInCourse = await db
+        .select({ id: lesson.id })
+        .from(lesson)
+        .where(eq(lesson.courseId, parsedInput.courseId));
+      const lessonIdsInCourse = new Set(lessonsInCourse.map(l => l.id));
 
-        if (!existingLesson) {
+      for (const lessonUpdate of parsedInput.lessons) {
+        if (!lessonIdsInCourse.has(lessonUpdate.id)) {
           throw new Error(`Lesson ${lessonUpdate.id} not found in this course`);
         }
-
-        await db
-          .update(lesson)
-          .set({ orderIndex: lessonUpdate.orderIndex })
-          .where(eq(lesson.id, lessonUpdate.id));
       }
+
+      await db.transaction(async (tx) => {
+        for (const lessonUpdate of parsedInput.lessons) {
+          await tx
+            .update(lesson)
+            .set({ orderIndex: lessonUpdate.orderIndex })
+            .where(eq(lesson.id, lessonUpdate.id));
+        }
+      });
 
       return { success: true };
     }

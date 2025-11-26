@@ -6,6 +6,7 @@ import { toast } from "sonner";
 import { z } from "zod";
 
 import type { Lesson } from "~/types/course";
+import type { Recording } from "~/types/recording";
 
 import { Button } from "~/components/ui/button";
 import { Input } from "~/components/ui/input";
@@ -17,13 +18,6 @@ import {
   SelectValue,
 } from "~/components/ui/select";
 import { createLessonAction, updateLessonAction } from "~/lib/actions/lessons";
-
-type Recording = {
-  id: string;
-  title: string;
-  duration?: number | null;
-  createdAt: Date;
-};
 
 type LessonFormProps = {
   courseId: string;
@@ -37,7 +31,7 @@ const MAX_TITLE = 100;
 
 const lessonFormSchema = z.object({
   title: z.string().min(1, "Title is required").max(MAX_TITLE, `Title must be at most ${MAX_TITLE} characters`),
-  recordingId: z.uuid("Invalid recording ID").or(z.literal("")).optional(),
+  recordingId: z.uuid("Invalid recording ID").optional().nullable(),
 });
 
 export function LessonForm({

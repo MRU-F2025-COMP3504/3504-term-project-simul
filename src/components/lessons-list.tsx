@@ -6,6 +6,7 @@ import { useCallback, useState } from "react";
 import { toast } from "sonner";
 
 import type { Lesson } from "~/types/course";
+import type { Recording } from "~/types/recording";
 
 import { Button } from "~/components/ui/button";
 import {
@@ -34,13 +35,6 @@ import {
   linkRecordingToLessonAction,
   reorderLessonsAction,
 } from "~/lib/actions/lessons";
-
-type Recording = {
-  id: string;
-  title: string;
-  duration?: number | null;
-  createdAt: Date;
-};
 
 type LessonsListProps = {
   courseId: string;

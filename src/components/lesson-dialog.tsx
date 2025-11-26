@@ -3,6 +3,7 @@
 import { useState } from "react";
 
 import type { Lesson } from "~/types/course";
+import type { Recording } from "~/types/recording";
 
 import { Button } from "~/components/ui/button";
 import {
@@ -15,13 +16,6 @@ import {
 } from "~/components/ui/dialog";
 
 import { LessonForm } from "./lesson-form";
-
-type Recording = {
-  id: string;
-  title: string;
-  duration?: number | null;
-  createdAt: Date;
-};
 
 type LessonDialogProps = {
   courseId: string;
