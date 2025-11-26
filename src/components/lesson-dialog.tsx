@@ -27,7 +27,7 @@ type LessonDialogProps = {
   courseId: string;
   lesson?: Lesson;
   mode: "create" | "edit";
-  onSuccess?: () => void;
+  onSuccessAction?: () => void;
   recordings: Recording[];
   triggerLabel?: string;
 };
@@ -36,7 +36,7 @@ export function LessonDialog({
   courseId,
   lesson,
   mode,
-  onSuccess,
+  onSuccessAction,
   recordings,
   triggerLabel,
 }: LessonDialogProps) {
@@ -51,7 +51,7 @@ export function LessonDialog({
 
   const handleSuccess = () => {
     setOpen(false);
-    onSuccess?.();
+    onSuccessAction?.();
   };
 
   return (
@@ -73,7 +73,7 @@ export function LessonDialog({
           courseId={courseId}
           initialData={lesson}
           mode={mode}
-          onSuccess={handleSuccess}
+          onSuccessAction={handleSuccess}
           recordings={recordings}
         />
       </DialogContent>

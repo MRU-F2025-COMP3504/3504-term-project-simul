@@ -22,7 +22,7 @@ type LessonFormProps = {
   courseId: string;
   initialData?: Lesson;
   mode: "create" | "edit";
-  onSuccess?: () => void;
+  onSuccessAction?: () => void;
   recordings: Recording[];
 };
 
@@ -37,7 +37,7 @@ export function LessonForm({
   courseId,
   initialData,
   mode,
-  onSuccess,
+  onSuccessAction,
   recordings,
 }: LessonFormProps) {
   const [title, setTitle] = useState(initialData?.title || "");
@@ -87,7 +87,7 @@ export function LessonForm({
         toast.success("Lesson created successfully");
         setTitle("");
         setRecordingId("");
-        onSuccess?.();
+        onSuccessAction?.();
       }
       else if (result?.serverError) {
         toast.error(result.serverError);
@@ -100,7 +100,7 @@ export function LessonForm({
       });
       if (result?.data?.lesson) {
         toast.success("Lesson updated successfully");
-        onSuccess?.();
+        onSuccessAction?.();
       }
       else if (result?.serverError) {
         toast.error(result.serverError);

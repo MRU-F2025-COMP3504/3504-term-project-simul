@@ -38,14 +38,14 @@ type Recording = {
 type LessonsListProps = {
   courseId: string;
   lessons: Lesson[];
-  onLessonUpdated?: () => void;
+  onLessonUpdatedAction?: () => void;
   recordings: Recording[];
 };
 
 export function LessonsList({
   courseId,
   lessons,
-  onLessonUpdated,
+  onLessonUpdatedAction,
   recordings,
 }: LessonsListProps) {
   const [linkingRecordingLessonId, setLinkingRecordingLessonId] = useState<
@@ -96,13 +96,13 @@ export function LessonsList({
 
       if (result?.data?.success) {
         toast.success("Lesson moved up");
-        onLessonUpdated?.();
+        onLessonUpdatedAction?.();
       }
       else if (result?.serverError) {
         toast.error(result.serverError);
       }
     },
-    [sortedLessons, courseId, reorderAction, onLessonUpdated],
+    [sortedLessons, courseId, reorderAction, onLessonUpdatedAction],
   );
 
   const handleMoveDown = useCallback(
@@ -132,13 +132,13 @@ export function LessonsList({
 
       if (result?.data?.success) {
         toast.success("Lesson moved down");
-        onLessonUpdated?.();
+        onLessonUpdatedAction?.();
       }
       else if (result?.serverError) {
         toast.error(result.serverError);
       }
     },
-    [sortedLessons, courseId, reorderAction, onLessonUpdated],
+    [sortedLessons, courseId, reorderAction, onLessonUpdatedAction],
   );
 
   const handleDelete = useCallback(
@@ -151,13 +151,13 @@ export function LessonsList({
       if (result?.data?.success) {
         toast.success("Lesson deleted successfully");
         setDeleteConfirmLessonId(null);
-        onLessonUpdated?.();
+        onLessonUpdatedAction?.();
       }
       else if (result?.serverError) {
         toast.error(result.serverError);
       }
     },
-    [courseId, deleteAction, onLessonUpdated],
+    [courseId, deleteAction, onLessonUpdatedAction],
   );
 
   const handleLinkRecording = useCallback(
@@ -176,13 +176,13 @@ export function LessonsList({
         toast.success("Recording linked to lesson");
         setLinkingRecordingLessonId(null);
         setSelectedRecordingId("");
-        onLessonUpdated?.();
+        onLessonUpdatedAction?.();
       }
       else if (result?.serverError) {
         toast.error(result.serverError);
       }
     },
-    [linkRecordingAction, onLessonUpdated],
+    [linkRecordingAction, onLessonUpdatedAction],
   );
 
   if (sortedLessons.length === 0) {

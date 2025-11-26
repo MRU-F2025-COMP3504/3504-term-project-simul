@@ -243,7 +243,7 @@ export default function CourseDetailPage({ params }: PageProps) {
             courseId={courseId}
             mode="create"
             recordings={recordings}
-            onSuccess={handleLessonUpdated}
+            onSuccessAction={handleLessonUpdated}
           />
         </div>
 
@@ -251,7 +251,7 @@ export default function CourseDetailPage({ params }: PageProps) {
           courseId={courseId}
           lessons={course.lessons || []}
           recordings={recordings}
-          onLessonUpdated={handleLessonUpdated}
+          onLessonUpdatedAction={handleLessonUpdated}
         />
       </div>
 

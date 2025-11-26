@@ -19,14 +19,14 @@ import { CourseForm } from "./course-form";
 type CourseDialogProps = {
   mode: "create" | "edit";
   course?: Course;
-  onSuccess?: () => void;
+  onSuccessAction?: () => void;
   triggerLabel?: string;
 };
 
 export function CourseDialog({
   mode,
   course,
-  onSuccess,
+  onSuccessAction,
   triggerLabel,
 }: CourseDialogProps) {
   const [open, setOpen] = useState(false);
@@ -40,7 +40,7 @@ export function CourseDialog({
 
   const handleSuccess = () => {
     setOpen(false);
-    onSuccess?.();
+    onSuccessAction?.();
   };
 
   return (
@@ -58,7 +58,7 @@ export function CourseDialog({
         <CourseForm
           mode={mode}
           initialData={course}
-          onSuccess={handleSuccess}
+          onSuccessAction={handleSuccess}
         />
       </DialogContent>
     </Dialog>

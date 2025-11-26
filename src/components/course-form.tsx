@@ -16,7 +16,7 @@ import { createCourseAction, updateCourseAction } from "~/lib/actions/courses";
 type CourseFormProps = {
   mode: "create" | "edit";
   initialData?: Course;
-  onSuccess?: () => void;
+  onSuccessAction?: () => void;
 };
 
 const MAX_TITLE = 100;
@@ -34,7 +34,7 @@ const courseFormSchema = z.object({
 export function CourseForm({
   mode,
   initialData,
-  onSuccess,
+  onSuccessAction,
 }: CourseFormProps) {
   const [title, setTitle] = useState(initialData?.title || "");
   const [description, setDescription] = useState(initialData?.description || "");
@@ -128,7 +128,7 @@ export function CourseForm({
         setEstimatedHours("");
         setTags([]);
         setThumbnailUrl("");
-        onSuccess?.();
+        onSuccessAction?.();
       }
       else if (result?.serverError) {
         toast.error(result.serverError);
@@ -141,7 +141,7 @@ export function CourseForm({
       });
       if (result?.data?.course) {
         toast.success("Course updated successfully");
-        onSuccess?.();
+        onSuccessAction?.();
       }
       else if (result?.serverError) {
         toast.error(result.serverError);
