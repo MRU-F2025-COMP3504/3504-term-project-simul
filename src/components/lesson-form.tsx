@@ -9,6 +9,13 @@ import type { Lesson } from "~/types/course";
 
 import { Button } from "~/components/ui/button";
 import { Input } from "~/components/ui/input";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "~/components/ui/select";
 import { createLessonAction, updateLessonAction } from "~/lib/actions/lessons";
 
 type Recording = {
@@ -130,37 +137,29 @@ export function LessonForm({
       </div>
 
       <div className="space-y-2">
-        <label htmlFor="recordingId" className="block text-sm font-medium">
+        <label className="block text-sm font-medium">
           Recording
           <span className="text-muted-foreground ml-2 text-xs">(optional)</span>
         </label>
-        <select
-          className={`
-            placeholder:text-muted-foreground
-            selection:bg-primary selection:text-primary-foreground
-            dark:bg-input/30
-            border-input h-9 w-full border bg-transparent px-3 py-1 text-base
-            shadow-xs transition-[color,box-shadow] outline-none
-            focus-visible:border-ring focus-visible:ring-ring/50
-            focus-visible:ring-[3px]
-            aria-invalid:ring-destructive/20 aria-invalid:border-destructive
-            dark:aria-invalid:ring-destructive/40
-            disabled:pointer-events-none disabled:cursor-not-allowed
-            disabled:opacity-50
-            md:text-sm
-          `}
-          disabled={isLoading}
-          id="recordingId"
-          onChange={e => setRecordingId(e.target.value)}
-          value={recordingId}
-        >
-          <option value="">No recording linked</option>
-          {recordings.map(recording => (
-            <option key={recording.id} value={recording.id}>
-              {recording.title}
-            </option>
-          ))}
-        </select>
+        {recordings.length > 0
+          ? (
+              <Select value={recordingId || "none"} onValueChange={val => setRecordingId(val === "none" ? "" : val)} disabled={isLoading}>
+                <SelectTrigger>
+                  <SelectValue placeholder="No recording linked" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="none">No recording linked</SelectItem>
+                  {recordings.map(recording => (
+                    <SelectItem key={recording.id} value={recording.id}>
+                      {recording.title}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            )
+          : (
+              <div className="text-muted-foreground px-3 py-2 text-sm">No recordings available</div>
+            )}
       </div>
 
       <div className="flex gap-3 pt-2">

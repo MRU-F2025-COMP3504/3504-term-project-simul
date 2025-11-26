@@ -23,6 +23,13 @@ import {
   DialogTitle,
 } from "~/components/ui/dialog";
 import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "~/components/ui/select";
+import {
   deleteLessonAction,
   linkRecordingToLessonAction,
   reorderLessonsAction,
@@ -294,31 +301,19 @@ export function LessonsList({
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4">
-            <select
-              className={`
-                placeholder:text-muted-foreground
-                selection:bg-primary selection:text-primary-foreground
-                dark:bg-input/30
-                border-input h-9 w-full border bg-transparent px-3 py-1
-                text-base shadow-xs transition-[color,box-shadow] outline-none
-                focus-visible:border-ring focus-visible:ring-ring/50
-                focus-visible:ring-[3px]
-                aria-invalid:ring-destructive/20 aria-invalid:border-destructive
-                dark:aria-invalid:ring-destructive/40
-                disabled:pointer-events-none disabled:cursor-not-allowed
-                disabled:opacity-50
-                md:text-sm
-              `}
-              onChange={e => setSelectedRecordingId(e.target.value)}
-              value={selectedRecordingId}
-            >
-              <option value="">Select a recording...</option>
-              {recordings.map(recording => (
-                <option key={recording.id} value={recording.id}>
-                  {recording.title}
-                </option>
-              ))}
-            </select>
+            <Select value={selectedRecordingId || "none"} onValueChange={val => setSelectedRecordingId(val === "none" ? "" : val)}>
+              <SelectTrigger>
+                <SelectValue placeholder="Select a recording..." />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="none">Select a recording...</SelectItem>
+                {recordings.map(recording => (
+                  <SelectItem key={recording.id} value={recording.id}>
+                    {recording.title}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
             <Button
               className="w-full"
               disabled={isLoading || !selectedRecordingId}
