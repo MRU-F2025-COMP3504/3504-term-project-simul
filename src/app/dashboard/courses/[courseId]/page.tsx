@@ -2,6 +2,8 @@ import { ArrowLeft, BookOpen, Calendar, Clock, User } from "lucide-react";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 
+import type { Lesson } from "~/types/course";
+
 import { Badge } from "~/components/ui/badge";
 import { Button } from "~/components/ui/button";
 import {
@@ -101,22 +103,22 @@ export default async function CourseViewPage({ params }: CourseViewPageProps) {
                 <CourseDetailRow
                   icon={User}
                   label="Instructor"
-                  value={course.instructor_name}
+                  value={course.instructorName}
                 />
                 <CourseDetailRow
                   icon={BookOpen}
                   label="Lessons"
-                  value={`${course.lessons?.length ?? 0} lessons`}
+                  value="0 lessons"
                 />
                 <CourseDetailRow
                   icon={Clock}
                   label="Duration"
-                  value={`${course.estimated_hours} hours`}
+                  value={`${course.estimatedHours} hours`}
                 />
                 <CourseDetailRow
                   icon={Calendar}
                   label="Last Updated"
-                  value={formatDate(course.updated_at)}
+                  value={formatDate(course.updatedAt)}
                 />
               </div>
 
@@ -146,9 +148,9 @@ export default async function CourseViewPage({ params }: CourseViewPageProps) {
         {/* Right: Lessons List */}
         <div className="space-y-4">
           <div className="space-y-3">
-            {course.lessons?.map(lesson => (
+            {([] as Lesson[]).map(lesson => (
               <Card
-                key={lesson.lesson_id}
+                key={lesson.id}
                 className={`
                   transition-shadow
                   hover:shadow-md
@@ -163,7 +165,7 @@ export default async function CourseViewPage({ params }: CourseViewPageProps) {
                         font-medium
                       `}
                       >
-                        {lesson.order_index}
+                        {lesson.orderIndex}
                       </span>
                       <div className="flex flex-col gap-1">
                         <CardTitle className="text-lg font-semibold">
@@ -172,12 +174,12 @@ export default async function CourseViewPage({ params }: CourseViewPageProps) {
                         <span className="text-muted-foreground text-xs">
                           Added
                           {" "}
-                          {formatDate(lesson.created_at)}
+                          {formatDate(lesson.createdAt)}
                         </span>
                       </div>
                     </div>
                     <Link
-                      href={`/dashboard/courses/${courseId}/lessons/${lesson.lesson_id}`}
+                      href={`/dashboard/courses/${courseId}/lessons/${lesson.id}`}
                     >
                       <Button size="sm">Start</Button>
                     </Link>

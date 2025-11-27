@@ -44,3 +44,16 @@ export type RecordingData = {
     instructorId?: string;
   };
 };
+
+/**
+ * Recording summary type
+ *
+ * This type represents a summary of a recording, including its ID, title,
+ * duration, and creation date.
+ */
+export type Recording = {
+  id: string;
+  title: string;
+  duration?: number | null;
+  createdAt: Date;
+};
