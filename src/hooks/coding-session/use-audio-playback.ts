@@ -375,45 +375,55 @@ export function useAudioPlayback({
 
     if (shouldPlay) {
       // Calculate audio time based on recording timeline
-      // Find all events to determine proper timing
+      // Both audio and editor events are already normalized to the same recording start time
+      // So we can directly use currentTime to calculate audio playback position
+
       const audioEvents = events.filter(e => e.kind === "audio-chunk" && e.time >= 0);
-      const nonAudioEvents = events.filter(e => e.kind !== "audio-chunk" && e.time >= 0);
 
       if (audioEvents.length === 0) {
         console.warn("AUDIO: No audio events available for sync");
         return;
       }
 
-      // Use the overall recording start (first event of any kind) as the baseline
-      const allEvents = [...audioEvents, ...nonAudioEvents].sort((a, b) => a.time - b.time);
-      const recordingStartTime = allEvents.length > 0 ? allEvents[0].time : 0;
+      // Find the first audio chunk to see when audio content actually starts
+      const firstAudioTime = audioEvents[0].time;
 
-      // The first audio chunk represents when audio recording actually began
-      const audioStartTime = audioEvents[0].time;
+      // Check if there are other events before the first audio chunk
+      const allEvents = events.filter(e => e.time >= 0).sort((a, b) => a.time - b.time);
+      const firstEventTime = allEvents.length > 0 ? allEvents[0].time : 0;
 
-      // Calculate how much audio should have played by now
-      // If currentTime is before audioStartTime, audio should not play yet
-      if (currentTime < audioStartTime) {
-        // We're in the "pre-audio" phase of the recording
+      // If there are editor events before the first audio chunk, we need to account for that
+      // This handles the case where recording starts but audio takes time to initialize
+      let audioTimelineStart = firstAudioTime;
+
+      // If there are events before the first audio, we should start audio playback
+      // relative to when recording actually started, not when audio started
+      if (firstEventTime < firstAudioTime) {
+        audioTimelineStart = firstEventTime;
+        console.warn("AUDIO: Detected events before first audio chunk - using recording start for sync");
+      }
+
+      // If we haven't reached the audio start point yet, don't play
+      if (currentTime < audioTimelineStart) {
         if (!audio.paused) {
-          console.warn("AUDIO: Pausing - playback is before audio starts. Current:", currentTime, "AudioStart:", audioStartTime);
+          console.warn("AUDIO: Pausing - haven't reached audio timeline start. Current:", currentTime, "AudioStart:", audioTimelineStart);
           audio.pause();
         }
         return;
       }
 
-      // Calculate audio time relative to when audio recording started
-      const relativeAudioTime = currentTime - audioStartTime;
-      const audioTime = relativeAudioTime / 1000; // Convert ms to seconds
+      // Calculate audio time relative to the audio timeline start
+      const relativeAudioTime = (currentTime - audioTimelineStart) / 1000;
+      const adjustedAudioTime = Math.max(0, relativeAudioTime);
 
-      console.warn("Audio sync - currentTime:", currentTime, "recordingStart:", recordingStartTime, "audioStart:", audioStartTime, "relativeAudioTime:", relativeAudioTime, "audioTime:", audioTime, "duration:", audio.duration);
+      console.warn("Audio sync - currentTime:", currentTime, "firstEventTime:", firstEventTime, "firstAudioTime:", firstAudioTime, "audioTimelineStart:", audioTimelineStart, "adjustedAudioTime:", adjustedAudioTime, "duration:", audio.duration);
 
       // Only proceed if audio is ready to play and has duration
-      if (audio.readyState >= 2 && !Number.isNaN(audio.duration) && audio.duration > 0 && audioTime >= 0) {
+      if (audio.readyState >= 2 && !Number.isNaN(audio.duration) && audio.duration > 0 && adjustedAudioTime >= 0) {
         // Only seek if time difference is significant (avoid constant seeking)
-        const timeDiff = Math.abs(audio.currentTime - audioTime);
+        const timeDiff = Math.abs(audio.currentTime - adjustedAudioTime);
         if (timeDiff > 0.2) { // 200ms threshold to reduce jitter
-          const targetTime = Math.min(Math.max(0, audioTime), audio.duration);
+          const targetTime = Math.min(Math.max(0, adjustedAudioTime), audio.duration);
           console.warn("Audio seeking from", audio.currentTime, "to", targetTime, "diff:", timeDiff);
           try {
             audio.currentTime = targetTime;
@@ -425,7 +435,7 @@ export function useAudioPlayback({
 
         // Play if not already playing
         if (audio.paused) {
-          console.warn("Starting audio playback at time:", audioTime, "readyState:", audio.readyState, "duration:", audio.duration);
+          console.warn("Starting audio playback at time:", adjustedAudioTime, "readyState:", audio.readyState, "duration:", audio.duration);
           audio.play().catch((error) => {
             console.error("Failed to play audio:", error, "readyState:", audio.readyState, "networkState:", audio.networkState);
           });
