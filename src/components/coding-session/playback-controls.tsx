@@ -50,8 +50,8 @@ export function PlaybackControls({
           onClick={handleTogglePlayback}
           disabled={isLoadingRecording}
           className={`
-            text-primary-foreground flex size-6 cursor-pointer items-center justify-center
-            rounded border-none text-sm transition-colors
+            text-primary-foreground flex size-6 cursor-pointer items-center
+            justify-center rounded border-none text-sm transition-colors
             ${isLoadingRecording ? "cursor-not-allowed opacity-50" : ""}
             ${isPlaying
       ? `
