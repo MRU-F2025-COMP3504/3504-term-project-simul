@@ -66,9 +66,9 @@ export function PlaybackControls({
           title={isLoadingRecording ? "Loading..." : (isPlaying ? "Pause" : "Play")}
         >
           {isPlaying
-            ? <Pause className="size-4 fill-white text-white" />
+            ? <Pause className="text-primary-foreground size-4" />
             : (
-                <Play className="size-4 fill-white text-white" />
+                <Play className="text-primary-foreground size-4" />
               )}
         </button>
 
