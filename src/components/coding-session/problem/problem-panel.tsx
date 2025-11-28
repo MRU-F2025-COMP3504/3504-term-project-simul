@@ -1,14 +1,10 @@
-import type { ProblemDefinition, TestDetail, TestResults } from "~/types/coding-session";
+import type { ProblemDefinition } from "~/types/coding-session";
 
 import { Button } from "~/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "~/components/ui/tabs";
 
-import { TestList } from "./test-list";
-
 export type ProblemPanelProps = {
   problem: ProblemDefinition;
-  testResults: TestResults | null;
-  testStatusMap: Map<string, TestDetail> | null;
   isSubmitting: boolean;
   onSubmit: () => void;
   onReset: () => void;
@@ -16,20 +12,18 @@ export type ProblemPanelProps = {
 
 export function ProblemPanel({
   problem,
-  testResults,
-  testStatusMap,
   isSubmitting,
   onSubmit,
   onReset,
 }: ProblemPanelProps) {
-  const _totalTests = problem.testCases.length;
-  const _testsPassed = testResults?.passed ?? 0;
-
   return (
     <div className="bg-background flex h-full flex-col overflow-hidden border">
 
       {/* Problem content */}
-      <div className="flex-1 overflow-auto p-4 text-[0.85rem] leading-relaxed">
+      <div className={`
+        flex-1 overflow-auto p-4 pb-20 text-[0.85rem] leading-relaxed
+      `}
+      >
         {/* Actions and guidance */}
 
         <h3 className="text-primary mt-0 mb-3 text-base font-semibold">
@@ -103,33 +97,29 @@ export function ProblemPanel({
             </ul>
           </div>
         )}
-        <div className="mb-6 flex flex-col gap-5">
-          <div className="flex flex-wrap gap-2">
-            <Button
-              onClick={onSubmit}
-              disabled={isSubmitting}
-              variant="default"
-              className="w-full"
-            >
-              {isSubmitting ? "Submitting..." : "Submit Code"}
-            </Button>
-            <Button
-              type="button"
-              onClick={onReset}
-              variant="outline"
-              className="w-full"
-            >
-              Reset to Starter
-            </Button>
-          </div>
-        </div>
 
-        <TestList
-          testCases={problem.testCases}
-          testStatusMap={testStatusMap}
-          testResults={testResults}
-          renderTestInput={problem.renderTestInput}
-        />
+      </div>
+
+      {/* Fixed Action buttons at bottom */}
+      <div className="bg-background flex-shrink-0 border-t p-4">
+        <div className="flex flex-col gap-2">
+          <Button
+            onClick={onSubmit}
+            disabled={isSubmitting}
+            variant="default"
+            className="w-full"
+          >
+            {isSubmitting ? "Submitting..." : "Submit Code"}
+          </Button>
+          <Button
+            type="button"
+            onClick={onReset}
+            variant="outline"
+            className="w-full"
+          >
+            Reset to Starter
+          </Button>
+        </div>
       </div>
 
     </div>

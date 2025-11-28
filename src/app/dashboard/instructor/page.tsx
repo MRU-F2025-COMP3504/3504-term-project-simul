@@ -6,6 +6,7 @@ import { useMemo } from "react";
 import { CodeMirrorEditor, CursorOverlay } from "~/components/coding-session/editor";
 import { PlaybackControls } from "~/components/coding-session/playback-controls";
 import { ProblemPanel } from "~/components/coding-session/problem/problem-panel";
+import { TestPanel } from "~/components/coding-session/test-panel";
 import { ResizableHandle, ResizablePanel, ResizablePanelGroup } from "~/components/ui/resizable";
 import { useFilesManager, useLoadRecording, usePlayer, useRecorder, useRecordingControls, useTestRunner } from "~/hooks/coding-session";
 import { useSaveRecording } from "~/hooks/coding-session/use-save-recording";
@@ -119,8 +120,6 @@ export default function CodeEditor() {
         <ResizablePanel defaultSize={30}>
           <ProblemPanel
             problem={problem}
-            testResults={tester.testResults}
-            testStatusMap={tester.testStatusMap}
             isSubmitting={tester.isSubmitting}
             onSubmit={tester.submit}
             onReset={resetToStarter}
@@ -128,30 +127,42 @@ export default function CodeEditor() {
         </ResizablePanel>
         <ResizableHandle withHandle />
         <ResizablePanel defaultSize={70} minSize={50}>
-          <CodeMirrorEditor
-            value={startingState.doc.toString()}
-            files={filesManager.files}
-            activeFile={filesManager.activeFile}
-            onCreateFile={(name) => {
-              filesManager.createFile(name, EditorState.create({ doc: "" }));
-              recorder.recordFileCreate(name);
-            }}
-            onSelectFile={(name) => {
-              recorder.recordFileSwitch(name);
-              filesManager.selectFile(name);
-            }}
-            onDeleteFile={(name) => {
-              filesManager.deleteFile(name);
-            }}
-            onUserTransaction={(tr) => {
-              recorder.recordTransaction(tr);
-            }}
-            onEditorMouseMove={recorder.recordMouseEvent}
-            containerRef={editorContainerRef}
-            setExternalApiRef={editorApiRef}
-          >
-            <CursorOverlay cursorRef={cursorRef} />
-          </CodeMirrorEditor>
+          <ResizablePanelGroup direction="vertical">
+            <ResizablePanel defaultSize={70} minSize={40}>
+              <CodeMirrorEditor
+                value={startingState.doc.toString()}
+                files={filesManager.files}
+                activeFile={filesManager.activeFile}
+                onCreateFile={(name) => {
+                  filesManager.createFile(name, EditorState.create({ doc: "" }));
+                  recorder.recordFileCreate(name);
+                }}
+                onSelectFile={(name) => {
+                  recorder.recordFileSwitch(name);
+                  filesManager.selectFile(name);
+                }}
+                onDeleteFile={(name) => {
+                  filesManager.deleteFile(name);
+                }}
+                onUserTransaction={(tr) => {
+                  recorder.recordTransaction(tr);
+                }}
+                onEditorMouseMove={recorder.recordMouseEvent}
+                containerRef={editorContainerRef}
+                setExternalApiRef={editorApiRef}
+              >
+                <CursorOverlay cursorRef={cursorRef} />
+              </CodeMirrorEditor>
+            </ResizablePanel>
+            <ResizableHandle withHandle />
+            <ResizablePanel defaultSize={30}>
+              <TestPanel
+                problem={problem}
+                testResults={tester.testResults}
+                testStatusMap={tester.testStatusMap}
+              />
+            </ResizablePanel>
+          </ResizablePanelGroup>
         </ResizablePanel>
       </ResizablePanelGroup>
 
