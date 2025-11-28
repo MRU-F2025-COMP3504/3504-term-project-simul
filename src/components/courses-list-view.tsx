@@ -1,11 +1,11 @@
 "use client";
 
 import { BookOpen, Calendar, Clock, User, X } from "lucide-react";
-import Link from "next/link";
 import { useState } from "react";
 
 import type { Course } from "~/types/course";
 
+import EnrollmentButton from "~/components/enrollment-button";
 import { Badge } from "~/components/ui/badge";
 import { Button } from "~/components/ui/button";
 import {
@@ -17,8 +17,13 @@ import {
 } from "~/components/ui/card";
 import { formatDate } from "~/lib/utils";
 
+type CourseWithEnrollment = Course & {
+  isEnrolled?: boolean;
+};
+
 type CoursesListViewProps = {
-  courses: Course[];
+  courses: CourseWithEnrollment[];
+  isLoggedIn?: boolean;
 };
 
 function CourseDetailRow({
@@ -42,8 +47,8 @@ function CourseDetailRow({
   );
 }
 
-export default function CoursesListView({ courses }: CoursesListViewProps) {
-  const [selectedCourse, setSelectedCourse] = useState<Course | null>(null);
+export default function CoursesListView({ courses, isLoggedIn }: CoursesListViewProps) {
+  const [selectedCourse, setSelectedCourse] = useState<CourseWithEnrollment | null>(null);
 
   return (
     <div className="flex gap-6">
@@ -254,11 +259,11 @@ export default function CoursesListView({ courses }: CoursesListViewProps) {
               )}
 
               <div className="pt-4">
-                <Button asChild className="w-full" size="lg">
-                  <Link href={`/dashboard/courses/${selectedCourse.id}`}>
-                    Enroll in Course
-                  </Link>
-                </Button>
+                <EnrollmentButton
+                  courseId={selectedCourse.id}
+                  initialIsEnrolled={selectedCourse.isEnrolled ?? false}
+                  isLoggedIn={isLoggedIn}
+                />
               </div>
             </CardContent>
           </Card>
@@ -363,11 +368,11 @@ export default function CoursesListView({ courses }: CoursesListViewProps) {
 
                 {/* Enroll Button */}
                 <div className="pt-4">
-                  <Button asChild className="w-full" size="lg">
-                    <Link href={`/dashboard/courses/${selectedCourse.id}`}>
-                      Enroll in Course
-                    </Link>
-                  </Button>
+                  <EnrollmentButton
+                    courseId={selectedCourse.id}
+                    initialIsEnrolled={selectedCourse.isEnrolled ?? false}
+                    isLoggedIn={isLoggedIn}
+                  />
                 </div>
               </CardContent>
             </Card>

@@ -1,8 +1,7 @@
+import { eq } from "drizzle-orm";
 import { ArrowLeft, BookOpen, Calendar, Clock, User } from "lucide-react";
 import Link from "next/link";
 import { notFound } from "next/navigation";
-
-import type { Lesson } from "~/types/course";
 
 import { Badge } from "~/components/ui/badge";
 import { Button } from "~/components/ui/button";
@@ -12,7 +11,8 @@ import {
   CardHeader,
   CardTitle,
 } from "~/components/ui/card";
-import { getMockCourseById } from "~/lib/mock-data/courses";
+import { db } from "~/lib/db";
+import { course as courseTable, lesson } from "~/lib/db/schema";
 import { formatDate } from "~/lib/utils";
 
 type CourseViewPageProps = {
@@ -45,11 +45,35 @@ function CourseDetailRow({
 
 export default async function CourseViewPage({ params }: CourseViewPageProps) {
   const { courseId } = await params;
-  const course = getMockCourseById(courseId);
 
-  if (!course) {
+  // Fetch course from database
+  const [courseData] = await db
+    .select()
+    .from(courseTable)
+    .where(eq(courseTable.id, courseId));
+
+  if (!courseData) {
     notFound();
   }
+
+  // Fetch lessons for this course
+  const lessonsData = await db
+    .select()
+    .from(lesson)
+    .where(eq(lesson.courseId, courseId));
+
+  const course = {
+    id: courseData.id,
+    title: courseData.title,
+    description: courseData.description,
+    thumbnailUrl: courseData.thumbnailUrl,
+    instructorName: courseData.instructorName,
+    estimatedHours: courseData.estimatedHours,
+    tags: courseData.tags,
+    createdBy: courseData.createdBy,
+    createdAt: courseData.createdAt,
+    updatedAt: courseData.updatedAt,
+  };
 
   return (
     <div className="container mx-auto py-8">
@@ -148,9 +172,9 @@ export default async function CourseViewPage({ params }: CourseViewPageProps) {
         {/* Right: Lessons List */}
         <div className="space-y-4">
           <div className="space-y-3">
-            {([] as Lesson[]).map(lesson => (
+            {lessonsData.map(l => (
               <Card
-                key={lesson.id}
+                key={l.id}
                 className={`
                   transition-shadow
                   hover:shadow-md
@@ -165,21 +189,21 @@ export default async function CourseViewPage({ params }: CourseViewPageProps) {
                         font-medium
                       `}
                       >
-                        {lesson.orderIndex}
+                        {l.orderIndex}
                       </span>
                       <div className="flex flex-col gap-1">
                         <CardTitle className="text-lg font-semibold">
-                          {lesson.title}
+                          {l.title}
                         </CardTitle>
                         <span className="text-muted-foreground text-xs">
                           Added
                           {" "}
-                          {formatDate(lesson.createdAt)}
+                          {formatDate(l.createdAt)}
                         </span>
                       </div>
                     </div>
                     <Link
-                      href={`/dashboard/courses/${courseId}/lessons/${lesson.id}`}
+                      href={`/dashboard/courses/${courseId}/lessons/${l.id}`}
                     >
                       <Button size="sm">Start</Button>
                     </Link>

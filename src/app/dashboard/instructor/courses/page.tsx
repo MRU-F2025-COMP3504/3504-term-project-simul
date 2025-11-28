@@ -13,6 +13,8 @@ import {
 import { listUserCoursesAction } from "~/lib/actions/courses";
 import { formatDate } from "~/lib/utils";
 
+export const dynamic = "force-dynamic";
+
 export default async function InstructorCoursesPage() {
   const result = await listUserCoursesAction();
   const courses = result?.data?.courses || [];

@@ -1,9 +1,54 @@
+import { headers } from "next/headers";
+
 import Banner from "~/components/banner";
 import CoursesListView from "~/components/courses-list-view";
 import Footer from "~/components/footer";
-import { MOCK_COURSES } from "~/lib/mock-data/courses";
+import { auth } from "~/lib/auth";
+import { db } from "~/lib/db";
+import { course } from "~/lib/db/schema";
+
+export const dynamic = "force-dynamic";
 
 export default async function CoursesPage() {
+  // Fetch all courses from database
+  const allCourses = await db.select().from(course);
+
+  // Get current user session to check enrollment status
+  const session = await auth.api.getSession({
+    headers: await headers(),
+  });
+  const userId = session?.user?.id;
+
+  // Fetch user's enrollments if logged in
+  let enrolledCourseIds = new Set<string>();
+  if (userId) {
+    const { getStudentEnrolledCoursesAction } = await import("~/lib/actions/enrollments");
+    try {
+      const result = await getStudentEnrolledCoursesAction();
+      if (result.data?.courses) {
+        enrolledCourseIds = new Set(result.data.courses.map(c => c.id));
+      }
+    }
+    catch (error) {
+      console.error("Failed to fetch enrolled courses:", error);
+    }
+  }
+
+  // Map database courses to Course type and add enrollment status
+  const coursesWithStatus = allCourses.map(c => ({
+    id: c.id,
+    title: c.title,
+    description: c.description,
+    thumbnailUrl: c.thumbnailUrl,
+    instructorName: c.instructorName,
+    estimatedHours: c.estimatedHours,
+    tags: c.tags,
+    createdBy: c.createdBy,
+    createdAt: c.createdAt,
+    updatedAt: c.updatedAt,
+    isEnrolled: enrolledCourseIds.has(c.id),
+  }));
+
   return (
     <div className="flex min-h-screen flex-col">
       <Banner />
@@ -33,7 +78,7 @@ export default async function CoursesPage() {
           </div>
 
           {/* Courses List with Detail View */}
-          <CoursesListView courses={MOCK_COURSES} />
+          <CoursesListView courses={coursesWithStatus} isLoggedIn={!!userId} />
         </div>
       </main>
       <Footer />
