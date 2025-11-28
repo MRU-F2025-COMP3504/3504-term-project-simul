@@ -32,9 +32,9 @@ Here's where authentication-related code lives in our project:
 src/
 ├── lib/
 │   ├── auth.ts                    # Better Auth configuration
-│   └── db/schema/auth.ts          # Database tables for users/sessions
-├── actions/
-│   └── auth-actions.ts            # Sign-in/sign-out server actions
+│   ├── db/schema/auth.ts          # Database tables for users/sessions
+│   └── actions/
+│       └── auth-actions.ts        # Sign-in/sign-out server actions
 ├── components/auth/
 │   ├── signin-button.tsx          # GitHub sign-in button
 │   └── signout-button.tsx         # Sign-out button
