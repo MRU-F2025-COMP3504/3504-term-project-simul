@@ -7,6 +7,8 @@ import { auth } from "~/lib/auth";
 import { db } from "~/lib/db";
 import { course } from "~/lib/db/schema";
 
+export const dynamic = "force-dynamic";
+
 export default async function CoursesPage() {
   // Fetch all courses from database
   const allCourses = await db.select().from(course);
