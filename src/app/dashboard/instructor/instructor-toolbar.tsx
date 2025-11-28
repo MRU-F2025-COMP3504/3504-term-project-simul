@@ -160,7 +160,6 @@ export default function InstructorToolbar(props: Props) {
                       `}
                       title={audioError || undefined}
                     >
-                      🎤
                       {" "}
                       {isAudioRecording ? "Audio ON" : audioError ? "Audio ERROR" : audioSupported ? "Audio OFF" : "No Audio"}
                     </div>
