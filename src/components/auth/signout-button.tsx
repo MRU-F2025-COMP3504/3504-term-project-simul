@@ -2,8 +2,8 @@
 
 import { useAction } from "next-safe-action/hooks";
 
-import { signOutAction } from "~/actions/auth-actions";
 import { Button } from "~/components/ui/button";
+import { signOutAction } from "~/lib/actions/auth-actions";
 
 /**
  * A button component that triggers the sign-out action when clicked.

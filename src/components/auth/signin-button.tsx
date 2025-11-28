@@ -3,8 +3,8 @@
 import { GithubIcon } from "lucide-react";
 import { useAction } from "next-safe-action/hooks";
 
-import { signInWithGithubAction } from "~/actions/auth-actions";
 import { Button } from "~/components/ui/button";
+import { signInWithGithubAction } from "~/lib/actions/auth-actions";
 
 export type SignInButtonProps = {
   callbackURL?: string;
