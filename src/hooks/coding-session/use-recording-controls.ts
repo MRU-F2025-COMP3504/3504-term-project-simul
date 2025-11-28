@@ -16,7 +16,7 @@ import { useEditorController } from "./use-editor-controller";
 export function useRecordingControls(
   recorder: {
     recording: boolean;
-    startRecording: () => void;
+    startRecording: () => Promise<void>;
     stopRecording: () => void;
   },
   filesManager: FilesManager,
@@ -29,13 +29,13 @@ export function useRecordingControls(
   } = useInstructorSession();
   const editorController = useEditorController(editorApiRef);
 
-  const toggleRecording = useCallback(() => {
+  const toggleRecording = useCallback(async () => {
     if (!recorder.recording) {
       // Starting recording - capture initial state and reset events
       initialStateRef.current = editorController.getEditorState();
       setRecordedEvents([]);
       setPlaybackTime(0);
-      recorder.startRecording();
+      await recorder.startRecording();
     }
     else {
       // Stopping recording - save current editor state to files

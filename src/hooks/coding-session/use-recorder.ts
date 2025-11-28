@@ -8,6 +8,8 @@ import type { RecordedEvent } from "~/types/coding-session";
 
 import { positionWithin } from "~/lib/coding-session/dom";
 
+import { useAudioRecorder } from "./use-audio-recorder";
+
 /**
  * Hook for recording coding session events
  *
@@ -29,9 +31,37 @@ export function useRecorder(
   onEvent: (event: RecordedEvent) => void,
   getActiveFile: () => string,
   editorContainer: React.RefObject<HTMLDivElement | null>,
+  options?: { enableAudio?: boolean },
 ) {
   const [recording, setRecording] = useState(false);
   const recordingStartTime = useRef<number>(0);
+
+  // Audio recording integration
+  const audioRecorder = useAudioRecorder({
+    onAudioChunk: (audioBlob: Blob, timestamp: number) => {
+      // Calculate relative time from recording start, just like other events
+      const relativeTime = recordingStartTime.current > 0 ? timestamp - recordingStartTime.current : 0;
+
+      console.warn("AUDIO CHUNK CALLBACK:", {
+        recording,
+        audioBlobSize: audioBlob.size,
+        absoluteTimestamp: timestamp,
+        relativeTime,
+        audioBlobType: audioBlob.type,
+        recordingStartTime: recordingStartTime.current,
+      });
+      // Always save audio chunks if we have a recording session active
+      // Check both current recording state AND if we have a valid start time
+      if (recording || recordingStartTime.current > 0) {
+        onEvent({
+          time: relativeTime,
+          kind: "audio-chunk",
+          audioData: audioBlob,
+        });
+      }
+    },
+    chunkInterval: 1000, // 1 second chunks for smooth playback
+  });
 
   /**
    * Record a transaction (code edit)
@@ -151,36 +181,62 @@ export function useRecorder(
    * Start recording
    *
    * Initializes the recording start time and sets recording state to true.
-   * Called before beginning to capture events.
+   * Also starts audio recording if enabled.
    */
-  const startRecording = useCallback(() => {
+  const startRecording = useCallback(async () => {
+    console.warn("RECORDER: Starting recording, audio config:", {
+      enableAudio: options?.enableAudio,
+      isSupported: audioRecorder.isSupported,
+      audioError: audioRecorder.error,
+    });
+
     setRecording(true);
     recordingStartTime.current = performance.now();
-  }, []);
+
+    // Start audio recording if enabled and supported
+    if (options?.enableAudio && audioRecorder.isSupported) {
+      const success = await audioRecorder.startRecording();
+      console.warn("RECORDER: Audio start result:", success);
+    }
+  }, [options?.enableAudio, audioRecorder]);
 
   /**
    * Stop recording
    *
    * Sets recording state to false. Events will no longer be captured.
+   * Also stops audio recording.
    */
   const stopRecording = useCallback(() => {
     setRecording(false);
-  }, []);
+
+    // Stop audio recording
+    if (audioRecorder.isRecording) {
+      audioRecorder.stopRecording();
+    }
+
+    // Clear recording start time after a short delay to allow final audio chunks
+    setTimeout(() => {
+      recordingStartTime.current = 0;
+    }, 100);
+  }, [audioRecorder]);
 
   /**
    * Toggle recording on/off
    */
-  const toggleRecording = useCallback(() => {
+  const toggleRecording = useCallback(async () => {
     if (recording) {
       stopRecording();
     }
     else {
-      startRecording();
+      await startRecording();
     }
   }, [recording, startRecording, stopRecording]);
 
   return {
     recording,
+    audioRecording: audioRecorder.isRecording,
+    audioSupported: audioRecorder.isSupported,
+    audioError: audioRecorder.error,
     recordTransaction,
     recordMouseEvent,
     recordFileCreate,
