@@ -35,13 +35,13 @@ export function useSaveRecording({ recordedEvents, filesManager, initialStateRef
       }
 
       // serialize the events client side before sending to server
-      const audioChunks = recordedEvents.filter(e => e.kind === "audio-chunk");
-      const eventTypes = recordedEvents.reduce((acc: Record<string, number>, e) => {
-        acc[e.kind] = (acc[e.kind] || 0) + 1;
-        return acc;
-      }, {});
-      console.warn("SAVE: Recording events breakdown:", eventTypes);
-      console.warn("SAVE: Total events:", recordedEvents.length, "Audio chunks:", audioChunks.length);
+      // const audioChunks = recordedEvents.filter(e => e.kind === "audio-chunk");
+      // const eventTypes = recordedEvents.reduce((acc: Record<string, number>, e) => {
+      //   acc[e.kind] = (acc[e.kind] || 0) + 1;
+      //   return acc;
+      // }, {});
+      // console.warn("SAVE: Recording events breakdown:", eventTypes);
+      // console.warn("SAVE: Total events:", recordedEvents.length, "Audio chunks:", audioChunks.length);
 
       const serializedEvents = await Promise.all(recordedEvents.map(serializeEvent));
 

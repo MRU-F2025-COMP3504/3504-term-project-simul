@@ -42,14 +42,14 @@ export function useRecorder(
       // Calculate relative time from recording start, just like other events
       const relativeTime = recordingStartTime.current > 0 ? timestamp - recordingStartTime.current : 0;
 
-      console.warn("AUDIO CHUNK CALLBACK:", {
-        recording,
-        audioBlobSize: audioBlob.size,
-        absoluteTimestamp: timestamp,
-        relativeTime,
-        audioBlobType: audioBlob.type,
-        recordingStartTime: recordingStartTime.current,
-      });
+      // console.warn("AUDIO CHUNK CALLBACK:", {
+      //   recording,
+      //   audioBlobSize: audioBlob.size,
+      //   absoluteTimestamp: timestamp,
+      //   relativeTime,
+      //   audioBlobType: audioBlob.type,
+      //   recordingStartTime: recordingStartTime.current,
+      // });
       // Always save audio chunks if we have a recording session active
       // Check both current recording state AND if we have a valid start time
       if (recording || recordingStartTime.current > 0) {
@@ -184,19 +184,20 @@ export function useRecorder(
    * Also starts audio recording if enabled.
    */
   const startRecording = useCallback(async () => {
-    console.warn("RECORDER: Starting recording, audio config:", {
-      enableAudio: options?.enableAudio,
-      isSupported: audioRecorder.isSupported,
-      audioError: audioRecorder.error,
-    });
+    // console.warn("RECORDER: Starting recording, audio config:", {
+    //   enableAudio: options?.enableAudio,
+    //   isSupported: audioRecorder.isSupported,
+    //   audioError: audioRecorder.error,
+    // });
 
     setRecording(true);
     recordingStartTime.current = performance.now();
 
     // Start audio recording if enabled and supported
     if (options?.enableAudio && audioRecorder.isSupported) {
-      const success = await audioRecorder.startRecording();
-      console.warn("RECORDER: Audio start result:", success);
+      await audioRecorder.startRecording();
+      // const success = await audioRecorder.startRecording();
+      // console.warn("RECORDER: Audio start result:", success);
     }
   }, [options?.enableAudio, audioRecorder]);
 

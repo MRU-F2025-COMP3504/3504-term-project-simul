@@ -6,7 +6,7 @@ import type { RecordedEvent } from "~/types/coding-session";
 import { deserializeEvent, serializeEvent } from "~/lib/coding-session/events";
 
 describe("coding-session events serialization", () => {
-  it("serializes transaction changes", () => {
+  it("serializes transaction changes", async () => {
     const baseState = EditorState.create({ doc: "console.log('hi');" });
     const transaction = baseState.update({
       changes: {
@@ -23,7 +23,7 @@ describe("coding-session events serialization", () => {
       transaction,
     };
 
-    const serialized = serializeEvent(event);
+    const serialized = await serializeEvent(event);
     const eventData = serialized.eventData as Record<string, unknown>;
 
     expect(serialized.eventData.Transaction?.changes).toEqual(transaction.changes.toJSON());
