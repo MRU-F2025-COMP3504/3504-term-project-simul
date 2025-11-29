@@ -34,15 +34,6 @@ export function useSaveRecording({ recordedEvents, filesManager, initialStateRef
         filesObject[fileName] = { name: fileData.fileName, content: fileData.content.doc.toString() };
       }
 
-      // serialize the events client side before sending to server
-      // const audioChunks = recordedEvents.filter(e => e.kind === "audio-chunk");
-      // const eventTypes = recordedEvents.reduce((acc: Record<string, number>, e) => {
-      //   acc[e.kind] = (acc[e.kind] || 0) + 1;
-      //   return acc;
-      // }, {});
-      // console.warn("SAVE: Recording events breakdown:", eventTypes);
-      // console.warn("SAVE: Total events:", recordedEvents.length, "Audio chunks:", audioChunks.length);
-
       const serializedEvents = await Promise.all(recordedEvents.map(serializeEvent));
 
       const initialCode = initialStateRef.current?.doc.toString() ?? problem.starterCode;
@@ -65,7 +56,6 @@ export function useSaveRecording({ recordedEvents, filesManager, initialStateRef
       setTimeout(() => setSaveStatus(SaveStatus.Idle), 3000);
     }
     catch (error) {
-      // bubble and log
       console.error("Failed to save recording:", error);
       toast.error("Failed to save recording. Please try again.");
       setSaveStatus(SaveStatus.Error);

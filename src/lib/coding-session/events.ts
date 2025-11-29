@@ -146,7 +146,7 @@ export function totalDuration(events: Array<{ time: number; kind?: string }>): n
   if (nonAudioEvents.length < 2)
     return 0;
 
-  // Round to integer to match database schema
+  // Round to integer to match database schema (duration column expects integer milliseconds)
   return Math.round(nonAudioEvents[nonAudioEvents.length - 1]!.time - nonAudioEvents[0]!.time);
 }
 
@@ -182,42 +182,31 @@ function blobToBase64(blob: Blob): Promise<string> {
  * Convert base64 string back to Blob with better error handling
  */
 function base64ToBlob(base64: string, mimeType: string = "audio/webm"): Blob {
+  // Clean up the base64 string (remove whitespace and validate)
+  const cleanBase64 = base64.replace(/\s/g, "");
+
+  if (!cleanBase64) {
+    throw new Error("Empty base64 string");
+  }
+
+  let byteCharacters: string;
   try {
-    // Clean up the base64 string (remove whitespace and validate)
-    const cleanBase64 = base64.replace(/\s/g, "");
-
-    if (!cleanBase64) {
-      throw new Error("Empty base64 string");
-    }
-
-    const byteCharacters = atob(cleanBase64);
-    const byteArray = new Uint8Array(byteCharacters.length);
-
-    for (let i = 0; i < byteCharacters.length; i++) {
-      byteArray[i] = byteCharacters.charCodeAt(i);
-    }
-
-    const blob = new Blob([byteArray], { type: mimeType });
-
-    console.warn("DESERIALIZE: Created blob:", {
-      size: blob.size,
-      type: blob.type,
-      base64Length: cleanBase64.length,
-      originalMimeType: mimeType,
-    });
-
-    return blob;
+    byteCharacters = atob(cleanBase64);
   }
   catch (error) {
-    console.error("DESERIALIZE: Failed to convert base64 to blob:", error, {
-      base64Length: base64.length,
-      mimeType,
-      base64Sample: `${base64.substring(0, 50)}...`,
-    });
-
-    // Return empty blob as fallback
+    // Malformed base64, return empty Blob as fallback
+    console.warn("Malformed base64 encountered in base64ToBlob:", error);
     return new Blob([], { type: mimeType });
   }
+  const byteArray = new Uint8Array(byteCharacters.length);
+
+  for (let i = 0; i < byteCharacters.length; i++) {
+    byteArray[i] = byteCharacters.charCodeAt(i);
+  }
+
+  const blob = new Blob([byteArray], { type: mimeType });
+
+  return blob;
 }
 
 /**
