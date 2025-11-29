@@ -14,7 +14,10 @@ import { useInstructorSession } from "./instructor-session-context";
 
 type Props = {
   isRecording: boolean;
-  onToggleRecordingAction: () => void;
+  isAudioRecording: boolean;
+  audioSupported: boolean;
+  audioError: string | null;
+  onToggleRecordingAction: () => Promise<void>;
   onTogglePlaybackAction: () => void;
 
   showSaveDialog: boolean;
@@ -30,6 +33,9 @@ type Props = {
 export default function InstructorToolbar(props: Props) {
   const {
     isRecording,
+    isAudioRecording,
+    audioSupported,
+    audioError,
     onToggleRecordingAction,
     onTogglePlaybackAction: _onTogglePlaybackAction,
 
@@ -143,9 +149,22 @@ export default function InstructorToolbar(props: Props) {
                     <RecordingList onSelectRecording={onSelectRecording} />
                   </SheetContent>
                 </Sheet>
-                <Button onClick={onToggleRecordingAction}>
-                  {isRecording ? "Stop Recording" : "Start Recording"}
-                </Button>
+                <div className="flex flex-col items-center gap-1">
+                  <Button onClick={() => onToggleRecordingAction()}>
+                    {isRecording ? "Stop Recording" : "Start Recording"}
+                  </Button>
+                  {isRecording && (
+                    <div
+                      className={`
+                        text-muted-foreground flex items-center gap-1 text-xs
+                      `}
+                      title={audioError || undefined}
+                    >
+                      {" "}
+                      {isAudioRecording ? "Audio ON" : audioError ? "Audio ERROR" : audioSupported ? "Audio OFF" : "No Audio"}
+                    </div>
+                  )}
+                </div>
                 {!isRecording && recordedEvents.length > 0 && (
                   <>
                     {showSaveDialog && (

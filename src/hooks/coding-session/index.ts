@@ -1,3 +1,5 @@
+export { useAudioPlayback } from "./use-audio-playback";
+export { useAudioRecorder } from "./use-audio-recorder";
 export { useFilesManager } from "./use-files-manager";
 export { useLoadRecording } from "./use-load-recording";
 export { usePlayer } from "./use-player";

@@ -42,6 +42,7 @@ export default function CodeEditor() {
     event => setRecordedEvents(prev => [...prev, event]),
     () => filesManager.activeFile,
     editorContainerRef,
+    { enableAudio: true }, // Enable audio recording
   );
 
   const { toggleRecording } = useRecordingControls(recorder, filesManager);
@@ -56,6 +57,7 @@ export default function CodeEditor() {
     onPlaybackTimeChange: setPlaybackTime,
     onPlaybackStateChange: setIsPlaying,
     isLoadingRecording,
+    recording: recorder.recording,
   });
 
   // Initialize test runner hook
@@ -95,6 +97,9 @@ export default function CodeEditor() {
     <div className="flex h-screen flex-col">
       <InstructorToolbar
         isRecording={recorder.recording}
+        isAudioRecording={recorder.audioRecording}
+        audioSupported={recorder.audioSupported}
+        audioError={recorder.audioError}
         onToggleRecordingAction={toggleRecording}
         onTogglePlaybackAction={togglePlayback}
 

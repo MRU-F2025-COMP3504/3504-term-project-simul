@@ -21,8 +21,11 @@ export function PlaybackControls({
   isLoadingRecording,
 }: PlaybackControlsProps) {
   const { recordedEvents, playbackTime, isPlaying } = useInstructorSession();
-  const totalTime = recordedEvents.length > 0 ? Math.max(...recordedEvents.map(e => e.time), 0) : 0;
-  const progressPercentage = recordedEvents.length > 0 ? (playbackTime / Math.max(...recordedEvents.map(e => e.time), 1)) * 100 : 0;
+
+  // Filter out audio-chunk events for time calculations to avoid timestamp issues
+  const nonAudioEvents = recordedEvents.filter(e => e.kind !== "audio-chunk");
+  const totalTime = nonAudioEvents.length > 0 ? Math.max(...nonAudioEvents.map(e => e.time), 0) : 0;
+  const progressPercentage = totalTime > 0 ? (playbackTime / totalTime) * 100 : 0;
 
   const handleTogglePlayback = () => {
     if (isLoadingRecording) {
@@ -83,7 +86,7 @@ export function PlaybackControls({
         <input
           type="range"
           min="0"
-          max={recordedEvents.length > 0 ? Math.max(...recordedEvents.map(e => e.time), 1) : 0}
+          max={totalTime > 0 ? totalTime : 0}
           value={playbackTime}
           onChange={e => handleSeek(Number(e.target.value))}
           className={`

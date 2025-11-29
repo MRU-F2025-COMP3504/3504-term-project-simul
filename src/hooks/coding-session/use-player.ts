@@ -45,6 +45,7 @@ import { cloneState, getNextEventIndex, upperBoundKF } from "~/lib/coding-sessio
 
 import type { FilesManager } from "./use-files-manager";
 
+import { useAudioPlayback } from "./use-audio-playback";
 import { useEditorController } from "./use-editor-controller";
 
 // Time bucket size for seek indexing and lookup
@@ -86,6 +87,8 @@ type UsePlayerProps = {
   onPlaybackStateChange: (isPlaying: boolean) => void;
   /** Whether a recording is currently being loaded */
   isLoadingRecording: boolean;
+  /** Whether recording is currently active (prevents audio playback during recording) */
+  recording?: boolean;
 };
 
 /**
@@ -105,6 +108,7 @@ export function usePlayer({
   onPlaybackTimeChange,
   onPlaybackStateChange,
   isLoadingRecording,
+  recording,
 }: UsePlayerProps): PlayerHandle {
   const [isPlaying, setIsPlaying] = useState(false);
   const [playbackTime, setPlaybackTime] = useState(0);
@@ -114,6 +118,14 @@ export function usePlayer({
   const rate = 1;
   const eventPointer = useRef(0);
   const editorController = useEditorController(editorApiRef);
+
+  // Audio playback integration
+  const _audioPlayback = useAudioPlayback({
+    events: recordedEvents,
+    isPlaying,
+    currentTime: playbackTime,
+    recording: recording ?? false,
+  });
 
   /**
    * This memo computes keyframes, index, and events for playback.
@@ -314,6 +326,13 @@ export function usePlayer({
         mouse: event.mouse,
       };
     }
+
+    if (event.kind === "audio-chunk") {
+      // Audio chunks are handled separately by the audio playback system
+      // No state changes needed for the editor state
+      return state;
+    }
+
     // Every event type should be handled above.
     throw new Error(`Unknown event kind: ${event.kind}`);
   }
@@ -423,7 +442,11 @@ export function usePlayer({
         cursorRef.current.style.display = "none";
       }
       if (recordedEvents.length > 0) {
-        const endTime = recordedEvents[recordedEvents.length - 1]?.time ?? pausedAt.current;
+        // Use non-audio events to determine end time to avoid timestamp issues
+        const nonAudioEvents = recordedEvents.filter(e => e.kind !== "audio-chunk");
+        const endTime = nonAudioEvents.length > 0
+          ? Math.max(...nonAudioEvents.map(e => e.time))
+          : pausedAt.current;
         pausedAt.current = endTime;
         setPlaybackTime(endTime);
         onPlaybackTimeChange(endTime);
@@ -499,9 +522,10 @@ export function usePlayer({
     if (recordedEvents.length === 0) {
       return;
     }
-    // Clamp target time to valid range
-    const minTime = recordedEvents[0]?.time ?? 0;
-    const maxTime = Math.max(...recordedEvents.map(event => event.time ?? 0));
+    // Clamp target time to valid range - only use non-audio events to avoid timestamp issues
+    const nonAudioEvents = recordedEvents.filter(event => event.kind !== "audio-chunk");
+    const minTime = nonAudioEvents[0]?.time ?? 0;
+    const maxTime = Math.max(...nonAudioEvents.map(event => event.time ?? 0));
     const clampedTime = Math.max(minTime, Math.min(targetTime, maxTime));
 
     // Pause playback if currently playing

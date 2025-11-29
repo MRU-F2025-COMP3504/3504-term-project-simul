@@ -41,15 +41,16 @@ export type EditorAPI = {
 
 /**
  * A recorded event during a coding session
- * Can be a transaction, mouse event, file switch, or file creation
+ * Can be a transaction, mouse event, file switch, file creation, or audio chunk
  */
 export type RecordedEvent = {
   time: number; // epoch ms
-  kind: "transaction" | "mouse" | "file-switch" | "file-create";
+  kind: "transaction" | "mouse" | "file-switch" | "file-create" | "audio-chunk";
   fileName?: string; // which file (for transactions and file ops)
   transaction?: Transaction;
   mouse?: MouseState;
   fileContent?: string; // for file-create events
+  audioData?: Blob; // for audio-chunk events
 };
 
 /**

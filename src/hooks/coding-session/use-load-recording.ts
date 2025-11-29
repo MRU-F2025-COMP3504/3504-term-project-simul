@@ -48,6 +48,8 @@ export function useLoadRecording(filesManager: FilesManager) {
 
         // Deserialize and load before updates
         const deserializedEvents = recording.events.map(deserializeEvent);
+        // const audioChunks = deserializedEvents.filter(e => e.kind === "audio-chunk");
+        // console.warn("Loading recording with", audioChunks.length, "audio chunks");
         const initialState = CMEditorState.create({ doc: recording.initialCode });
 
         // Restore file state

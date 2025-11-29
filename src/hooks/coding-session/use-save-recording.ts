@@ -34,8 +34,7 @@ export function useSaveRecording({ recordedEvents, filesManager, initialStateRef
         filesObject[fileName] = { name: fileData.fileName, content: fileData.content.doc.toString() };
       }
 
-      // serialize the events client side before sending to server
-      const serializedEvents = recordedEvents.map(serializeEvent);
+      const serializedEvents = await Promise.all(recordedEvents.map(serializeEvent));
 
       const initialCode = initialStateRef.current?.doc.toString() ?? problem.starterCode;
 
@@ -57,7 +56,6 @@ export function useSaveRecording({ recordedEvents, filesManager, initialStateRef
       setTimeout(() => setSaveStatus(SaveStatus.Idle), 3000);
     }
     catch (error) {
-      // bubble and log
       console.error("Failed to save recording:", error);
       toast.error("Failed to save recording. Please try again.");
       setSaveStatus(SaveStatus.Error);

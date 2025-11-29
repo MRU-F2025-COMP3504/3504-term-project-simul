@@ -38,7 +38,7 @@ export type ChangeSetJSON = ChangeJSON[];
  */
 export type SerializedRecordedEvent = {
   time: number;
-  kind: "transaction" | "mouse" | "file-switch" | "file-create";
+  kind: "transaction" | "mouse" | "file-switch" | "file-create" | "audio-chunk";
   fileName?: string;
   eventData: {
     Transaction?: {
@@ -50,6 +50,9 @@ export type SerializedRecordedEvent = {
     mouse?: { x: number; y: number; type?: string; button?: number };
     // For file-create events
     fileContent?: string;
+    // For audio events - store as base64 string with MIME type
+    audioData?: string;
+    audioMimeType?: string;
   };
 };
 
@@ -136,10 +139,15 @@ export function transactionToChangeSetJSON(tr: Transaction): ChangeSetJSON {
  * const duration = totalDuration(recordedEvents);
  * // duration = last event time - first event time
  */
-export function totalDuration(events: Array<{ time: number }>): number {
-  if (events.length < 2)
+export function totalDuration(events: Array<{ time: number; kind?: string }>): number {
+  // Filter out audio chunks to get accurate duration based on editor events only
+  const nonAudioEvents = events.filter(e => !("kind" in e) || e.kind !== "audio-chunk");
+
+  if (nonAudioEvents.length < 2)
     return 0;
-  return events[events.length - 1]!.time - events[0]!.time;
+
+  // Round to integer to match database schema (duration column expects integer milliseconds)
+  return Math.round(nonAudioEvents[nonAudioEvents.length - 1]!.time - nonAudioEvents[0]!.time);
 }
 
 /**
@@ -154,6 +162,54 @@ export function relativeTime(startTime: number, currentTime: number): number {
 }
 
 /**
+ * Convert Blob to base64 string for serialization
+ */
+function blobToBase64(blob: Blob): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onloadend = () => {
+      const result = reader.result as string;
+      // Remove data URL prefix (data:audio/webm;base64,)
+      const base64 = result.split(",")[1] || result;
+      resolve(base64);
+    };
+    reader.onerror = reject;
+    reader.readAsDataURL(blob);
+  });
+}
+
+/**
+ * Convert base64 string back to Blob with better error handling
+ */
+function base64ToBlob(base64: string, mimeType: string = "audio/webm"): Blob {
+  // Clean up the base64 string (remove whitespace and validate)
+  const cleanBase64 = base64.replace(/\s/g, "");
+
+  if (!cleanBase64) {
+    throw new Error("Empty base64 string");
+  }
+
+  let byteCharacters: string;
+  try {
+    byteCharacters = atob(cleanBase64);
+  }
+  catch (error) {
+    // Malformed base64, return empty Blob as fallback
+    console.warn("Malformed base64 encountered in base64ToBlob:", error);
+    return new Blob([], { type: mimeType });
+  }
+  const byteArray = new Uint8Array(byteCharacters.length);
+
+  for (let i = 0; i < byteCharacters.length; i++) {
+    byteArray[i] = byteCharacters.charCodeAt(i);
+  }
+
+  const blob = new Blob([byteArray], { type: mimeType });
+
+  return blob;
+}
+
+/**
  * Serialize a RecordedEvent to JSON-serializable format
  *
  * Converts non-serializable Transaction objects and other complex data
@@ -162,7 +218,7 @@ export function relativeTime(startTime: number, currentTime: number): number {
  * @param event - The recorded event to serialize
  * @returns JSON-serializable version of the event
  */
-export function serializeEvent(event: RecordedEvent): SerializedRecordedEvent {
+export async function serializeEvent(event: RecordedEvent): Promise<SerializedRecordedEvent> {
   const baseEvent = {
     time: event.time,
     kind: event.kind,
@@ -190,6 +246,14 @@ export function serializeEvent(event: RecordedEvent): SerializedRecordedEvent {
 
     case "file-create":
       baseEvent.eventData.fileContent = event.fileContent;
+      break;
+
+    case "audio-chunk":
+      if (event.audioData) {
+        // Convert Blob to base64 for serialization
+        baseEvent.eventData.audioData = await blobToBase64(event.audioData);
+        baseEvent.eventData.audioMimeType = event.audioData.type;
+      }
       break;
   }
 
@@ -238,6 +302,13 @@ export function deserializeEvent(serializedEvent: SerializedRecordedEvent): Reco
 
     case "file-create":
       baseEvent.fileContent = serializedEvent.eventData.fileContent;
+      break;
+
+    case "audio-chunk":
+      if (serializedEvent.eventData.audioData) {
+        const mimeType = serializedEvent.eventData.audioMimeType || "audio/webm;codecs=opus";
+        baseEvent.audioData = base64ToBlob(serializedEvent.eventData.audioData, mimeType);
+      }
       break;
   }
 
