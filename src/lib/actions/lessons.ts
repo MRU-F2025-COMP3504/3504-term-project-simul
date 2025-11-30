@@ -418,3 +418,72 @@ export const linkRecordingToLessonAction = actionClient
       throw new Error(message);
     }
   });
+
+/**
+ * Get a single lesson by ID (student read-only)
+ */
+export const getLessonByIdAction = actionClient
+  .inputSchema(z.object({
+    lessonId: z.uuid("Invalid lesson ID"),
+  }))
+  .action(async ({ parsedInput }) => {
+    try {
+      const [lessonData] = await db
+        .select()
+        .from(lesson)
+        .where(eq(lesson.id, parsedInput.lessonId));
+
+      if (!lessonData) {
+        throw new Error("Lesson not found");
+      }
+
+      const result: Lesson = {
+        id: lessonData.id,
+        title: lessonData.title,
+        orderIndex: lessonData.orderIndex,
+        courseId: lessonData.courseId,
+        recordingId: lessonData.recordingId,
+        createdAt: lessonData.createdAt,
+      };
+
+      return { lesson: result };
+    }
+    catch (error) {
+      const message = error instanceof Error ? error.message : "Failed to get lesson";
+      console.error("Error getting lesson:", error);
+      throw new Error(message);
+    }
+  });
+
+/**
+ * Get lessons for a course (student read-only)
+ */
+export const getLessonsByCourseAction = actionClient
+  .inputSchema(z.object({
+    courseId: z.uuid("Invalid course ID"),
+  }))
+  .action(async ({ parsedInput }) => {
+    try {
+      const lessons = await db
+        .select()
+        .from(lesson)
+        .where(eq(lesson.courseId, parsedInput.courseId))
+        .orderBy(lesson.orderIndex);
+
+      const result: Lesson[] = lessons.map(l => ({
+        id: l.id,
+        title: l.title,
+        orderIndex: l.orderIndex,
+        courseId: l.courseId,
+        recordingId: l.recordingId,
+        createdAt: l.createdAt,
+      }));
+
+      return { lessons: result };
+    }
+    catch (error) {
+      const message = error instanceof Error ? error.message : "Failed to get lessons";
+      console.error("Error getting lessons:", error);
+      throw new Error(message);
+    }
+  });

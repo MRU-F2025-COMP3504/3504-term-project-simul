@@ -159,3 +159,45 @@ export const deleteRecordingAction = actionClient
       throw new Error("Failed to delete recording");
     }
   });
+
+/**
+ * Get recording by ID for playback (student-safe, read-only)
+ *
+ * @param params - Recording ID
+ * @returns Recording data for playback
+ */
+export const getRecordingForPlaybackAction = actionClient
+  .inputSchema(loadRecordingSchema)
+  .action(async ({ parsedInput }) => {
+    try {
+      const [result] = await db
+        .select()
+        .from(recording)
+        .where(eq(recording.id, parsedInput.id));
+
+      if (!result) {
+        throw new Error(`Recording with ID ${parsedInput.id} not found`);
+      }
+
+      const recordingData: RecordingData = {
+        id: result.id,
+        title: result.title,
+        problem: result.problem as any,
+        initialCode: result.initialCode,
+        files: result.files as Record<string, { name: string; content: string }>,
+        activeFile: result.activeFile,
+        events: result.events as any[],
+        metadata: {
+          createdAt: result.createdAt?.toISOString() ?? new Date().toISOString(),
+          duration: result.duration,
+          instructorId: result.instructorId || undefined,
+        },
+      };
+
+      return { recording: recordingData };
+    }
+    catch (error) {
+      console.error("Failed to load recording for playback:", error);
+      throw new Error("Failed to load recording for playback");
+    }
+  });

@@ -357,3 +357,63 @@ export const getInstructorStatsAction = actionClient.action(async () => {
     throw new Error(message);
   }
 });
+
+/**
+ * Check if student can access a lesson (via course enrollment)
+ *
+ * @param input - Course ID and lesson ID
+ * @returns Boolean indicating access
+ */
+export const canStudentAccessLessonAction = actionClient
+  .inputSchema(z.object({
+    courseId: z.uuid("Invalid course ID"),
+    lessonId: z.uuid("Invalid lesson ID"),
+  }))
+  .action(async ({ parsedInput }) => {
+    try {
+      const session = await auth.api.getSession({ headers: await headers() });
+
+      if (!session?.user) {
+        throw new Error("Unauthorized: You must be logged in");
+      }
+
+      const userId = session.user.id as string;
+      const { courseId, lessonId } = parsedInput;
+
+      // Verify student is enrolled in course
+      const [enrollmentRecord] = await db
+        .select()
+        .from(enrollment)
+        .where(
+          and(
+            eq(enrollment.userId, userId),
+            eq(enrollment.courseId, courseId),
+          ),
+        );
+
+      // If no enrollment, deny access
+      if (!enrollmentRecord) {
+        return { canAccess: false };
+      }
+
+      // Verify lesson belongs to course
+      const [lessonRecord] = await db
+        .select()
+        .from(lesson)
+        .where(
+          and(
+            eq(lesson.id, lessonId),
+            eq(lesson.courseId, courseId),
+          ),
+        );
+
+      return { canAccess: !!lessonRecord };
+    }
+    catch (error) {
+      const message = error instanceof Error
+        ? error.message
+        : "Failed to check lesson access";
+      console.error("Error checking lesson access:", error);
+      throw new Error(message);
+    }
+  });
