@@ -1,0 +1,45 @@
+"use client";
+
+import { GithubIcon } from "lucide-react";
+import { useAction } from "next-safe-action/hooks";
+
+import { Button } from "~/components/ui/button";
+import { signInWithGithubAction } from "~/lib/actions/auth-actions";
+
+export type SignInButtonProps = {
+  callbackURL?: string;
+  className?: string;
+  size?: "sm" | "default" | "lg";
+};
+
+/**
+ * Renders a button that initiates the GitHub sign-in process.
+ *
+ * @param {SignInButtonProps} props - The props for the SignInButton component.
+ * @param {string} [props.callbackURL] - The URL to redirect to after successful sign-in.
+ * @returns {JSX.Element} The rendered sign-in button component.
+ *
+ * @example
+ * <SignInButton callbackURL="/profile" />
+ */
+export default function SignInButton({
+  callbackURL = "/dashboard",
+  className,
+  size = "default",
+}: SignInButtonProps) {
+  const { execute, isExecuting } = useAction(signInWithGithubAction);
+
+  return (
+    <Button
+      disabled={isExecuting}
+      size={size}
+      className={className}
+      onClick={() => execute({
+        callbackURL,
+      })}
+    >
+      <GithubIcon className="mr-2" />
+      Sign In with Github
+    </Button>
+  );
+}
